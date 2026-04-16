@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using dc;
+﻿﻿using dc;
 using dc.cine;
 using dc.en;
 using dc.en.active;
@@ -118,12 +118,19 @@ namespace SampleSimple
         private const int VK_K = 0x4B;
         private const int VK_T = 0x54;
 
+        // // ---------- 残影效果相关 ----------
+        // private double _trailAccumulator = 0.0;
+        // private const double TrailInterval = 0.08;   // 生成残影间隔（秒）
+        // private const double TrailDuration = 0.2;    // 每个残影持续时间（秒）
+        // private const double TrailAlpha = 0.8;       // 残影透明度
+        // private const double TrailScale = 2;
+
         // ---------- 残影效果相关 ----------
         private double _trailAccumulator = 0.0;
         private const double TrailInterval = 0.08;   // 生成残影间隔（秒）
-        private const double TrailDuration = 0.2;    // 每个残影持续时间（秒）
-        private const double TrailAlpha = 0.8;       // 残影透明度
-        private const double TrailScale = 2;
+        private const double TrailDuration = 1.0;     // 每个残影持续时间改为 1 秒
+        private const double TrailAlpha = 1.0;        // 透明度改为完全不透明
+        private const double TrailScale = 2;          // 保持原有缩放
 
         [DllImport("user32.dll", CharSet = CharSet.Auto, ExactSpelling = true)]
         private static extern short GetAsyncKeyState(int vkey);
@@ -310,22 +317,11 @@ namespace SampleSimple
 
             int randomColor = (255 << 24) | (_random.Next(256) << 16) | (_random.Next(256) << 8) | _random.Next(256);
 
-            var onionSkin = OnionSkin.Class.fromEntity(
-                hero,
-                null,
-                randomColor,
-                Ref<double>.In(TrailAlpha),
-                Ref<double>.In(TrailDuration),  
-                Ref<bool>.Null,
-                Ref<bool>.Null,
-                Ref<double>.In(TrailScale)   // 控制大小的参数
-            );
-
             double offsetX = -hero.dir * 8.0;
             double offsetY = 0.0;
             onionSkin.offset(offsetX, offsetY);
         }
-
+        
         private void TeleportToPrevLevel()
         {
             try
