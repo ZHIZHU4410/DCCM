@@ -311,16 +311,34 @@ namespace SampleSimple
                 _trailAccumulator = 0;
             }
         }
-        private void CreateRandomTrail(Hero hero)
-        {
-            if (hero == null) return;
+private void CreateRandomTrail(Hero hero)
+{
+    if (hero == null) return;
 
-            int randomColor = (255 << 24) | (_random.Next(256) << 16) | (_random.Next(256) << 8) | _random.Next(256);
+    // 生成随机颜色（ARGB格式）
+    int randomColor = (255 << 24) | (_random.Next(256) << 16) | (_random.Next(256) << 8) | _random.Next(256);
 
-            double offsetX = -hero.dir * 8.0;
-            double offsetY = 0.0;
-            onionSkin.offset(offsetX, offsetY);
-        }
+    // 创建残影（OnionSkin）
+    var trail = OnionSkin.Class.fromEntity(
+        hero,
+        null,
+        randomColor,
+        Ref<double>.In(TrailAlpha),    // 透明度
+        Ref<double>.In(TrailDuration), // 持续时间
+        Ref<bool>.Null,                // 是否反转方向（默认）
+        Ref<bool>.Null,                // 是否跟随旋转（默认）
+        Ref<double>.Null               // 额外参数（默认）
+    );
+
+    // 设置偏移量（朝英雄反方向偏移一点，营造拖尾效果）
+    double offsetX = -hero.dir * 8.0;
+    double offsetY = 0.0;
+    trail.offset(offsetX, offsetY);
+
+    // 可选：设置缩放
+    trail.scaleX = TrailScale;
+    trail.scaleY = TrailScale;
+}
         
         private void TeleportToPrevLevel()
         {

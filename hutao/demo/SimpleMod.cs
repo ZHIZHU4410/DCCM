@@ -72,7 +72,8 @@ namespace SampleSimple
         private readonly Random _random = new Random();
         private int _currentLevelIndex = 0;
         private double _killDamageBoost = 0.0;
-
+        private int _addedMaxLife = 0;
+        private int _killCount = 0;
         private dc.ui.Text? _boostDisplayText;
         private const int VK_F1 = 0x70;
         private bool _isF1KeyPressed = false;
@@ -131,10 +132,8 @@ namespace SampleSimple
                     System.Console.WriteLine("[SimpleMod] 无法获取 UI root，稍后重试");
                     return;
                 }
-
                 var initText = Lang.Class.t.untranslated(ToHaxeString("增伤: 0.0% | 最大HP: ?"));
                 _boostDisplayText = Assets.Class.makeText(initText, null, true, null);
-
                 _boostDisplayText.set_textColor(dc.ui.Text.Class.COLORS.get(ToHaxeString("ST")));
                 _boostDisplayText.set_textAlign(new Align.Left());
                 _boostDisplayText.scaleX = 2.7f;
@@ -171,25 +170,38 @@ namespace SampleSimple
             Hero? hero = ModCore.Modules.Game.Instance.HeroInstance;
             if (hero != null && attackData.source == hero)
             {
-                double missingHpPercent = 1.0 - ((double)hero.life / (double)hero.maxLife);
-                double totalMultiplier = 1.0 + missingHpPercent + _killDamageBoost;
+                double currentHpRatio = (double)hero.life / (double)hero.maxLife;
+                double missingHpPercent = 1.0 - currentHpRatio;
+                double dynamicCap = 1.0 + (0.01 * _killCount);
+                
+                double bleedDamageBoost = missingHpPercent * dynamicCap;
+                double totalMultiplier = 1.0 + bleedDamageBoost + _killDamageBoost;
                 attackData.finalDmg = (int)((double)attackData.finalDmg * totalMultiplier);
             }
             orig(self, attackData);
         }
-
         private void OnHeroMobDeathHook(Hook_Hero.orig_onMobDeath orig, Hero self, dc.en.Mob mob)
         {
             orig(self, mob);
             if (self != null)
             {
-                _killDamageBoost += 0.03;
-                int maxHpBonus = (int)((double)self.maxLife * 0.01);
-                if (maxHpBonus < 1) maxHpBonus = 1;
-                self.maxLife += maxHpBonus;
-                int healAmount = (int)((double)self.maxLife * 0.05);
-                self.heal(healAmount);
-            }
+                _killCount++;
+                double progress = (double)_killCount / 420.0; 
+                _killDamageBoost = System.Math.Exp(2.3 * progress) - 1; 
+                const double BASE_HP = 100.0; 
+                int targetTotalAddedHp = (int)(BASE_HP * _killDamageBoost); 
+                if (targetTotalAddedHp > _addedMaxLife) 
+                { 
+                    int hpToGive = targetTotalAddedHp - _addedMaxLife; 
+                    self.maxLife += hpToGive; 
+                    _addedMaxLife += hpToGive; 
+                } 
+                
+                // --- 4. 杀怪回血 (最大生命值的 5%) ---
+                // 随着生命值膨胀，回血量也会变多
+                int healAmount = (int)((double)self.maxLife * 0.05); 
+                self.heal(healAmount); 
+            } 
         }
 
         void IOnHeroUpdate.OnHeroUpdate(double dt)
@@ -226,13 +238,21 @@ namespace SampleSimple
                 CreateBoostDisplayText();
                 return;
             }
-
+            
             Hero? hero = ModCore.Modules.Game.Instance.HeroInstance;
             if (hero == null) return;
-
-            double missingHpPercent = 1.0 - ((double)hero.life / (double)hero.maxLife);
-            double totalBoost = (missingHpPercent + _killDamageBoost) * 100.0;
-            string displayText = $"增伤: +{totalBoost:F1}% | 最大HP: {hero.maxLife}";
+            
+            double currentHpRatio = (double)hero.life / (double)hero.maxLife;
+            double missingHpPercent = 1.0 - currentHpRatio;
+            
+            // 修改点：与伤害计算保持一致
+            double dynamicCap = 1.0 + (0.01 * _killCount);
+            
+            double maxPossibleBleedPercent = dynamicCap * 100.0;
+            double currentBleedBoostPercent = missingHpPercent * dynamicCap * 100.0;
+            string displayText = $"增伤: +{(_killDamageBoost * 100):F1}% | " +
+                                $"残血: +{currentBleedBoostPercent:F1}%/{maxPossibleBleedPercent:F1}% | " +
+                                $"击杀: {_killCount} | 最大HP: {hero.maxLife}";
             _boostDisplayText.set_text(ToHaxeString(displayText));
         }
 
