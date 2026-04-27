@@ -43,11 +43,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\steama\\steamapps\\common\\Dead Cells\\coremod\\demo\\QueenRapier\\demo\\SampleSimple.csproj",
+      "projectUniqueName": "D:\\steama\\steamapps\\common\\Dead Cells\\coremod\\demo\\WUXIANHUOLI\\demo\\SampleSimple.csproj",
       "projectName": "SampleSimple",
-      "projectPath": "D:\\steama\\steamapps\\common\\Dead Cells\\coremod\\demo\\QueenRapier\\demo\\SampleSimple.csproj",
+      "projectPath": "D:\\steama\\steamapps\\common\\Dead Cells\\coremod\\demo\\WUXIANHUOLI\\demo\\SampleSimple.csproj",
       "packagesPath": "C:\\Users\\10113\\.nuget\\packages\\",
-      "outputPath": "D:\\steama\\steamapps\\common\\Dead Cells\\coremod\\demo\\QueenRapier\\demo\\obj\\",
+      "outputPath": "D:\\steama\\steamapps\\common\\Dead Cells\\coremod\\demo\\WUXIANHUOLI\\demo\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\10113\\AppData\\Roaming\\NuGet\\NuGet.Config"

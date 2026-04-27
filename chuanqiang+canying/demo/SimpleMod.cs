@@ -40,7 +40,7 @@ using ModCore.Events.Interfaces.Game;
 using ModCore.Events.Interfaces.Game.Hero;
 using ModCore.Mods;
 using ModCore.Modules;
-using ModCore.Utitities;
+using ModCore.Utilities;   
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -118,19 +118,12 @@ namespace SampleSimple
         private const int VK_K = 0x4B;
         private const int VK_T = 0x54;
 
-        // // ---------- 残影效果相关 ----------
-        // private double _trailAccumulator = 0.0;
-        // private const double TrailInterval = 0.08;   // 生成残影间隔（秒）
-        // private const double TrailDuration = 0.2;    // 每个残影持续时间（秒）
-        // private const double TrailAlpha = 0.8;       // 残影透明度
-        // private const double TrailScale = 2;
-
         // ---------- 残影效果相关 ----------
         private double _trailAccumulator = 0.0;
-        private const double TrailInterval = 0.08;   // 生成残影间隔（秒）
-        private const double TrailDuration = 1.0;     // 每个残影持续时间改为 1 秒
-        private const double TrailAlpha = 1.0;        // 透明度改为完全不透明
-        private const double TrailScale = 2;          // 保持原有缩放
+        private const double TrailInterval = 0.15;   // 生成残影间隔（秒）
+        private const double TrailDuration = 1.2;     //停留
+        private const double TrailAlpha = 0.7;      
+        private const double TrailScale = 2.5;          // 保持原有缩放
 
         [DllImport("user32.dll", CharSet = CharSet.Auto, ExactSpelling = true)]
         private static extern short GetAsyncKeyState(int vkey);
@@ -311,34 +304,37 @@ namespace SampleSimple
                 _trailAccumulator = 0;
             }
         }
-private void CreateRandomTrail(Hero hero)
-{
-    if (hero == null) return;
+        private void CreateRandomTrail(Hero hero)
+        {
+            if (hero == null) return;
 
-    // 生成随机颜色（ARGB格式）
-    int randomColor = (255 << 24) | (_random.Next(256) << 16) | (_random.Next(256) << 8) | _random.Next(256);
+            // 随机 ARGB 颜色
+            //int randomColor = (255 << 24) | (_random.Next(256) << 16) | (_random.Next(256) << 8) | _random.Next(256);
+            int greyishWhite = ColorFromHex("#a0dbdc");
+            // 创建残影，自动继承英雄当前的外观、朝向
+            var trail = OnionSkin.Class.fromEntity(
+                hero,
+                null,                           // 动画（null 表示使用英雄当前动画）
+                greyishWhite,
+                Ref<double>.In(TrailAlpha),
+                Ref<double>.In(TrailDuration),
+                Ref<bool>.Null,
+                Ref<bool>.Null,
+                Ref<double>.Null
+            );
 
-    // 创建残影（OnionSkin）
-    var trail = OnionSkin.Class.fromEntity(
-        hero,
-        null,
-        randomColor,
-        Ref<double>.In(TrailAlpha),    // 透明度
-        Ref<double>.In(TrailDuration), // 持续时间
-        Ref<bool>.Null,                // 是否反转方向（默认）
-        Ref<bool>.Null,                // 是否跟随旋转（默认）
-        Ref<double>.Null               // 额外参数（默认）
-    );
+            // 偏移：朝英雄反方向移动，形成拖尾感
+            double offsetX = -hero.dir * 16.0;
+            trail.offset(offsetX, 0.0);
 
-    // 设置偏移量（朝英雄反方向偏移一点，营造拖尾效果）
-    double offsetX = -hero.dir * 8.0;
-    double offsetY = 0.0;
-    trail.offset(offsetX, offsetY);
+            // 在保留原始方向的前提下放大尺寸
+            trail.scaleX *= TrailScale;   // 注意这里是 *=，不是 =
+            trail.scaleY *= TrailScale;
 
-    // 可选：设置缩放
-    trail.scaleX = TrailScale;
-    trail.scaleY = TrailScale;
-}
+            // 可选：与 Entry 风格一致的物理参数
+            trail.ds = 0.0;
+            trail.frict = 0.87;
+        }
         
         private void TeleportToPrevLevel()
         {
