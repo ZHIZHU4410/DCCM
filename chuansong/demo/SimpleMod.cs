@@ -40,7 +40,7 @@ using ModCore.Events.Interfaces.Game;
 using ModCore.Events.Interfaces.Game.Hero;
 using ModCore.Mods;
 using ModCore.Modules;
-using ModCore.Utitities;
+using ModCore.Utilities;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
