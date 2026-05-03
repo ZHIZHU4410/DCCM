@@ -47,11 +47,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 
+
 namespace PermaEffectsMod
 {
     public class PermaEffectsModMain : ModBase, IOnHeroUpdate
     {
-        // ---------- 颜色转换辅助 ----------
         private static int ColorFromHex(string hex)
         {
             if (hex.StartsWith("#")) hex = hex.Substring(1);
@@ -59,81 +59,145 @@ namespace PermaEffectsMod
             return Convert.ToInt32(hex, 16);
         }
 
-        // ---------- 残影参数 ----------
-        private const double TrailInterval = 0.15;   //残影生成的间隔时间
-        private const double TrailDuration = 1.2;  //存在的时间（秒）
-        private const double TrailAlpha = 1;    //残影的不透明度
-        private const double TrailScale = 2.5;    //缩放倍数
-        private static readonly int TrailColor = ColorFromHex("#ff0000"); 
-        private const double TrailOffset = 10.0;    //水平方向的偏移量
-        private const double TrailFrict = 0.87;   //物理摩擦力
+        // 残影参数
+        private const double TrailInterval = 0.15;
+        private const double TrailDuration = 1.2;
+        private const double TrailAlpha = 0.9;
+        private const double TrailScale = 2.0;
+        private static readonly Random TrailColorRandom = new Random();
+        private static readonly int[] TrailColorPalette = new[]
+        {
+            ColorFromHex("#FF3D3D"),
+            ColorFromHex("#ff0000"),
+            ColorFromHex("#ff0000"),
+            ColorFromHex("#00ff2a"),
+            ColorFromHex("#ffffff"),
+            ColorFromHex("#00ff77"),
+            ColorFromHex("#00ff08"),
+        };
+        private const double TrailOffset = 10.0;
+        private const double TrailFrict = 0.87;
 
-        // ---------- 天使头环参数 ----------
-        private const double HaloDuration = 99999.0; // 超长持续时间，视为永久
-        private const int HaloEffectId = 79; // 天使头环
+        private static int GetRandomBrightColor()
+        {
+            return TrailColorPalette[TrailColorRandom.Next(TrailColorPalette.Length)];
+        }
 
-        // ---------- 内部状态 ----------
+        // 天使头环参数
+        private const double HaloDuration = 99999.0;
+        private const int HaloEffectId = 79;
+
+        // 状态
         private double _trailAccumulator = 0.0;
-        private Hero _lastHero = null;
+        private bool _haloApplied = false;
+        private Hero? _currentHero = null;
 
         public PermaEffectsModMain(ModInfo info) : base(info) { }
 
         public override void Initialize()
         {
             base.Initialize();
-            System.Console.WriteLine("SimpleMod 初始化完成");
+            
+            // 立即注册钩子，避免时序问题
+            Hook_Hero.onLand += OnHeroLand;
+            
+            global::System.Console.WriteLine("永久残影+天使头环模组已加载");
         }
 
         void IOnHeroUpdate.OnHeroUpdate(double dt)
         {
-            Hero hero = ModCore.Modules.Game.Instance.HeroInstance;
+            Hero? hero = ModCore.Modules.Game.Instance.HeroInstance;
             if (hero == null || hero._level == null)
             {
                 _trailAccumulator = 0.0;
-                _lastHero = null;
                 return;
             }
-            if (_lastHero != hero)
+
+            // 更新当前英雄引用（可能换人了）
+            if (_currentHero != hero)
             {
-                _lastHero = hero;
-                double dummy = 0;
-                var ignoreRef = new Ref<double>(ref dummy);
-                hero.setAffectS(HaloEffectId, HaloDuration, ignoreRef, null);
+                _currentHero = hero;
+                _haloApplied = false; // 允许新英雄重新应用头环
             }
-            _trailAccumulator += dt;
-            while (_trailAccumulator >= TrailInterval)
+
+            // 残影生成（英雄存活且游戏未暂停）
+            // 注意：pause 可能是方法，需要加括号
+            if (hero.life > 0 )
             {
-                _trailAccumulator -= TrailInterval;
-                CreateTrail(hero);
+                _trailAccumulator += dt;
+                while (_trailAccumulator >= TrailInterval)
+                {
+                    _trailAccumulator -= TrailInterval;
+                    CreateTrailSafe(hero);
+                }
             }
         }
 
-        private void CreateTrail(Hero hero)
+        private void OnHeroLand(Hook_Hero.orig_onLand orig, Hero self, double height)
+        {
+            orig(self, height); // 必须调用原逻辑
+            
+            // 尝试给落地英雄施加头环
+            TryApplyHalo(self);
+        }
+
+        private void TryApplyHalo(Hero hero)
+        {
+            if (hero == null || _haloApplied) return;
+
+            try
+            {
+                // 确保英雄完全初始化且有生命值
+                if (hero.life <= 0 || hero._level == null)
+                    return;
+
+                double dummy = 0;
+                var ignoreRef = new Ref<double>(ref dummy);
+                hero.setAffectS(HaloEffectId, HaloDuration, ignoreRef, null);
+                _haloApplied = true;
+                global::System.Console.WriteLine("天使头环已施加");
+            }
+            catch (Exception ex)
+            {
+                global::System.Console.WriteLine($"施加天使头环失败: {ex.Message}");
+            }
+        }
+
+        private void CreateTrailSafe(Hero hero)
         {
             if (hero == null) return;
 
-            var trail = OnionSkin.Class.fromEntity(
-                hero,
-                null,                           // 使用英雄当前动画
-                TrailColor,
-                Ref<double>.In(TrailAlpha),
-                Ref<double>.In(TrailDuration),
-                Ref<bool>.Null,
-                Ref<bool>.Null,
-                Ref<double>.Null
-            );
+            try
+            {
+                // 创建可写的 Ref 实例，避免静态属性兼容问题
+                bool dummyBool = false;
+                double dummyDouble = 0.0;
+                var refBool1 = new Ref<bool>(ref dummyBool);
+                var refBool2 = new Ref<bool>(ref dummyBool);
+                var refDouble = new Ref<double>(ref dummyDouble);
 
-            // 朝英雄反方向偏移，制造拖尾
-            double offsetX = -hero.dir * TrailOffset;
-            trail.offset(offsetX, 0.0);
+                var trail = OnionSkin.Class.fromEntity(
+                    hero,
+                    null,
+                    GetRandomBrightColor(),
+                    Ref<double>.In(TrailAlpha),
+                    Ref<double>.In(TrailDuration),
+                    refBool1,
+                    refBool2,
+                    refDouble
+                );
 
-            // 放大尺寸
-            trail.scaleX *= TrailScale;
-            trail.scaleY *= TrailScale;
-
-            // 物理阻力，使其运动更自然
-            trail.ds = 0.0;
-            trail.frict = TrailFrict;
+                double offsetX = -hero.dir * TrailOffset;
+                trail.offset(offsetX, 0.0);
+                trail.scaleX *= TrailScale;
+                trail.scaleY *= TrailScale;
+                trail.ds = 0.0;
+                trail.frict = TrailFrict;
+            }
+            catch (Exception ex)
+            {
+                global::System.Console.WriteLine($"残影创建异常: {ex.Message}");
+            }
         }
     }
 }

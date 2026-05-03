@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("PermaEffectsMod")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+889b292e07b77b80040863300449e8e948637ab3")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+eae60d8a9064d1c0e0f4373e8feb644745017055")]
 [assembly: System.Reflection.AssemblyProductAttribute("PermaEffectsMod")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PermaEffectsMod")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

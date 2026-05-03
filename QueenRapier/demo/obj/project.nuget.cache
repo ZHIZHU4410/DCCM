@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "FfTFxZb1WlE=",
+  "dgSpecHash": "zspwvPdWKxY=",
   "success": true,
-  "projectFilePath": "D:\\steama\\steamapps\\common\\Dead Cells\\coremod\\demo\\QueenRapier\\demo\\SampleSimple.csproj",
+  "projectFilePath": "D:\\steama\\steamapps\\common\\Dead Cells\\coremod\\DCCMDEAD CELLS\\QueenRapier\\demo\\SampleSimple.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\10113\\.nuget\\packages\\deadcellscoremodding.mdk\\1.0.1\\deadcellscoremodding.mdk.1.0.1.nupkg.sha512"
   ],

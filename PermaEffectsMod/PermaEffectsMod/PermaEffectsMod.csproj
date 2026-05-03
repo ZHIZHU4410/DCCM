@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <PackageReference Include="DeadCellsCoreModding.MDK" Version="1.0.1" />
+    <!-- 无需单独引用 CoreLibrary -->
   </ItemGroup>
 
   <PropertyGroup>

@@ -173,7 +173,6 @@ namespace SampleSimple
                 double currentHpRatio = (double)hero.life / (double)hero.maxLife;
                 double missingHpPercent = 1.0 - currentHpRatio;
                 double dynamicCap = 1.0 + (0.01 * _killCount);
-                
                 double bleedDamageBoost = missingHpPercent * dynamicCap;
                 double totalMultiplier = 1.0 + bleedDamageBoost + _killDamageBoost;
                 attackData.finalDmg = (int)((double)attackData.finalDmg * totalMultiplier);

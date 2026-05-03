@@ -84,3 +84,16 @@ D:\steama\steamapps\common\Dead Cells\coremod\demo\QueenRapier\demo\bin\Debug\ne
 D:\steama\steamapps\common\Dead Cells\coremod\demo\QueenRapier\demo\bin\Debug\net10.0\SampleSimple.dll
 D:\steama\steamapps\common\Dead Cells\coremod\demo\QueenRapier\demo\bin\Debug\net10.0\SampleSimple.pdb
 D:\steama\steamapps\common\Dead Cells\coremod\demo\QueenRapier\demo\obj\Debug\net10.0\ref\SampleSimple.dll
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\QueenRapier\demo\bin\Debug\net10.0\SampleSimple.deps.json
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\QueenRapier\demo\bin\Debug\net10.0\SampleSimple.dll
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\QueenRapier\demo\bin\Debug\net10.0\SampleSimple.pdb
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\QueenRapier\demo\obj\Debug\net10.0\SampleSimple.csproj.AssemblyReference.cache
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\QueenRapier\demo\obj\Debug\net10.0\SampleSimple.GeneratedMSBuildEditorConfig.editorconfig
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\QueenRapier\demo\obj\Debug\net10.0\SampleSimple.AssemblyInfoInputs.cache
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\QueenRapier\demo\obj\Debug\net10.0\SampleSimple.AssemblyInfo.cs
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\QueenRapier\demo\obj\Debug\net10.0\SampleSimple.csproj.CoreCompileInputs.cache
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\QueenRapier\demo\obj\Debug\net10.0\SampleSimple.sourcelink.json
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\QueenRapier\demo\obj\Debug\net10.0\SampleSimple.dll
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\QueenRapier\demo\obj\Debug\net10.0\refint\SampleSimple.dll
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\QueenRapier\demo\obj\Debug\net10.0\SampleSimple.pdb
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\QueenRapier\demo\obj\Debug\net10.0\ref\SampleSimple.dll
