@@ -1,12 +1,12 @@
 {
-  "name": "Simple",
+  "name": "PermaEffectsMod",
   "version": "1.0.0",
   "type": "mod",
   "tags": [],
   "dccmversion": "35.9.18",
   "assemblies": [
-    "SampleSimple.dll"
+    "PermaEffectsMod.dll"
   ],
-  "main": "SampleSimple.SimpleMod",
+  "main": "PermaEffectsMod.PermaEffectsModMain",
   "dependencies": []
 }

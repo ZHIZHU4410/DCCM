@@ -1,0 +1,6 @@
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\PermaEffectsMod\PermaEffectsMod\obj\Release\net10.0\PermaEffectsMod.csproj.AssemblyReference.cache
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\PermaEffectsMod\PermaEffectsMod\obj\Release\net10.0\PermaEffectsMod.GeneratedMSBuildEditorConfig.editorconfig
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\PermaEffectsMod\PermaEffectsMod\obj\Release\net10.0\PermaEffectsMod.AssemblyInfoInputs.cache
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\PermaEffectsMod\PermaEffectsMod\obj\Release\net10.0\PermaEffectsMod.AssemblyInfo.cs
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\PermaEffectsMod\PermaEffectsMod\obj\Release\net10.0\PermaEffectsMod.csproj.CoreCompileInputs.cache
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\PermaEffectsMod\PermaEffectsMod\obj\Release\net10.0\PermaEffectsMod.sourcelink.json

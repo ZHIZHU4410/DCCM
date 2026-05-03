@@ -1,4 +1,4 @@
-﻿﻿﻿using dc;
+﻿﻿using dc;
 using dc.cine;
 using dc.en;
 using dc.en.active;
@@ -42,7 +42,7 @@ using ModCore.Events.Interfaces.Game;
 using ModCore.Events.Interfaces.Game.Hero;
 using ModCore.Mods;
 using ModCore.Modules;
-using ModCore.Utitities;
+using ModCore.Utilities;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -189,7 +189,7 @@ namespace SampleSimple
                 double progress = (double)_killCount / 420.0; 
                 _killDamageBoost = System.Math.Exp(2.3 * progress) - 1; 
                 const double BASE_HP = 100.0; 
-                int targetTotalAddedHp = (int)(BASE_HP * _killDamageBoost); 
+                int targetTotalAddedHp = (int)(BASE_HP * _killDamageBoost * 3.0); // 将最大生命值增长翻倍
                 if (targetTotalAddedHp > _addedMaxLife) 
                 { 
                     int hpToGive = targetTotalAddedHp - _addedMaxLife; 
@@ -244,8 +244,6 @@ namespace SampleSimple
             
             double currentHpRatio = (double)hero.life / (double)hero.maxLife;
             double missingHpPercent = 1.0 - currentHpRatio;
-            
-            // 修改点：与伤害计算保持一致
             double dynamicCap = 1.0 + (0.01 * _killCount);
             
             double maxPossibleBleedPercent = dynamicCap * 100.0;
