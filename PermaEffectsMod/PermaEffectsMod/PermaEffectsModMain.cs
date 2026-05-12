@@ -40,7 +40,7 @@ using ModCore.Events.Interfaces.Game;
 using ModCore.Events.Interfaces.Game.Hero;
 using ModCore.Mods;
 using ModCore.Modules;
-using ModCore.Utilities;   
+using ModCore.Utilities;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -92,6 +92,14 @@ namespace PermaEffectsMod
         private bool _haloApplied = false;
         private Hero? _currentHero = null;
 
+        // 按键控制
+        private bool _effectsEnabled = true;        // 特效总开关（默认开启）
+        private bool _isTKeyPressed = false;        // T键前一帧状态
+        private const int VK_T = 0x54;              // T键虚拟键码
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, ExactSpelling = true)]
+        private static extern short GetAsyncKeyState(int vkey);
+
         public PermaEffectsModMain(ModInfo info) : base(info) { }
 
         public override void Initialize()
@@ -102,10 +110,34 @@ namespace PermaEffectsMod
             Hook_Hero.onLand += OnHeroLand;
             
             global::System.Console.WriteLine("永久残影+天使头环模组已加载");
+            global::System.Console.WriteLine("按 T 键开关残影与头环效果");
         }
 
         void IOnHeroUpdate.OnHeroUpdate(double dt)
         {
+            // ---------- 检测 T 键切换特效开关 ----------
+            bool isTPressedNow = GetAsyncKeyState(VK_T) < 0;
+            if (isTPressedNow && !_isTKeyPressed)
+            {
+                _effectsEnabled = !_effectsEnabled;
+                global::System.Console.WriteLine($"残影+天使头环 效果已{(_effectsEnabled ? "开启" : "关闭")}");
+
+                // 如果重新开启，允许下一次落地时重新施加头环
+                if (_effectsEnabled)
+                {
+                    _haloApplied = false;
+                }
+            }
+            _isTKeyPressed = isTPressedNow;
+
+            // 如果特效被禁用，直接返回，不产生任何残影
+            if (!_effectsEnabled)
+            {
+                _trailAccumulator = 0.0;
+                return;
+            }
+
+            // ---------- 原有残影逻辑 ----------
             Hero? hero = ModCore.Modules.Game.Instance.HeroInstance;
             if (hero == null || hero._level == null)
             {
@@ -121,8 +153,7 @@ namespace PermaEffectsMod
             }
 
             // 残影生成（英雄存活且游戏未暂停）
-            // 注意：pause 可能是方法，需要加括号
-            if (hero.life > 0 )
+            if (hero.life > 0)
             {
                 _trailAccumulator += dt;
                 while (_trailAccumulator >= TrailInterval)
@@ -136,9 +167,12 @@ namespace PermaEffectsMod
         private void OnHeroLand(Hook_Hero.orig_onLand orig, Hero self, double height)
         {
             orig(self, height); // 必须调用原逻辑
-            
-            // 尝试给落地英雄施加头环
-            TryApplyHalo(self);
+
+            // 只有特效开启时才尝试施加头环
+            if (_effectsEnabled)
+            {
+                TryApplyHalo(self);
+            }
         }
 
         private void TryApplyHalo(Hero hero)

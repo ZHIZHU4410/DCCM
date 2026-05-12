@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ModType>mod</ModType>
+    <ModMain>ControlEnforcerMod.ControlEnforcerModMain</ModMain>
+    <AutoInstallMod Condition="'$(Configuration)' == 'Debug'">true</AutoInstallMod>
+  </PropertyGroup>
+
+  <Target Name="CopyModFiles" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+    <ItemGroup>
+      <ModFiles Include="$(OutputPath)output\ControlEnforcerMod\**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(ModFiles)" DestinationFolder="D:\steama\steamapps\common\Dead Cells\coremod\mods\ControlEnforcerMod\%(RecursiveDir)" />
+  </Target>
+
+  <ItemGroup>
+    <PackageReference Include="DeadCellsCoreModding.MDK" Version="1.0.1" />
+    <!-- 无需单独引用 CoreLibrary -->
+  </ItemGroup>
+
+  <PropertyGroup>
+    <GenerateDiffCDB>false</GenerateDiffCDB>
+    <GameVersion>35</GameVersion>
+    <GenerateSinglePakFile>false</GenerateSinglePakFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+</Project>

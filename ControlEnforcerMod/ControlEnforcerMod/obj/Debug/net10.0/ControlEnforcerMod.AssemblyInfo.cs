@@ -10,12 +10,12 @@
 using System;
 using System.Reflection;
 
-[assembly: System.Reflection.AssemblyCompanyAttribute("PermaEffectsMod")]
+[assembly: System.Reflection.AssemblyCompanyAttribute("ControlEnforcerMod")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
 [assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+104c2084afaa11c0779aa75d6a8641dca3705882")]
-[assembly: System.Reflection.AssemblyProductAttribute("PermaEffectsMod")]
-[assembly: System.Reflection.AssemblyTitleAttribute("PermaEffectsMod")]
+[assembly: System.Reflection.AssemblyProductAttribute("ControlEnforcerMod")]
+[assembly: System.Reflection.AssemblyTitleAttribute("ControlEnforcerMod")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
 
 // 由 MSBuild WriteCodeFragment 类生成。

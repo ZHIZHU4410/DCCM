@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "+62NMxfLYtA=",
+  "success": true,
+  "projectFilePath": "D:\\steama\\steamapps\\common\\Dead Cells\\coremod\\DCCMDEAD CELLS\\ControlEnforcerMod\\ControlEnforcerMod\\ControlEnforcerMod.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\10113\\.nuget\\packages\\deadcellscoremodding.mdk\\1.0.1\\deadcellscoremodding.mdk.1.0.1.nupkg.sha512"
+  ],
+  "logs": []
+}
