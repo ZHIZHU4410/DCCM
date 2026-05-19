@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "mA82IuH47jk=",
+  "success": true,
+  "projectFilePath": "D:\\steama\\steamapps\\common\\Dead Cells\\coremod\\DCCMDEAD CELLS\\PlantsVsZombies\\PlantsVsZombies\\PlantsVsZombies.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\10113\\.nuget\\packages\\deadcellscoremodding.mdk\\1.0.1\\deadcellscoremodding.mdk.1.0.1.nupkg.sha512"
+  ],
+  "logs": []
+}
