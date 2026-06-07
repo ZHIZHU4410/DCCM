@@ -71,3 +71,16 @@ D:\steama\steamapps\common\Dead Cells\coremod\demo\hutao\demo\obj\Debug\net10.0\
 D:\steama\steamapps\common\Dead Cells\coremod\demo\hutao\demo\obj\Debug\net10.0\refint\SampleSimple.dll
 D:\steama\steamapps\common\Dead Cells\coremod\demo\hutao\demo\obj\Debug\net10.0\SampleSimple.pdb
 D:\steama\steamapps\common\Dead Cells\coremod\demo\hutao\demo\obj\Debug\net10.0\ref\SampleSimple.dll
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\hutao\demo\bin\Debug\net10.0\SampleSimple.deps.json
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\hutao\demo\bin\Debug\net10.0\SampleSimple.dll
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\hutao\demo\bin\Debug\net10.0\SampleSimple.pdb
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\hutao\demo\obj\Debug\net10.0\SampleSimple.csproj.AssemblyReference.cache
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\hutao\demo\obj\Debug\net10.0\SampleSimple.GeneratedMSBuildEditorConfig.editorconfig
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\hutao\demo\obj\Debug\net10.0\SampleSimple.AssemblyInfoInputs.cache
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\hutao\demo\obj\Debug\net10.0\SampleSimple.AssemblyInfo.cs
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\hutao\demo\obj\Debug\net10.0\SampleSimple.csproj.CoreCompileInputs.cache
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\hutao\demo\obj\Debug\net10.0\SampleSimple.sourcelink.json
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\hutao\demo\obj\Debug\net10.0\SampleSimple.dll
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\hutao\demo\obj\Debug\net10.0\refint\SampleSimple.dll
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\hutao\demo\obj\Debug\net10.0\SampleSimple.pdb
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\hutao\demo\obj\Debug\net10.0\ref\SampleSimple.dll

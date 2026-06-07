@@ -1,6 +1,0 @@
-d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\PlantsVsZombies\PlantsVsZombies\obj\Debug\net10.0\PlantsVsZombies.csproj.AssemblyReference.cache
-d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\PlantsVsZombies\PlantsVsZombies\obj\Debug\net10.0\PlantsVsZombies.GeneratedMSBuildEditorConfig.editorconfig
-d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\PlantsVsZombies\PlantsVsZombies\obj\Debug\net10.0\PlantsVsZombies.AssemblyInfoInputs.cache
-d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\PlantsVsZombies\PlantsVsZombies\obj\Debug\net10.0\PlantsVsZombies.AssemblyInfo.cs
-d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\PlantsVsZombies\PlantsVsZombies\obj\Debug\net10.0\PlantsVsZombies.csproj.CoreCompileInputs.cache
-d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\PlantsVsZombies\PlantsVsZombies\obj\Debug\net10.0\PlantsVsZombies.sourcelink.json

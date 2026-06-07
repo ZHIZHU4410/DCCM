@@ -1,0 +1,3068 @@
+using System;
+using dc.cine;
+using dc.en;
+using dc.en.active;
+using dc.en.inter;
+using dc.en.mob;
+using dc.haxe.ds;
+using dc.hl.types;
+using dc.hxd;
+using dc.hxd.res;
+using dc.level;
+using dc.level._LevelAudio;
+using dc.libs;
+using dc.libs.heaps.slib;
+using dc.libs._Cooldown;
+using dc.pr;
+using dc.tool.atk;
+using dc.tool._Cooldown;
+using Hashlink.Virtuals;
+using HashlinkNET.Native.Impl;
+using HaxeProxy.Runtime;
+using HaxeProxy.Runtime.Internals;
+
+namespace dc.tool.weap
+{
+	// Token: 0x0200131B RID: 4891
+	[HashlinkTIndex(21738)]
+	public class Katana : Weapon
+	{
+		// Token: 0x17004366 RID: 17254
+		// (get) Token: 0x060113FD RID: 70653
+		// (set) Token: 0x060113FC RID: 70652
+		public extern int currentStart { get; set; }
+
+		// Token: 0x17004367 RID: 17255
+		// (get) Token: 0x060113FF RID: 70655
+		// (set) Token: 0x060113FE RID: 70654
+		public extern int currentEnd { get; set; }
+
+		// Token: 0x17004368 RID: 17256
+		// (get) Token: 0x06011401 RID: 70657
+		// (set) Token: 0x06011400 RID: 70656
+		public extern int katanaChargeF { get; set; }
+
+		// Token: 0x17004369 RID: 17257
+		// (get) Token: 0x06011403 RID: 70659
+		// (set) Token: 0x06011402 RID: 70658
+		public extern double atkTpDmgMul { get; set; }
+
+		// Token: 0x1700436A RID: 17258
+		// (get) Token: 0x06011405 RID: 70661
+		// (set) Token: 0x06011404 RID: 70660
+		public extern ArrayObj mobsToHit { get; set; }
+
+		// Token: 0x1700436B RID: 17259
+		// (get) Token: 0x06011407 RID: 70663
+		// (set) Token: 0x06011406 RID: 70662
+		public extern int hitMobEveryF { get; set; }
+
+		// Token: 0x1700436C RID: 17260
+		// (get) Token: 0x06011409 RID: 70665
+		// (set) Token: 0x06011408 RID: 70664
+		public extern int switcher { get; set; }
+
+		// Token: 0x1700436D RID: 17261
+		// (get) Token: 0x0601140B RID: 70667
+		// (set) Token: 0x0601140A RID: 70666
+		public extern bool nextIsChargeAtk { get; set; }
+
+		// Token: 0x1700436E RID: 17262
+		// (get) Token: 0x0601140D RID: 70669
+		// (set) Token: 0x0601140C RID: 70668
+		public extern int dashKillWithoutHitCount { get; set; }
+
+		// Token: 0x0601140E RID: 70670 RVA: 0x01706F73 File Offset: 0x01705173
+		public Katana(Hero o, InventItem i) : base(HaxeProxyHelper.CreateInstance(21738))
+		{
+			_Katana.__inst_construct__(this, o, i);
+		}
+
+		// Token: 0x1700436F RID: 17263
+		// (get) Token: 0x0601140F RID: 70671
+		public new static extern _Katana Class { get; }
+
+		// Token: 0x06011410 RID: 70672 RVA: 0x01706F93 File Offset: 0x01705193
+		[HashlinkFIndex(35517)]
+		public override void prepare(double attackSpeed)
+		{
+			base.prepare(attackSpeed);
+		}
+
+		// Token: 0x06011411 RID: 70673 RVA: 0x01706FA4 File Offset: 0x017051A4
+		[HashlinkFIndex(35518)]
+		public override bool onExecute()
+		{
+			bool flag = base.onExecute();
+			base.owner.cancelVelocities();
+			flag = false;
+			Hero owner;
+			bool flag2;
+			if (this.nextIsChargeAtk)
+			{
+				base.owner._level.viewport.bumpDir(base.owner.dir, 0.5);
+				this.tryTeleport();
+				base.playReleaseSfx(null, null, null, null, null);
+				this.katanaChargeF = 0;
+				owner = base.owner;
+				Hero owner2 = base.owner;
+				base.owner._level.fx.leavesBurst(((double)owner.cx + owner.xr) * 24.0, ((double)owner2.cy + owner2.yr) * 24.0, base.owner.dir);
+				double num;
+				double num2;
+				double num4;
+				if (base.owner.hasSkin(null, "KatanaZero"))
+				{
+					Hero owner3 = base.owner;
+					Hero owner4 = base.owner;
+					Fx fx = base.owner._level.fx;
+					num = ((double)owner3.cx + owner3.xr) * 24.0 + (double)(-(double)base.owner.dir * 10 * 24);
+					num2 = ((double)owner4.cy + owner4.yr) * 24.0 - owner4.hei * 0.5;
+					int num3 = base.owner.dir;
+					if (base.owner.dir == 1)
+					{
+						num4 = 0.0;
+						fx.katanaZeroHitLine(num, num2, num3, num4);
+					}
+					else
+					{
+						num4 = dc.Math.Class.PI;
+						fx.katanaZeroHitLine(num, num2, num3, num4);
+					}
+				}
+				this.nextIsChargeAtk = false;
+				flag2 = true;
+				flag = flag2;
+				HSprite hsprite = base.owner._level.fx.playWeaponFx(base.owner, "fxBeheadedKatanaA", null, null, null, null);
+				Cooldown cd = base.owner.cd;
+				Cooldown cd2 = base.owner.cd;
+				num = base.get_curSkillInf().props.duration;
+				num2 = cd2.baseFps;
+				num2 = num * num2 * 1000.0;
+				num2 = Lib_std.math_ffloor.Invoke(num2) / 1000.0;
+				dc.tool._Cooldown.CdInst cdInst = cd.fastCheck.get(1038090240);
+				if (cdInst != null)
+				{
+					num4 = cdInst.frames;
+					if (num2 < num4)
+					{
+						flag2 = false;
+						if (flag2)
+						{
+							base.owner.lockControlsS(0.7);
+							num = 0.7;
+							double? critFeedback = num;
+							base.setCritFeedback(critFeedback);
+							goto IL_36D;
+						}
+					}
+				}
+				num4 = 0.0;
+				if (num4 > num2 && cdInst != null)
+				{
+					if (cdInst != null)
+					{
+						flag2 = cd.cdList.remove(cdInst);
+						cdInst.frames = 0.0;
+						flag2 = cd.fastCheck.remove(cdInst.k);
+					}
+					base.owner.lockControlsS(0.7);
+					num = 0.7;
+					double? critFeedback = num;
+					base.setCritFeedback(critFeedback);
+				}
+				else if (cdInst != null)
+				{
+					cdInst.frames = num2;
+					base.owner.lockControlsS(0.7);
+					num = 0.7;
+					double? critFeedback = num;
+					base.setCritFeedback(critFeedback);
+				}
+				else
+				{
+					int num3 = 1038090240;
+					dc.tool._Cooldown.CdInst cdInst2 = new dc.tool._Cooldown.CdInst(num3, num2);
+					cd.fastCheck.set(1038090240, cdInst2);
+					num3 = cd.cdList.push(cdInst2);
+					base.owner.lockControlsS(0.7);
+					num = 0.7;
+					double? critFeedback = num;
+					base.setCritFeedback(critFeedback);
+				}
+			}
+			else if (base.get_cycle() != 2)
+			{
+				base.owner.bump((double)base.owner.dir * base.get_curSkillInf().props.bump, 0.0, null);
+			}
+			else
+			{
+				owner = base.owner;
+				Hero owner2 = base.owner;
+				base.owner._level.fx.stoneExplosion(((double)owner.cx + owner.xr) * 24.0 + (double)(base.owner.dir * 2 * 24), ((double)owner2.cy + owner2.yr) * 24.0, 19.200000000000003, 4940167, null, null);
+				LevelAudio lAudio = Game.Class.ME.curLevel.lAudio;
+				Loader loader = _Res.get_loader();
+				_Sound @class = Sound.Class;
+				dc.level._LevelAudio.Event @event = lAudio.playEvent(loader.loadCache("sfx/weapon/stomp_char3.wav", @class), 0.5, null, null);
+				base.owner._level.viewport.shakeS(0.3, 0.5, 0.3);
+				base.owner.bump((double)base.owner.dir * base.get_curSkillInf().props.bump, 0.0, null);
+			}
+			IL_36D:
+			flag2 = false;
+			TeamIterator teamIterator2;
+			if (flag)
+			{
+				this.atkTpDmgMul = 0.0;
+				double num = (double)this.katanaChargeF / 30.0 / base.get_curSkillInf().props.threshold;
+				double num2;
+				if (num < 0.0)
+				{
+					num2 = 0.0;
+				}
+				else
+				{
+					double num4 = 1.0;
+					if (num4 < num)
+					{
+						num2 = 1.0;
+					}
+					else
+					{
+						num2 = num;
+					}
+				}
+				if (num2 > 1.0)
+				{
+					base.owner._level.viewport.shakeS(0.7, 1.0, 0.6);
+				}
+				owner = base.owner;
+				if (owner._team == null)
+				{
+					TeamIterator teamIterator = null;
+					teamIterator2 = teamIterator;
+				}
+				else
+				{
+					Team team = owner._team;
+					teamIterator2 = team.opponentsIterator.reset(team);
+				}
+				while (teamIterator2.hasNext())
+				{
+					Entity entity = teamIterator2.next();
+					_Door class2 = Door.Class;
+					bool flag3;
+					if (!_Std.@is(entity, class2))
+					{
+						flag3 = false;
+					}
+					else if (base.destroyed)
+					{
+						flag3 = false;
+					}
+					else
+					{
+						Hero owner2 = base.owner;
+						int num3 = owner2.life;
+						flag3 = (0 < num3 && !owner2.destroyed);
+					}
+					if (flag3 && entity.canBeHit() && base.canHit(entity, null))
+					{
+						_AttackUtils.hit(_AttackUtils.createFromHeroWeapon(this, null), entity);
+					}
+					bool flag4;
+					if (base.destroyed)
+					{
+						flag4 = false;
+					}
+					else
+					{
+						int num3 = entity.life;
+						if (0 >= num3)
+						{
+							flag4 = false;
+						}
+						else if (entity.destroyed)
+						{
+							flag4 = false;
+						}
+						else
+						{
+							Hero owner2 = base.owner;
+							num3 = owner2.life;
+							flag4 = (0 < num3 && !owner2.destroyed);
+						}
+					}
+					if (flag4)
+					{
+						if (entity.canBeHit())
+						{
+							Hero owner2 = base.owner;
+							num2 = (double)entity.cy + entity.yr - ((double)owner2.cy + owner2.yr);
+							double num4;
+							if (num2 < 0.0)
+							{
+								num4 = -num2;
+							}
+							else
+							{
+								num4 = num2;
+							}
+							if (num4 < 3.0)
+							{
+								if ((double)entity.cx > _Math.min((double)(this.currentStart - 1), (double)(this.currentEnd - 1)))
+								{
+									num4 = (double)entity.cx;
+									if (_Math.max((double)(this.currentEnd + 1), (double)(this.currentStart + 1)) > num4)
+									{
+										num4 = this.atkTpDmgMul;
+										double num5 = (double)this.katanaChargeF / 30.0 / base.get_curSkillInf().props.threshold;
+										double num6;
+										if (num5 < 0.0)
+										{
+											num6 = 0.0;
+										}
+										else
+										{
+											double num7 = 1.0;
+											if (num7 < num5)
+											{
+												num6 = 1.0;
+											}
+											else
+											{
+												num6 = num5;
+											}
+										}
+										double num8 = num4 + num6;
+										this.atkTpDmgMul = num8;
+										dc.en._Mob class3 = dc.en.Mob.Class;
+										if (!_Std.@is(entity, class3))
+										{
+											Hero owner5 = base.owner;
+											num8 = base.get_curSkillInf().props.duration;
+											owner5.setAffectS(5, num8, null, null);
+											flag4 = true;
+											flag2 = flag4;
+										}
+										else
+										{
+											dc.en.Mob mob = (dc.en.Mob)entity;
+											if (mob._infos == null)
+											{
+												virtual_active_blueprints_canBeElite_colorSwaps_dlc_flesh1_flesh2_genTags_glowInnerColor_glowOuterColor_group_icon_id_index_life_maxPerPlatform_maxPerRoom_metaItems_minPfHeight_minPfSize_mobTags_name_newSkill_particles_pfCost_props_score_skill_volteDelay_weight_ infos = (virtual_active_blueprints_canBeElite_colorSwaps_dlc_flesh1_flesh2_genTags_glowInnerColor_glowOuterColor_group_icon_id_index_life_maxPerPlatform_maxPerRoom_metaItems_minPfHeight_minPfSize_mobTags_name_newSkill_particles_pfCost_props_score_skill_volteDelay_weight_)Data.Class.mob.byId.get(mob.type);
+												mob._infos = infos;
+											}
+											if ((mob._infos.genTags & 1 << 2) == 0)
+											{
+												_AmazonBase class4 = AmazonBase.Class;
+												if (!_Std.@is(entity, class4))
+												{
+													((dc.en.Mob)entity).lockAiS(0.7);
+													((dc.en.Mob)entity).spr.get_anim().pauseCurrentAnim();
+												}
+											}
+											int num3 = this.mobsToHit.push((dc.en.Mob)entity);
+											if (base.owner.hasSkin(null, "KatanaZero"))
+											{
+												num3 = 0;
+												this.hitMobEveryF = num3;
+												Hero owner6 = base.owner;
+												num8 = base.get_curSkillInf().props.duration;
+												owner6.setAffectS(5, num8, null, null);
+												flag4 = true;
+												flag2 = flag4;
+											}
+											else
+											{
+												num3 = 10;
+												this.hitMobEveryF = num3;
+												Hero owner7 = base.owner;
+												num8 = base.get_curSkillInf().props.duration;
+												owner7.setAffectS(5, num8, null, null);
+												flag4 = true;
+												flag2 = flag4;
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+				if (base.owner.dir == 1)
+				{
+					ArrayObj mobsToHit = this.mobsToHit;
+					HlFunc<int, dc.en.Mob, dc.en.Mob> hlFunc = PseudocodeHelper.CreateClosure<HlFunc<int, dc.en.Mob, dc.en.Mob>>(null, methodof(Katana.ArrowFunction_onExecute_36270(dc.en.Mob, dc.en.Mob)).MethodHandle);
+					if (hlFunc == null)
+					{
+						HlFunc<int, object, object> f = null;
+						mobsToHit.sort(f);
+					}
+					else
+					{
+						HlFunc<int, object, object> f = PseudocodeHelper.CreateClosure<HlFunc<int, object, object>>(hlFunc, methodof(Katana.ArrowFunction_onExecute_36271(HlFunc<int, dc.en.Mob, dc.en.Mob>, object, object)).MethodHandle);
+						mobsToHit.sort(f);
+					}
+					this.katanaChargeF = 0;
+				}
+				else
+				{
+					ArrayObj mobsToHit = this.mobsToHit;
+					HlFunc<int, dc.en.Mob, dc.en.Mob> hlFunc = PseudocodeHelper.CreateClosure<HlFunc<int, dc.en.Mob, dc.en.Mob>>(null, methodof(Katana.ArrowFunction_onExecute_36272(dc.en.Mob, dc.en.Mob)).MethodHandle);
+					if (hlFunc == null)
+					{
+						HlFunc<int, object, object> f = null;
+						mobsToHit.sort(f);
+						this.katanaChargeF = 0;
+					}
+					else
+					{
+						HlFunc<int, object, object> f = PseudocodeHelper.CreateClosure<HlFunc<int, object, object>>(hlFunc, methodof(Katana.ArrowFunction_onExecute_36271(HlFunc<int, dc.en.Mob, dc.en.Mob>, object, object)).MethodHandle);
+						mobsToHit.sort(f);
+						this.katanaChargeF = 0;
+					}
+				}
+				return flag2;
+			}
+			owner = base.owner;
+			if (owner._team == null)
+			{
+				TeamIterator teamIterator = null;
+				teamIterator2 = teamIterator;
+			}
+			else
+			{
+				Team team = owner._team;
+				teamIterator2 = team.opponentsIterator.reset(team);
+			}
+			while (teamIterator2.hasNext())
+			{
+				Entity entity = teamIterator2.next();
+				if (base.canHit(entity, null))
+				{
+					base.playHitSfx(null, null, null, null, null);
+					this.hitFromWeapon(entity, null);
+					bool flag5 = true;
+					flag2 = flag5;
+				}
+			}
+			return flag2;
+		}
+
+		// Token: 0x06011412 RID: 70674 RVA: 0x01708060 File Offset: 0x01706260
+		[HashlinkFIndex(35519)]
+		public override void hitFromWeapon(Entity e, ref int _cycle)
+		{
+			int num;
+			int num2;
+			if (ref _cycle == null)
+			{
+				num = -1;
+				num2 = num;
+				_cycle = ref num2;
+				base.hitFromWeapon(e, ref _cycle);
+				_AttackUtils.hit(_AttackUtils.createFromHeroWeapon(this, null), e);
+				return;
+			}
+			num = _cycle;
+			num2 = num;
+			_cycle = ref num2;
+			base.hitFromWeapon(e, ref _cycle);
+			_AttackUtils.hit(_AttackUtils.createFromHeroWeapon(this, null), e);
+		}
+
+		// Token: 0x06011413 RID: 70675 RVA: 0x017080D4 File Offset: 0x017062D4
+		[HashlinkFIndex(35520)]
+		public override void doAreaEffect(Area area)
+		{
+			base.doAreaEffect(area);
+			if (!base.item.hasAffix("CounterBullet"))
+			{
+				return;
+			}
+			base.owner._level.fx.shieldParryStart(base.owner, 4480637, null);
+		}
+
+		// Token: 0x06011414 RID: 70676 RVA: 0x01708144 File Offset: 0x01706344
+		[HashlinkFIndex(35521)]
+		public override void areaCounterBullet(Bullet cBullet, ref double speedMul)
+		{
+			double num;
+			if (ref speedMul == null)
+			{
+				num = 1.0;
+			}
+			else
+			{
+				num = speedMul;
+			}
+			cBullet.atk.addTag(2);
+			double num2 = num;
+			speedMul = ref num2;
+			base.areaCounterBullet(cBullet, ref speedMul);
+			double num3 = 0.2;
+			double? num4 = num3;
+			num3 = 0.1;
+			double? num5 = num3;
+			if (num5 == null)
+			{
+				num3 = 0.1;
+				num5 = num3;
+			}
+			if (num4 == null)
+			{
+				num3 = 0.35;
+				num4 = num3;
+			}
+			Fx fx = base.owner._level.fx;
+			num3 = num4;
+			double durationS = num5;
+			double fadeOutS = num5 * 1.5;
+			fx.customMask(9353156, num3, 0.04, durationS, fadeOutS, null);
+			base.owner._level.fx.frontShieldHit(base.owner, 6921449);
+			Hero owner = base.owner;
+			Hero owner2 = base.owner;
+			base.owner._level.fx.hitLines(((double)owner.cx + owner.xr) * 24.0, ((double)owner2.cy + owner2.yr) * 24.0 - owner2.hei * 0.5, base.owner.dir, 16777215, null, null, null);
+			LevelAudio lAudio = Game.Class.ME.curLevel.lAudio;
+			Loader loader = _Res.get_loader();
+			_Sound @class = Sound.Class;
+			Sound snd = loader.loadCache("sfx/env/hit_crit.wav", @class);
+			double num6 = _Math.random() * 0.19999999999999996;
+			num5 = 1.2 + num6;
+			dc.level._LevelAudio.Event @event = lAudio.playEvent(snd, 0.8, num5, null);
+		}
+
+		// Token: 0x06011415 RID: 70677 RVA: 0x017083C8 File Offset: 0x017065C8
+		[HashlinkFIndex(35522)]
+		public void tryTeleport()
+		{
+			int num = base.owner.cx;
+			this.currentStart = num;
+			bool flag = this.nextIsChargeAtk;
+			double num4;
+			double num5;
+			if (flag)
+			{
+				double range = base.get_curSkillInf().props.range;
+				double num2 = (double)this.katanaChargeF / 30.0 / base.get_curSkillInf().props.threshold;
+				double num3 = range;
+				num4 = 1.0;
+				if (num2 < 0.0)
+				{
+					num5 = 0.0;
+					num5 /= 2.0;
+					num4 += num5;
+					num = (int)(num3 * num4);
+				}
+				else
+				{
+					double num6 = 1.0;
+					if (num6 < num2)
+					{
+						num5 = 1.0;
+						num5 /= 2.0;
+						num4 += num5;
+						num = (int)(num3 * num4);
+					}
+					else
+					{
+						num5 = num2;
+						num5 /= 2.0;
+						num4 += num5;
+						num = (int)(num3 * num4);
+					}
+				}
+			}
+			else
+			{
+				num = (int)base.get_curSkillInf().props.range;
+			}
+			double cx = (double)base.owner.cx;
+			int num7 = base.owner.dir;
+			int num8 = (int)(cx + (double)(num * num7));
+			int num9 = (int)((double)base.owner.cy);
+			num4 = base.owner.xr;
+			num5 = 0.0;
+			Hero owner = base.owner;
+			TeamIterator teamIterator2;
+			if (owner._team == null)
+			{
+				TeamIterator teamIterator = null;
+				teamIterator2 = teamIterator;
+			}
+			else
+			{
+				Team team = owner._team;
+				teamIterator2 = team.opponentsIterator.reset(team);
+			}
+			Hero owner2;
+			bool flag2;
+			Hero owner3;
+			int i;
+			int num12;
+			int num13;
+			for (;;)
+			{
+				flag = teamIterator2.hasNext();
+				if (!flag)
+				{
+					break;
+				}
+				Entity entity = teamIterator2.next();
+				owner2 = base.owner;
+				double num6 = (double)entity.cx + entity.xr - ((double)owner2.cx + owner2.xr);
+				double num10;
+				if (num6 < 0.0)
+				{
+					num10 = -num6;
+				}
+				else
+				{
+					num10 = num6;
+				}
+				flag = base.destroyed;
+				if (flag)
+				{
+					flag2 = false;
+				}
+				else
+				{
+					dc.en._Mob @class = dc.en.Mob.Class;
+					flag = _Std.@is(entity, @class);
+					if (!flag)
+					{
+						flag2 = false;
+					}
+					else
+					{
+						num7 = entity.life;
+						if (0 >= num7)
+						{
+							flag2 = false;
+						}
+						else
+						{
+							flag = entity.destroyed;
+							if (flag)
+							{
+								flag2 = false;
+							}
+							else
+							{
+								owner3 = base.owner;
+								num7 = owner3.life;
+								if (0 >= num7)
+								{
+									flag2 = false;
+								}
+								else
+								{
+									flag2 = owner3.destroyed;
+									flag2 = !flag2;
+								}
+							}
+						}
+					}
+				}
+				bool flag3;
+				if (!flag2)
+				{
+					flag2 = false;
+					flag3 = flag2;
+				}
+				else
+				{
+					flag2 = entity.canBeHit();
+					if (!flag2)
+					{
+						flag2 = false;
+						flag3 = flag2;
+					}
+					else
+					{
+						owner3 = base.owner;
+						flag2 = false;
+						int? num11 = null;
+						Entity entity2 = owner3;
+						_Door class2 = Door.Class;
+						if (_Std.@is(entity, class2))
+						{
+							goto IL_8DA;
+						}
+						_EtheralDoorSocle class3 = EtheralDoorSocle.Class;
+						if (_Std.@is(entity, class3))
+						{
+							goto IL_8DA;
+						}
+						flag3 = false;
+						IL_922:
+						bool flag4;
+						if (flag3)
+						{
+							num7 = entity.cx - 1;
+							i = entity.cy;
+							if (owner3.sightCheckCase(num7, i, null, null))
+							{
+								flag4 = true;
+								flag3 = flag4;
+							}
+							else
+							{
+								num7 = entity.cx + 1;
+								i = entity.cy;
+								if (owner3.sightCheckCase(num7, i, null, null))
+								{
+									flag4 = true;
+									flag3 = flag4;
+								}
+								else
+								{
+									flag4 = false;
+									flag3 = flag4;
+								}
+							}
+							goto IL_1EC;
+						}
+						num7 = (int)(((double)owner3.cx + owner3.xr) * 24.0 / 24.0);
+						i = (int)((((double)owner3.cy + owner3.yr) * 24.0 - owner3.hei * 0.5) / 24.0);
+						num12 = (int)(((double)entity.cx + entity.xr) * 24.0 / 24.0);
+						num13 = (int)((((double)entity.cy + entity.yr) * 24.0 - entity.hei * 0.5) / 24.0);
+						int num14;
+						int num15;
+						int num16;
+						int num17;
+						int num19;
+						bool flag5;
+						bool flag6;
+						if (num11 == null)
+						{
+							num14 = num7;
+							num15 = i;
+							num16 = num12;
+							num17 = num13;
+							HlFunc<bool, int, int> hlFunc;
+							if (flag2)
+							{
+								hlFunc = PseudocodeHelper.CreateClosure<HlFunc<bool, int, int>>(owner3, methodof(Entity.isPositionEmptyWithoutOneWay(int, int)).MethodHandle);
+							}
+							else
+							{
+								hlFunc = PseudocodeHelper.CreateClosure<HlFunc<bool, int, int>>(owner3, methodof(Entity.isPositionEmpty(int, int)).MethodHandle);
+							}
+							if (!hlFunc.Invoke(num7, i))
+							{
+								flag4 = false;
+								flag3 = flag4;
+							}
+							else if (!hlFunc.Invoke(num12, num13))
+							{
+								flag4 = false;
+								flag3 = flag4;
+							}
+							else
+							{
+								int num18 = num13 - i;
+								num19 = num12 - num7;
+								int num20;
+								if (num18 < 0)
+								{
+									num20 = -num18;
+								}
+								else
+								{
+									num20 = num18;
+								}
+								int num21;
+								if (num19 < 0)
+								{
+									num21 = -num19;
+								}
+								else
+								{
+									num21 = num19;
+								}
+								flag4 = (num20 > num21);
+								if (flag4)
+								{
+									num14 = i;
+									num15 = num7;
+									num16 = num13;
+									num17 = num12;
+								}
+								if (num16 < num14)
+								{
+									int num22 = num14;
+									num14 = num16;
+									num16 = num22;
+									int num23 = num15;
+									num15 = num17;
+									num17 = num23;
+								}
+								num21 = num16 - num14;
+								int num24 = num17 - num15;
+								int num25;
+								if (num24 < 0)
+								{
+									num25 = -num24;
+								}
+								else
+								{
+									num25 = num24;
+								}
+								double num26 = (double)num25;
+								num25 = Lib_std.math_floor.Invoke(num26);
+								num26 = (double)num21 / 2.0;
+								int num27 = Lib_std.math_floor.Invoke(num26);
+								int num28 = num15;
+								int num29;
+								if (num15 < num17)
+								{
+									num29 = 1;
+								}
+								else
+								{
+									num29 = -1;
+								}
+								flag5 = true;
+								int j;
+								int num30;
+								if (flag4)
+								{
+									j = num14;
+									num30 = num16 + 1;
+									while (j < num30)
+									{
+										int num31 = j;
+										j++;
+										if (!hlFunc.Invoke(num28, num31))
+										{
+											flag6 = false;
+											flag5 = flag6;
+											IL_1F4B:
+											flag3 = flag5;
+											goto IL_1EC;
+										}
+										int num32 = num27 - num25;
+										num27 = num32;
+										if (num32 < 0)
+										{
+											num28 += num29;
+											num27 += num21;
+										}
+									}
+									goto IL_1F4B;
+								}
+								j = num14;
+								num30 = num16 + 1;
+								while (j < num30)
+								{
+									int num31 = j;
+									j++;
+									if (!hlFunc.Invoke(num31, num28))
+									{
+										flag6 = false;
+										flag5 = flag6;
+										flag3 = flag5;
+										goto IL_1EC;
+									}
+									int num32 = num27 - num25;
+									num27 = num32;
+									if (num32 < 0)
+									{
+										num28 += num29;
+										num27 += num21;
+									}
+								}
+								flag3 = flag5;
+							}
+							goto IL_1EC;
+						}
+						num14 = num7;
+						num15 = i;
+						num16 = num12;
+						num17 = num13;
+						LevelMap levelMap;
+						if (owner3._level == null)
+						{
+							levelMap = null;
+						}
+						else
+						{
+							levelMap = owner3._level.map;
+						}
+						if (num7 < 0)
+						{
+							goto IL_F41;
+						}
+						num19 = levelMap.wid;
+						if (num7 >= num19 || i < 0)
+						{
+							goto IL_F41;
+						}
+						num19 = levelMap.hei;
+						if (i >= num19)
+						{
+							goto IL_F41;
+						}
+						ArrayBytes_Int collisions;
+						if (num7 < 0)
+						{
+							flag4 = true;
+						}
+						else
+						{
+							num19 = levelMap.wid;
+							if (num7 >= num19)
+							{
+								flag4 = true;
+							}
+							else if (i < 0)
+							{
+								flag4 = true;
+							}
+							else
+							{
+								num19 = levelMap.hei;
+								if (i >= num19)
+								{
+									flag4 = true;
+								}
+								else
+								{
+									collisions = levelMap.collisions;
+									int num20 = levelMap.wid;
+									num19 = i * num20;
+									int num18 = num7 + num19;
+									num19 = collisions.length;
+									if (num18 >= num19)
+									{
+										num18 = 0;
+									}
+									else
+									{
+										num18 = PseudocodeHelper.ReadMem<int>(collisions.bytes, num18 << 2);
+									}
+									flag4 = ((num18 & 1) != 0);
+								}
+							}
+						}
+						if (!flag4)
+						{
+							flag5 = true;
+						}
+						else
+						{
+							collisions = levelMap.collisions;
+							int num20 = levelMap.wid;
+							num19 = i * num20;
+							int num18 = num7 + num19;
+							num19 = collisions.length;
+							if (num18 >= num19)
+							{
+								num18 = 0;
+							}
+							else
+							{
+								num18 = PseudocodeHelper.ReadMem<int>(collisions.bytes, num18 << 2);
+							}
+							if ((num18 & 4) == 0)
+							{
+								goto IL_F41;
+							}
+							flag5 = true;
+						}
+						IL_C24:
+						if (!flag5)
+						{
+							LevelMap levelMap2;
+							if (owner3._level == null)
+							{
+								levelMap2 = null;
+							}
+							else
+							{
+								levelMap2 = owner3._level.map;
+							}
+							int num18 = num11;
+							int num21 = levelMap2.wid;
+							int num20 = i * num21;
+							num19 = num7 + num20;
+							num21 = levelMap2.fastSpots.length;
+							if (num19 >= num21)
+							{
+								flag6 = false;
+							}
+							else
+							{
+								ArrayObj fastSpots = levelMap2.fastSpots;
+								num21 = fastSpots.length;
+								SpotFlags spotFlags;
+								if (num19 >= num21)
+								{
+									spotFlags = null;
+								}
+								else
+								{
+									spotFlags = fastSpots.array[num19];
+								}
+								if (spotFlags == null)
+								{
+									flag6 = false;
+								}
+								else
+								{
+									num21 = 31;
+									if (num21 < num18)
+									{
+										num20 = spotFlags.high;
+									}
+									else
+									{
+										num20 = spotFlags.low;
+									}
+									num21 = 1;
+									num21 <<= num18;
+									flag6 = ((num20 & num21) != 0);
+								}
+							}
+						}
+						else
+						{
+							flag6 = true;
+						}
+						bool flag8;
+						if (flag6)
+						{
+							LevelMap levelMap2;
+							if (owner3._level == null)
+							{
+								levelMap2 = null;
+							}
+							else
+							{
+								levelMap2 = owner3._level.map;
+							}
+							if (num12 < 0)
+							{
+								goto IL_1098;
+							}
+							num19 = levelMap2.wid;
+							if (num12 >= num19 || num13 < 0)
+							{
+								goto IL_1098;
+							}
+							num19 = levelMap2.hei;
+							if (num13 >= num19)
+							{
+								goto IL_1098;
+							}
+							if (num12 < 0)
+							{
+								flag6 = true;
+							}
+							else
+							{
+								num19 = levelMap2.wid;
+								if (num12 >= num19)
+								{
+									flag6 = true;
+								}
+								else if (num13 < 0)
+								{
+									flag6 = true;
+								}
+								else
+								{
+									num19 = levelMap2.hei;
+									if (num13 >= num19)
+									{
+										flag6 = true;
+									}
+									else
+									{
+										collisions = levelMap2.collisions;
+										int num20 = levelMap2.wid;
+										num19 = num13 * num20;
+										int num18 = num12 + num19;
+										num19 = collisions.length;
+										if (num18 >= num19)
+										{
+											num18 = 0;
+										}
+										else
+										{
+											num18 = PseudocodeHelper.ReadMem<int>(collisions.bytes, num18 << 2);
+										}
+										flag6 = ((num18 & 1) != 0);
+									}
+								}
+							}
+							bool flag7;
+							if (!flag6)
+							{
+								flag7 = true;
+							}
+							else
+							{
+								collisions = levelMap2.collisions;
+								int num20 = levelMap2.wid;
+								num19 = num13 * num20;
+								int num18 = num12 + num19;
+								num19 = collisions.length;
+								if (num18 >= num19)
+								{
+									num18 = 0;
+								}
+								else
+								{
+									num18 = PseudocodeHelper.ReadMem<int>(collisions.bytes, num18 << 2);
+								}
+								if ((num18 & 4) == 0)
+								{
+									goto IL_1098;
+								}
+								flag7 = true;
+							}
+							IL_D1F:
+							if (!flag7)
+							{
+								LevelMap levelMap3;
+								if (owner3._level == null)
+								{
+									levelMap3 = null;
+								}
+								else
+								{
+									levelMap3 = owner3._level.map;
+								}
+								int num18 = num11;
+								int num21 = levelMap3.wid;
+								int num20 = num13 * num21;
+								num19 = num12 + num20;
+								num21 = levelMap3.fastSpots.length;
+								if (num19 >= num21)
+								{
+									flag8 = false;
+								}
+								else
+								{
+									ArrayObj fastSpots = levelMap3.fastSpots;
+									num21 = fastSpots.length;
+									SpotFlags spotFlags;
+									if (num19 >= num21)
+									{
+										spotFlags = null;
+									}
+									else
+									{
+										spotFlags = fastSpots.array[num19];
+									}
+									if (spotFlags == null)
+									{
+										flag8 = false;
+									}
+									else
+									{
+										num21 = 31;
+										if (num21 < num18)
+										{
+											num20 = spotFlags.high;
+										}
+										else
+										{
+											num20 = spotFlags.low;
+										}
+										num21 = 1;
+										num21 <<= num18;
+										flag8 = ((num20 & num21) != 0);
+									}
+								}
+								flag8 = ~flag8;
+								goto IL_D99;
+							}
+							flag8 = true;
+							flag8 = ~flag8;
+							goto IL_D99;
+							IL_1098:
+							if (flag2)
+							{
+								LevelMap levelMap3;
+								if (owner3._level == null)
+								{
+									levelMap3 = null;
+								}
+								else
+								{
+									levelMap3 = owner3._level.map;
+								}
+								if (num12 < 0)
+								{
+									flag7 = false;
+								}
+								else
+								{
+									num19 = levelMap3.wid;
+									if (num12 >= num19)
+									{
+										flag7 = false;
+									}
+									else if (num13 < 0)
+									{
+										flag7 = false;
+									}
+									else
+									{
+										num19 = levelMap3.hei;
+										if (num13 >= num19)
+										{
+											flag7 = false;
+										}
+										else
+										{
+											collisions = levelMap3.collisions;
+											int num20 = levelMap3.wid;
+											num19 = num13 * num20;
+											int num18 = num12 + num19;
+											num19 = collisions.length;
+											if (num18 >= num19)
+											{
+												num18 = 0;
+											}
+											else
+											{
+												num18 = PseudocodeHelper.ReadMem<int>(collisions.bytes, num18 << 2);
+											}
+											if ((num18 & 8) != 0)
+											{
+												num18 = num13 + 1;
+												if (num12 < 0)
+												{
+													flag6 = true;
+												}
+												else
+												{
+													num20 = levelMap3.wid;
+													if (num12 >= num20)
+													{
+														flag6 = true;
+													}
+													else if (num18 < 0)
+													{
+														flag6 = true;
+													}
+													else
+													{
+														num20 = levelMap3.hei;
+														if (num18 >= num20)
+														{
+															flag6 = true;
+														}
+														else
+														{
+															collisions = levelMap3.collisions;
+															int num21 = levelMap3.wid;
+															num20 = num18 * num21;
+															num19 = num12 + num20;
+															num20 = collisions.length;
+															if (num19 >= num20)
+															{
+																num19 = 0;
+															}
+															else
+															{
+																num19 = PseudocodeHelper.ReadMem<int>(collisions.bytes, num19 << 2);
+															}
+															flag6 = ((num19 & 1) != 0);
+														}
+													}
+												}
+												if (flag6)
+												{
+													num19 = num13 - 1;
+													if (num12 < 0)
+													{
+														flag7 = false;
+													}
+													else
+													{
+														int num21 = levelMap3.wid;
+														if (num12 >= num21)
+														{
+															flag7 = false;
+														}
+														else if (num19 < 0)
+														{
+															flag7 = false;
+														}
+														else
+														{
+															num21 = levelMap3.hei;
+															if (num19 >= num21)
+															{
+																flag7 = false;
+															}
+															else
+															{
+																collisions = levelMap3.collisions;
+																int num24 = levelMap3.wid;
+																num21 = num19 * num24;
+																num20 = num12 + num21;
+																num21 = collisions.length;
+																if (num20 >= num21)
+																{
+																	num20 = 0;
+																}
+																else
+																{
+																	num20 = PseudocodeHelper.ReadMem<int>(collisions.bytes, num20 << 2);
+																}
+																flag7 = ((num20 & 512) != 0);
+															}
+														}
+													}
+												}
+												else
+												{
+													flag7 = true;
+												}
+											}
+											else
+											{
+												flag7 = false;
+											}
+										}
+									}
+								}
+								goto IL_D1F;
+							}
+							flag7 = false;
+							goto IL_D1F;
+						}
+						else
+						{
+							flag6 = true;
+							flag8 = flag6;
+						}
+						IL_D99:
+						if (flag8)
+						{
+							flag6 = false;
+							flag3 = flag6;
+						}
+						else
+						{
+							int num18 = num13 - i;
+							num19 = num12 - num7;
+							int num20;
+							if (num18 < 0)
+							{
+								num20 = -num18;
+							}
+							else
+							{
+								num20 = num18;
+							}
+							int num21;
+							if (num19 < 0)
+							{
+								num21 = -num19;
+							}
+							else
+							{
+								num21 = num19;
+							}
+							flag6 = (num20 > num21);
+							if (flag6)
+							{
+								num14 = i;
+								num15 = num7;
+								num16 = num13;
+								num17 = num12;
+							}
+							if (num16 < num14)
+							{
+								int num33 = num14;
+								num14 = num16;
+								num16 = num33;
+								int num34 = num15;
+								num15 = num17;
+								num17 = num34;
+							}
+							num21 = num16 - num14;
+							int num24 = num17 - num15;
+							int num25;
+							if (num24 < 0)
+							{
+								num25 = -num24;
+							}
+							else
+							{
+								num25 = num24;
+							}
+							double num26 = (double)num25;
+							num25 = Lib_std.math_floor.Invoke(num26);
+							num26 = (double)num21 / 2.0;
+							int num27 = Lib_std.math_floor.Invoke(num26);
+							int num28 = num15;
+							int num29;
+							if (num15 < num17)
+							{
+								num29 = 1;
+							}
+							else
+							{
+								num29 = -1;
+							}
+							bool flag7 = true;
+							int j;
+							int num30;
+							if (flag6)
+							{
+								j = num14;
+								num30 = num16 + 1;
+								while (j < num30)
+								{
+									int num31 = j;
+									j++;
+									LevelMap levelMap2;
+									if (entity2._level == null)
+									{
+										levelMap2 = null;
+									}
+									else
+									{
+										levelMap2 = entity2._level.map;
+									}
+									if (num28 < 0)
+									{
+										goto IL_1CEA;
+									}
+									int num35 = levelMap2.wid;
+									if (num28 >= num35 || num31 < 0)
+									{
+										goto IL_1CEA;
+									}
+									num35 = levelMap2.hei;
+									if (num31 >= num35)
+									{
+										goto IL_1CEA;
+									}
+									int num32;
+									bool flag9;
+									if (num28 < 0)
+									{
+										flag9 = true;
+									}
+									else
+									{
+										num35 = levelMap2.wid;
+										if (num28 >= num35)
+										{
+											flag9 = true;
+										}
+										else if (num31 < 0)
+										{
+											flag9 = true;
+										}
+										else
+										{
+											num35 = levelMap2.hei;
+											if (num31 >= num35)
+											{
+												flag9 = true;
+											}
+											else
+											{
+												collisions = levelMap2.collisions;
+												int num36 = levelMap2.wid;
+												num35 = num31 * num36;
+												num32 = num28 + num35;
+												num35 = collisions.length;
+												if (num32 >= num35)
+												{
+													num32 = 0;
+												}
+												else
+												{
+													num32 = PseudocodeHelper.ReadMem<int>(collisions.bytes, num32 << 2);
+												}
+												flag9 = ((num32 & 1) != 0);
+											}
+										}
+									}
+									bool flag10;
+									if (!flag9)
+									{
+										flag10 = true;
+									}
+									else
+									{
+										collisions = levelMap2.collisions;
+										int num36 = levelMap2.wid;
+										num35 = num31 * num36;
+										num32 = num28 + num35;
+										num35 = collisions.length;
+										if (num32 >= num35)
+										{
+											num32 = 0;
+										}
+										else
+										{
+											num32 = PseudocodeHelper.ReadMem<int>(collisions.bytes, num32 << 2);
+										}
+										if ((num32 & 4) == 0)
+										{
+											goto IL_1CEA;
+										}
+										flag10 = true;
+									}
+									IL_1787:
+									bool flag11;
+									if (!flag10)
+									{
+										LevelMap levelMap3;
+										if (entity2._level == null)
+										{
+											levelMap3 = null;
+										}
+										else
+										{
+											levelMap3 = entity2._level.map;
+										}
+										num32 = num11;
+										int num37 = levelMap3.wid;
+										int num36 = num31 * num37;
+										num35 = num28 + num36;
+										num37 = levelMap3.fastSpots.length;
+										if (num35 >= num37)
+										{
+											flag11 = false;
+										}
+										else
+										{
+											ArrayObj fastSpots = levelMap3.fastSpots;
+											num37 = fastSpots.length;
+											SpotFlags spotFlags;
+											if (num35 >= num37)
+											{
+												spotFlags = null;
+											}
+											else
+											{
+												spotFlags = fastSpots.array[num35];
+											}
+											if (spotFlags == null)
+											{
+												flag11 = false;
+											}
+											else
+											{
+												num37 = 31;
+												if (num37 < num32)
+												{
+													num36 = spotFlags.high;
+												}
+												else
+												{
+													num36 = spotFlags.low;
+												}
+												num37 = 1;
+												num37 <<= num32;
+												flag11 = ((num36 & num37) != 0);
+											}
+										}
+									}
+									else
+									{
+										flag11 = true;
+									}
+									if (!flag11)
+									{
+										flag11 = false;
+										flag7 = flag11;
+										IL_1815:
+										flag3 = flag7;
+										goto IL_1824;
+									}
+									num32 = num27 - num25;
+									num27 = num32;
+									if (num32 >= 0)
+									{
+										continue;
+									}
+									num28 += num29;
+									num27 += num21;
+									continue;
+									IL_1CEA:
+									if (flag2)
+									{
+										LevelMap levelMap3;
+										if (entity2._level == null)
+										{
+											levelMap3 = null;
+										}
+										else
+										{
+											levelMap3 = entity2._level.map;
+										}
+										if (num28 < 0)
+										{
+											flag10 = false;
+										}
+										else
+										{
+											num35 = levelMap3.wid;
+											if (num28 >= num35)
+											{
+												flag10 = false;
+											}
+											else if (num31 < 0)
+											{
+												flag10 = false;
+											}
+											else
+											{
+												num35 = levelMap3.hei;
+												if (num31 >= num35)
+												{
+													flag10 = false;
+												}
+												else
+												{
+													collisions = levelMap3.collisions;
+													int num36 = levelMap3.wid;
+													num35 = num31 * num36;
+													num32 = num28 + num35;
+													num35 = collisions.length;
+													if (num32 >= num35)
+													{
+														num32 = 0;
+													}
+													else
+													{
+														num32 = PseudocodeHelper.ReadMem<int>(collisions.bytes, num32 << 2);
+													}
+													if ((num32 & 8) != 0)
+													{
+														num32 = num31 + 1;
+														if (num28 < 0)
+														{
+															flag9 = true;
+														}
+														else
+														{
+															num36 = levelMap3.wid;
+															if (num28 >= num36)
+															{
+																flag9 = true;
+															}
+															else if (num32 < 0)
+															{
+																flag9 = true;
+															}
+															else
+															{
+																num36 = levelMap3.hei;
+																if (num32 >= num36)
+																{
+																	flag9 = true;
+																}
+																else
+																{
+																	collisions = levelMap3.collisions;
+																	int num37 = levelMap3.wid;
+																	num36 = num32 * num37;
+																	num35 = num28 + num36;
+																	num36 = collisions.length;
+																	if (num35 >= num36)
+																	{
+																		num35 = 0;
+																	}
+																	else
+																	{
+																		num35 = PseudocodeHelper.ReadMem<int>(collisions.bytes, num35 << 2);
+																	}
+																	flag9 = ((num35 & 1) != 0);
+																}
+															}
+														}
+														if (flag9)
+														{
+															num35 = num31 - 1;
+															if (num28 < 0)
+															{
+																flag10 = false;
+															}
+															else
+															{
+																int num37 = levelMap3.wid;
+																if (num28 >= num37)
+																{
+																	flag10 = false;
+																}
+																else if (num35 < 0)
+																{
+																	flag10 = false;
+																}
+																else
+																{
+																	num37 = levelMap3.hei;
+																	if (num35 >= num37)
+																	{
+																		flag10 = false;
+																	}
+																	else
+																	{
+																		collisions = levelMap3.collisions;
+																		int wid = levelMap3.wid;
+																		num37 = num35 * wid;
+																		num36 = num28 + num37;
+																		num37 = collisions.length;
+																		if (num36 >= num37)
+																		{
+																			num36 = 0;
+																		}
+																		else
+																		{
+																			num36 = PseudocodeHelper.ReadMem<int>(collisions.bytes, num36 << 2);
+																		}
+																		flag10 = ((num36 & 512) != 0);
+																	}
+																}
+															}
+														}
+														else
+														{
+															flag10 = true;
+														}
+													}
+													else
+													{
+														flag10 = false;
+													}
+												}
+											}
+										}
+										goto IL_1787;
+									}
+									flag10 = false;
+									goto IL_1787;
+								}
+								goto IL_1815;
+							}
+							j = num14;
+							num30 = num16 + 1;
+							while (j < num30)
+							{
+								int num31 = j;
+								j++;
+								LevelMap levelMap2;
+								if (entity2._level == null)
+								{
+									levelMap2 = null;
+								}
+								else
+								{
+									levelMap2 = entity2._level.map;
+								}
+								if (num31 < 0)
+								{
+									goto IL_20AB;
+								}
+								int num35 = levelMap2.wid;
+								if (num31 >= num35 || num28 < 0)
+								{
+									goto IL_20AB;
+								}
+								num35 = levelMap2.hei;
+								if (num28 >= num35)
+								{
+									goto IL_20AB;
+								}
+								int num32;
+								bool flag9;
+								if (num31 < 0)
+								{
+									flag9 = true;
+								}
+								else
+								{
+									num35 = levelMap2.wid;
+									if (num31 >= num35)
+									{
+										flag9 = true;
+									}
+									else if (num28 < 0)
+									{
+										flag9 = true;
+									}
+									else
+									{
+										num35 = levelMap2.hei;
+										if (num28 >= num35)
+										{
+											flag9 = true;
+										}
+										else
+										{
+											collisions = levelMap2.collisions;
+											int num36 = levelMap2.wid;
+											num35 = num28 * num36;
+											num32 = num31 + num35;
+											num35 = collisions.length;
+											if (num32 >= num35)
+											{
+												num32 = 0;
+											}
+											else
+											{
+												num32 = PseudocodeHelper.ReadMem<int>(collisions.bytes, num32 << 2);
+											}
+											flag9 = ((num32 & 1) != 0);
+										}
+									}
+								}
+								bool flag10;
+								if (!flag9)
+								{
+									flag10 = true;
+								}
+								else
+								{
+									collisions = levelMap2.collisions;
+									int num36 = levelMap2.wid;
+									num35 = num28 * num36;
+									num32 = num31 + num35;
+									num35 = collisions.length;
+									if (num32 >= num35)
+									{
+										num32 = 0;
+									}
+									else
+									{
+										num32 = PseudocodeHelper.ReadMem<int>(collisions.bytes, num32 << 2);
+									}
+									if ((num32 & 4) == 0)
+									{
+										goto IL_20AB;
+									}
+									flag10 = true;
+								}
+								IL_1C32:
+								bool flag11;
+								if (!flag10)
+								{
+									LevelMap levelMap3;
+									if (entity2._level == null)
+									{
+										levelMap3 = null;
+									}
+									else
+									{
+										levelMap3 = entity2._level.map;
+									}
+									num32 = num11;
+									int num37 = levelMap3.wid;
+									int num36 = num28 * num37;
+									num35 = num31 + num36;
+									num37 = levelMap3.fastSpots.length;
+									if (num35 >= num37)
+									{
+										flag11 = false;
+									}
+									else
+									{
+										ArrayObj fastSpots = levelMap3.fastSpots;
+										num37 = fastSpots.length;
+										SpotFlags spotFlags;
+										if (num35 >= num37)
+										{
+											spotFlags = null;
+										}
+										else
+										{
+											spotFlags = fastSpots.array[num35];
+										}
+										if (spotFlags == null)
+										{
+											flag11 = false;
+										}
+										else
+										{
+											num37 = 31;
+											if (num37 < num32)
+											{
+												num36 = spotFlags.high;
+											}
+											else
+											{
+												num36 = spotFlags.low;
+											}
+											num37 = 1;
+											num37 <<= num32;
+											flag11 = ((num36 & num37) != 0);
+										}
+									}
+								}
+								else
+								{
+									flag11 = true;
+								}
+								if (!flag11)
+								{
+									flag11 = false;
+									flag7 = flag11;
+									flag3 = flag7;
+									goto IL_1824;
+								}
+								num32 = num27 - num25;
+								num27 = num32;
+								if (num32 >= 0)
+								{
+									continue;
+								}
+								num28 += num29;
+								num27 += num21;
+								continue;
+								IL_20AB:
+								if (flag2)
+								{
+									LevelMap levelMap3;
+									if (entity2._level == null)
+									{
+										levelMap3 = null;
+									}
+									else
+									{
+										levelMap3 = entity2._level.map;
+									}
+									if (num31 < 0)
+									{
+										flag10 = false;
+									}
+									else
+									{
+										num35 = levelMap3.wid;
+										if (num31 >= num35)
+										{
+											flag10 = false;
+										}
+										else if (num28 < 0)
+										{
+											flag10 = false;
+										}
+										else
+										{
+											num35 = levelMap3.hei;
+											if (num28 >= num35)
+											{
+												flag10 = false;
+											}
+											else
+											{
+												collisions = levelMap3.collisions;
+												int num36 = levelMap3.wid;
+												num35 = num28 * num36;
+												num32 = num31 + num35;
+												num35 = collisions.length;
+												if (num32 >= num35)
+												{
+													num32 = 0;
+												}
+												else
+												{
+													num32 = PseudocodeHelper.ReadMem<int>(collisions.bytes, num32 << 2);
+												}
+												if ((num32 & 8) != 0)
+												{
+													num32 = num28 + 1;
+													if (num31 < 0)
+													{
+														flag9 = true;
+													}
+													else
+													{
+														num36 = levelMap3.wid;
+														if (num31 >= num36)
+														{
+															flag9 = true;
+														}
+														else if (num32 < 0)
+														{
+															flag9 = true;
+														}
+														else
+														{
+															num36 = levelMap3.hei;
+															if (num32 >= num36)
+															{
+																flag9 = true;
+															}
+															else
+															{
+																collisions = levelMap3.collisions;
+																int num37 = levelMap3.wid;
+																num36 = num32 * num37;
+																num35 = num31 + num36;
+																num36 = collisions.length;
+																if (num35 >= num36)
+																{
+																	num35 = 0;
+																}
+																else
+																{
+																	num35 = PseudocodeHelper.ReadMem<int>(collisions.bytes, num35 << 2);
+																}
+																flag9 = ((num35 & 1) != 0);
+															}
+														}
+													}
+													if (flag9)
+													{
+														num35 = num28 - 1;
+														if (num31 < 0)
+														{
+															flag10 = false;
+														}
+														else
+														{
+															int num37 = levelMap3.wid;
+															if (num31 >= num37)
+															{
+																flag10 = false;
+															}
+															else if (num35 < 0)
+															{
+																flag10 = false;
+															}
+															else
+															{
+																num37 = levelMap3.hei;
+																if (num35 >= num37)
+																{
+																	flag10 = false;
+																}
+																else
+																{
+																	collisions = levelMap3.collisions;
+																	int wid = levelMap3.wid;
+																	num37 = num35 * wid;
+																	num36 = num31 + num37;
+																	num37 = collisions.length;
+																	if (num36 >= num37)
+																	{
+																		num36 = 0;
+																	}
+																	else
+																	{
+																		num36 = PseudocodeHelper.ReadMem<int>(collisions.bytes, num36 << 2);
+																	}
+																	flag10 = ((num36 & 512) != 0);
+																}
+															}
+														}
+													}
+													else
+													{
+														flag10 = true;
+													}
+												}
+												else
+												{
+													flag10 = false;
+												}
+											}
+										}
+									}
+									goto IL_1C32;
+								}
+								flag10 = false;
+								goto IL_1C32;
+							}
+							flag3 = flag7;
+						}
+						IL_1824:
+						goto IL_1EC;
+						IL_F41:
+						if (flag2)
+						{
+							LevelMap levelMap2;
+							if (owner3._level == null)
+							{
+								levelMap2 = null;
+							}
+							else
+							{
+								levelMap2 = owner3._level.map;
+							}
+							if (num7 < 0)
+							{
+								flag5 = false;
+							}
+							else
+							{
+								num19 = levelMap2.wid;
+								if (num7 >= num19)
+								{
+									flag5 = false;
+								}
+								else if (i < 0)
+								{
+									flag5 = false;
+								}
+								else
+								{
+									num19 = levelMap2.hei;
+									if (i >= num19)
+									{
+										flag5 = false;
+									}
+									else
+									{
+										collisions = levelMap2.collisions;
+										int num20 = levelMap2.wid;
+										num19 = i * num20;
+										int num18 = num7 + num19;
+										num19 = collisions.length;
+										if (num18 >= num19)
+										{
+											num18 = 0;
+										}
+										else
+										{
+											num18 = PseudocodeHelper.ReadMem<int>(collisions.bytes, num18 << 2);
+										}
+										if ((num18 & 8) != 0)
+										{
+											num18 = i + 1;
+											if (num7 < 0)
+											{
+												flag4 = true;
+											}
+											else
+											{
+												num20 = levelMap2.wid;
+												if (num7 >= num20)
+												{
+													flag4 = true;
+												}
+												else if (num18 < 0)
+												{
+													flag4 = true;
+												}
+												else
+												{
+													num20 = levelMap2.hei;
+													if (num18 >= num20)
+													{
+														flag4 = true;
+													}
+													else
+													{
+														collisions = levelMap2.collisions;
+														int num21 = levelMap2.wid;
+														num20 = num18 * num21;
+														num19 = num7 + num20;
+														num20 = collisions.length;
+														if (num19 >= num20)
+														{
+															num19 = 0;
+														}
+														else
+														{
+															num19 = PseudocodeHelper.ReadMem<int>(collisions.bytes, num19 << 2);
+														}
+														flag4 = ((num19 & 1) != 0);
+													}
+												}
+											}
+											if (flag4)
+											{
+												num19 = i - 1;
+												if (num7 < 0)
+												{
+													flag5 = false;
+												}
+												else
+												{
+													int num21 = levelMap2.wid;
+													if (num7 >= num21)
+													{
+														flag5 = false;
+													}
+													else if (num19 < 0)
+													{
+														flag5 = false;
+													}
+													else
+													{
+														num21 = levelMap2.hei;
+														if (num19 >= num21)
+														{
+															flag5 = false;
+														}
+														else
+														{
+															collisions = levelMap2.collisions;
+															int num24 = levelMap2.wid;
+															num21 = num19 * num24;
+															num20 = num7 + num21;
+															num21 = collisions.length;
+															if (num20 >= num21)
+															{
+																num20 = 0;
+															}
+															else
+															{
+																num20 = PseudocodeHelper.ReadMem<int>(collisions.bytes, num20 << 2);
+															}
+															flag5 = ((num20 & 512) != 0);
+														}
+													}
+												}
+											}
+											else
+											{
+												flag5 = true;
+											}
+										}
+										else
+										{
+											flag5 = false;
+										}
+									}
+								}
+							}
+							goto IL_C24;
+						}
+						flag5 = false;
+						goto IL_C24;
+						IL_8DA:
+						if (owner3._level == null)
+						{
+							levelMap = null;
+						}
+						else
+						{
+							levelMap = owner3._level.map;
+						}
+						num7 = entity.cx;
+						i = entity.cy;
+						if (num7 < 0)
+						{
+							flag3 = true;
+							goto IL_922;
+						}
+						num13 = levelMap.wid;
+						if (num7 >= num13)
+						{
+							flag3 = true;
+							goto IL_922;
+						}
+						if (i < 0)
+						{
+							flag3 = true;
+							goto IL_922;
+						}
+						num13 = levelMap.hei;
+						if (i >= num13)
+						{
+							flag3 = true;
+							goto IL_922;
+						}
+						collisions = levelMap.collisions;
+						num14 = levelMap.wid;
+						num13 = i * num14;
+						num12 = num7 + num13;
+						num13 = collisions.length;
+						if (num12 >= num13)
+						{
+							num12 = 0;
+						}
+						else
+						{
+							num12 = PseudocodeHelper.ReadMem<int>(collisions.bytes, num12 << 2);
+						}
+						flag3 = ((num12 & 1) != 0);
+						goto IL_922;
+					}
+				}
+				IL_1EC:
+				if (flag3)
+				{
+					double num38 = (double)num;
+					if (num10 < num38)
+					{
+						if (num5 < num10)
+						{
+							num5 = num10 + 2.0;
+						}
+					}
+				}
+			}
+			if (num5 == 0.0)
+			{
+				num7 = base.owner.cx;
+				i = 0;
+				num12 = num;
+			}
+			else
+			{
+				num = (int)num5;
+				num7 = base.owner.cx;
+				i = 0;
+				num12 = num;
+			}
+			while (i < num12)
+			{
+				int num39 = i;
+				i++;
+				int num14 = base.owner.cx;
+				int num15 = num39 * base.owner.dir;
+				num14 = (int)((double)(num14 + num15));
+				LevelMap levelMap = base.owner._level.map;
+				if (num14 < 0)
+				{
+					flag = true;
+				}
+				else
+				{
+					int num16 = levelMap.wid;
+					if (num14 >= num16)
+					{
+						flag = true;
+					}
+					else if (num9 < 0)
+					{
+						flag = true;
+					}
+					else
+					{
+						num16 = levelMap.hei;
+						if (num9 >= num16)
+						{
+							flag = true;
+						}
+						else
+						{
+							ArrayBytes_Int collisions = levelMap.collisions;
+							int num17 = levelMap.wid;
+							num16 = num9 * num17;
+							num15 = num14 + num16;
+							num16 = collisions.length;
+							if (num15 >= num16)
+							{
+								num15 = 0;
+							}
+							else
+							{
+								num15 = PseudocodeHelper.ReadMem<int>(collisions.bytes, num15 << 2);
+							}
+							flag = ((num15 & 1) != 0);
+						}
+					}
+				}
+				if (!flag)
+				{
+					num7 = num14;
+				}
+				else
+				{
+					LevelMap levelMap2 = base.owner._level.map;
+					num15 = num9 - 1;
+					if (num14 < 0)
+					{
+						flag = true;
+					}
+					else
+					{
+						int num17 = levelMap2.wid;
+						if (num14 >= num17)
+						{
+							flag = true;
+						}
+						else if (num15 < 0)
+						{
+							flag = true;
+						}
+						else
+						{
+							num17 = levelMap2.hei;
+							if (num15 >= num17)
+							{
+								flag = true;
+							}
+							else
+							{
+								ArrayBytes_Int collisions = levelMap2.collisions;
+								int num18 = levelMap2.wid;
+								num17 = num15 * num18;
+								int num16 = num14 + num17;
+								num17 = collisions.length;
+								if (num16 >= num17)
+								{
+									num16 = 0;
+								}
+								else
+								{
+									num16 = PseudocodeHelper.ReadMem<int>(collisions.bytes, num16 << 2);
+								}
+								flag = ((num16 & 1) != 0);
+							}
+						}
+					}
+					if (flag)
+					{
+						break;
+					}
+					num9 += -1;
+					num7 = num14;
+				}
+			}
+			this.currentEnd = num7;
+			base.owner.dy = 0.0;
+			base.owner.bdy = 0.0;
+			if (this.switcher == -1)
+			{
+				this.switcher = 1;
+			}
+			else
+			{
+				this.switcher = -1;
+			}
+			i = 8;
+			i = _Std.random(i);
+			owner = base.owner;
+			owner2 = base.owner;
+			Fx fx = base.owner._level.fx;
+			double fromX = ((double)owner.cx + owner.xr) * 24.0;
+			double fromY = ((double)owner2.cy + owner2.yr) * 24.0 - owner2.hei * 0.5;
+			double toX = ((double)num7 + num4) * 24.0;
+			double toY = (double)((num9 + 1) * 24) - base.owner.hei * 0.5;
+			int color = base.get_curSkillInf().fxProps.fxInnerColor;
+			flag = false;
+			flag2 = false;
+			fx.entityTeleport(fromX, fromY, toX, toY, color, ref flag, ref flag2, null);
+			owner3 = base.owner;
+			Hero owner4 = base.owner;
+			Fx fx2 = base.owner._level.fx;
+			double fx3 = ((double)owner3.cx + owner3.xr) * 24.0;
+			double num40 = ((double)owner4.cy + owner4.yr) * 24.0 - owner4.hei * 0.5;
+			num13 = this.switcher;
+			double fy = num40 + (double)(i * num13);
+			double tx = ((double)num7 + num4) * 24.0;
+			double num41 = (double)((num9 + 1) * 24) - base.owner.hei * 0.5;
+			num13 = this.switcher;
+			fx2.katanaLine(fx3, fy, tx, num41 - (double)(i * num13), 16761905, 7020459, null, null);
+			Hero owner5 = base.owner;
+			Hero owner6 = base.owner;
+			Fx fx4 = base.owner._level.fx;
+			double fx5 = ((double)owner5.cx + owner5.xr) * 24.0;
+			double num42 = ((double)owner6.cy + owner6.yr) * 24.0 - owner6.hei * 0.5;
+			num13 = this.switcher;
+			double fy2 = num42 + (double)(i * num13);
+			double tx2 = ((double)num7 + num4) * 24.0;
+			double num43 = (double)((num9 + 1) * 24) - base.owner.hei * 0.5;
+			num13 = this.switcher;
+			fx4.katanaLine(fx5, fy2, tx2, num43 - (double)(i * num13), 16777215, 16777215, 1, null);
+			if (!base.owner.safeTpTo(num7, num9, num4, 1.0, true))
+			{
+				return;
+			}
+		}
+
+		// Token: 0x06011416 RID: 70678 RVA: 0x0170BB00 File Offset: 0x01709D00
+		[HashlinkFIndex(35523)]
+		public bool isWeaponButtonDown()
+		{
+			return base.owner.weaponsManager.hasButtonDownForWeapon(this);
+		}
+
+		// Token: 0x06011417 RID: 70679 RVA: 0x0170BB28 File Offset: 0x01709D28
+		[HashlinkFIndex(35524)]
+		public override void interrupt()
+		{
+			if (!this.nextIsChargeAtk)
+			{
+				base.interrupt();
+				return;
+			}
+			this.dynamicChargeExecute();
+			base.interrupt();
+		}
+
+		// Token: 0x06011418 RID: 70680 RVA: 0x0170BB68 File Offset: 0x01709D68
+		[HashlinkFIndex(35525)]
+		public void dynamicChargeExecute()
+		{
+			if (!this.nextIsChargeAtk)
+			{
+				return;
+			}
+			base.owner.lockControlFromSkill(base.get_curSkillInf().lockCtrlAfter);
+			Cooldown cd = base.get_curSkill().cd;
+			Cooldown cd2 = base.get_curSkill().cd;
+			int num = base.get_curSkillInf().hitFrame;
+			double num2 = (double)num / 30.0;
+			double num3 = cd2.baseFps;
+			double num4 = num2 * num3;
+			HlAction hlAction = null;
+			num3 = num4 * 1000.0;
+			num3 = Lib_std.math_ffloor.Invoke(num3) / 1000.0;
+			num2 = num3;
+			num = 524288000;
+			dc.libs._Cooldown.CdInst cdInst = cd._getCdObject(num);
+			double num5;
+			if (cdInst != null)
+			{
+				num5 = cdInst.frames;
+				if (num3 < num5 && false)
+				{
+					goto IL_14D;
+				}
+			}
+			num5 = 0.0;
+			if (num5 > num3)
+			{
+				if (cdInst != null)
+				{
+					bool flag = cd.cdList.remove(cdInst);
+					cdInst.frames = 0.0;
+					cdInst.cb = null;
+					IntMap fastCheck = cd.fastCheck;
+					num = cdInst.k;
+					flag = fastCheck.remove(num);
+				}
+			}
+			else
+			{
+				IntMap fastCheck2 = cd.fastCheck;
+				num = 524288000;
+				object value = (object)1;
+				fastCheck2.set(num, value);
+				if (cdInst != null)
+				{
+					cdInst.frames = num3;
+				}
+				else
+				{
+					ArrayObj cdList = cd.cdList;
+					num = 524288000;
+					num = cdList.push(new dc.libs._Cooldown.CdInst(num, num3));
+				}
+			}
+			if (hlAction != null)
+			{
+				num5 = 0.0;
+				if (num5 > num2)
+				{
+					hlAction.Invoke();
+				}
+				else
+				{
+					num = 524288000;
+					dc.libs._Cooldown.CdInst cdInst2 = cd._getCdObject(num);
+					if (cdInst2 == null)
+					{
+						num = 524288000;
+						ref int ptr = ref num;
+						String b = _String.__alloc__(Lib_std.itos.Invoke(num, ref ptr), num);
+						String a = _String.__add__(_String.__add__("cannot bind onComplete(", b), "): cooldown ");
+						num = 524288000;
+						ptr = ref num;
+						throw _String.__add__(_String.__add__(a, _String.__alloc__(Lib_std.itos.Invoke(num, ref ptr), num)), " isn't running");
+					}
+					cdInst2.cb = hlAction;
+				}
+			}
+			IL_14D:
+			Cooldown cd3 = base.get_curSkill().cd;
+			num = 524288000;
+			cdInst = cd3._getCdObject(num);
+			if (cdInst == null)
+			{
+				num = 524288000;
+				ref int ptr = ref num;
+				String b = _String.__alloc__(Lib_std.itos.Invoke(num, ref ptr), num);
+				String a2 = _String.__add__(_String.__add__("cannot bind onComplete(", b), "): cooldown ");
+				num = 524288000;
+				ptr = ref num;
+				throw _String.__add__(_String.__add__(a2, _String.__alloc__(Lib_std.itos.Invoke(num, ref ptr), num)), " isn't running");
+			}
+			HlFunc<bool> hlFunc = new HlFunc<bool>(this.onExecute);
+			if (hlFunc == null)
+			{
+				hlAction = null;
+				cdInst.cb = hlAction;
+				return;
+			}
+			hlAction = PseudocodeHelper.CreateClosure<HlAction>(hlFunc, methodof(_Credits.ArrowFunction___inst_construct___10395(HlFunc<bool>)).MethodHandle);
+			cdInst.cb = hlAction;
+		}
+
+		// Token: 0x06011419 RID: 70681 RVA: 0x0170BF30 File Offset: 0x0170A130
+		[HashlinkFIndex(35526)]
+		public override void fixedUpdate()
+		{
+			base.fixedUpdate();
+			bool flag = base.isCharging();
+			int num;
+			if (!flag)
+			{
+				flag = this.isWeaponButtonDown();
+				if (flag)
+				{
+					flag = base.owner.isChargingSkill();
+					if (!flag && base.get_cycle() != 0)
+					{
+						flag = true;
+						this.nextIsChargeAtk = flag;
+						num = base.set_cycle(3);
+					}
+				}
+			}
+			flag = base.isCharging();
+			if (!flag)
+			{
+				flag = this.isWeaponButtonDown();
+				if (!flag)
+				{
+					flag = base.owner.isChargingSkill();
+					if (!flag && base.get_cycle() == 3)
+					{
+						base.cancelChain();
+						flag = false;
+						this.nextIsChargeAtk = flag;
+						num = base.set_cycle(0);
+					}
+				}
+			}
+			flag = this.nextIsChargeAtk;
+			double num2;
+			double num3;
+			if (flag)
+			{
+				flag = base.isCharging();
+				if (flag)
+				{
+					flag = base.isCharging();
+					if (flag)
+					{
+						num = this.katanaChargeF + 1;
+						this.katanaChargeF = num;
+					}
+					num2 = (double)this.katanaChargeF;
+					num3 = 30.0;
+					num2 /= num3;
+					num3 = base.get_curSkillInf().props.threshold;
+					num2 /= num3;
+					if (num2 < 0.0)
+					{
+						num3 = 0.0;
+					}
+					else
+					{
+						double num4 = 1.0;
+						if (num4 < num2)
+						{
+							num3 = 1.0;
+						}
+						else
+						{
+							num3 = num2;
+						}
+					}
+					if (num3 > 1.0)
+					{
+						flag = this.onExecute();
+						this.katanaChargeF = 0;
+						base.cancelChain();
+						AnimManager animManager = base.owner.spr.get_anim().play("AtkKatanaA", null, null).stopOnLastFrame(null);
+					}
+				}
+			}
+			num = this.mobsToHit.length;
+			bool ptr;
+			if (0 < num)
+			{
+				flag = base.owner.hasSkin(null, "KatanaZero");
+				if (flag)
+				{
+					num = 0;
+					ArrayObj arrayObj = this.mobsToHit;
+					for (;;)
+					{
+						int length = arrayObj.length;
+						if (num >= length)
+						{
+							break;
+						}
+						length = arrayObj.length;
+						if (num >= length)
+						{
+							dc.en.Mob m = null;
+							num++;
+							this.playHitFx(m);
+							this.tryHitDash(m, null);
+						}
+						else
+						{
+							dc.en.Mob m = arrayObj.array[num];
+							num++;
+							this.playHitFx(m);
+							this.tryHitDash(m, null);
+						}
+					}
+					IntPtr typeFromHandle = typeof(dc.en.Mob);
+					arrayObj = _AssetsLibManager.ArrowFunction___inst_construct___6000(Lib_std.alloc_array.Invoke(typeFromHandle, 0));
+					this.mobsToHit = arrayObj;
+				}
+				else
+				{
+					num = this.hitMobEveryF + -1;
+					this.hitMobEveryF = num;
+					if (this.hitMobEveryF == 2)
+					{
+						ArrayObj arrayObj = this.mobsToHit;
+						num = 0;
+						int length2 = arrayObj.length;
+						if (num >= length2)
+						{
+							dc.en.Mob m = null;
+							this.playHitFx(m);
+						}
+						else
+						{
+							dc.en.Mob m = arrayObj.array[num];
+							this.playHitFx(m);
+						}
+					}
+					num = this.hitMobEveryF;
+					if (0 >= num)
+					{
+						this.hitMobEveryF = 3;
+						ArrayObj arrayObj = this.mobsToHit;
+						num = 0;
+						int length2 = arrayObj.length;
+						if (num >= length2)
+						{
+							dc.en.Mob m = null;
+							flag = true;
+							ptr = ref flag;
+							this.tryHitDash(m, ref ptr);
+							arrayObj = (ArrayObj)this.mobsToHit.splice(0, 1);
+						}
+						else
+						{
+							dc.en.Mob m = arrayObj.array[num];
+							flag = true;
+							ptr = ref flag;
+							this.tryHitDash(m, ref ptr);
+							arrayObj = (ArrayObj)this.mobsToHit.splice(0, 1);
+						}
+					}
+				}
+			}
+			bool flag2 = base.owner.cd.fastCheck.exists(1038090240);
+			if (!flag2)
+			{
+				return;
+			}
+			Hero owner = base.owner;
+			num2 = 0.1;
+			owner.setAffectS(4, num2, null, null);
+			Entity owner2 = base.owner;
+			num2 = (double)1;
+			ref double alpha = ref num2;
+			num3 = 0.3;
+			ref double sec = ref num3;
+			flag2 = false;
+			ptr = ref flag2;
+			OnionSkin onionSkin = _OnionSkin.fromEntity(owner2, null, 12851455, ref alpha, ref sec, ref ptr, null, null);
+			base.owner._level.fx.tailLine(base.owner, 12851455, 0.6, 2.5, null, null, null);
+		}
+
+		// Token: 0x0601141A RID: 70682 RVA: 0x0170C4C8 File Offset: 0x0170A6C8
+		[HashlinkFIndex(35527)]
+		public void playHitFx(dc.en.Mob m)
+		{
+			IntPtr intPtr = Lib_std.alloc_bytes.Invoke(8);
+			int num = 0;
+			int num2 = num << 2;
+			PseudocodeHelper.WriteMem<int>(intPtr, num2, 0);
+			num++;
+			num2 = num << 2;
+			PseudocodeHelper.WriteMem<int>(intPtr, num2, -20);
+			num++;
+			ArrayBytes_Int offset = _ArrayBase.allocI32(intPtr, 2);
+			HSprite hsprite = base.owner._level.fx.playWeaponFx(m, "fxBeheadedKatanaSlash", null, offset, null, null);
+			double pi = dc.Math.Class.PI;
+			double rotation = _Math.random() * pi;
+			hsprite.posChanged = true;
+			hsprite.rotation = rotation;
+		}
+
+		// Token: 0x0601141B RID: 70683 RVA: 0x0170C584 File Offset: 0x0170A784
+		[HashlinkFIndex(35528)]
+		public void tryHitDash(dc.en.Mob m, ref bool slowMo)
+		{
+			bool flag = ref slowMo != null && slowMo;
+			ArrayObj strikeChain = base.wInfos.strikeChain;
+			int num = 3;
+			int length = strikeChain.length;
+			virtual_animId_animSpd_area_breachBonus_canCrit_charge_coolDown_critMul_dynamicCharge_earlyCombo_fxId_fxProps_glowColor_hitFrame_lockCtrlAfter_onionSkinFrame_onionSkinOffX_power_props_sfxCharge_sfxHit_sfxProps_sfxRelease_ forcedSkillInf;
+			if (num >= length)
+			{
+				forcedSkillInf = null;
+			}
+			else
+			{
+				forcedSkillInf = (virtual_animId_animSpd_area_breachBonus_canCrit_charge_coolDown_critMul_dynamicCharge_earlyCombo_fxId_fxProps_glowColor_hitFrame_lockCtrlAfter_onionSkinFrame_onionSkinOffX_power_props_sfxCharge_sfxHit_sfxProps_sfxRelease_)strikeChain.array[num];
+			}
+			AttackData attackData = _AttackUtils.createFromHeroWeapon(this, forcedSkillInf);
+			double num2 = attackData.dmgMultiplier + this.atkTpDmgMul;
+			attackData.dmgMultiplier = num2;
+			attackData.setTag(2, true);
+			_AttackUtils.hit(attackData, m);
+			if (!attackData.isSuccess())
+			{
+				return;
+			}
+			slowMo = null;
+			base.playHitSfx(null, null, ref slowMo, null, null);
+			num = m.life;
+			if (0 >= num || m.destroyed)
+			{
+				this.addDashKillWithoutHit();
+				if (flag)
+				{
+					Boot.Class.ME.slowMo(0.25, 0.2, 0, null);
+				}
+			}
+			Hero owner = base.owner;
+			double num3;
+			double num4;
+			if (m == null)
+			{
+				num3 = 99999.0;
+				num2 = num3;
+			}
+			else if (m == null)
+			{
+				num4 = 99999.0;
+				num3 = num4;
+				num2 = Lib_std.math_sqrt.Invoke(num3);
+			}
+			else
+			{
+				num4 = 0.020833333333333332;
+				double num5 = (double)owner.cx + owner.xr - ((double)m.cx + m.xr);
+				double num6 = (double)owner.cy + owner.yr;
+				double hei = owner.hei;
+				double num7 = num6 - num4 * hei;
+				double num8 = (double)m.cy + m.yr;
+				double hei2 = m.hei;
+				double num9 = num7 - (num8 - num4 * hei2);
+				num3 = num5 * num5 + num9 * num9;
+				num2 = Lib_std.math_sqrt.Invoke(num3);
+			}
+			num4 = base.get_curSkillInf().area.width * 0.5;
+			if (num2 <= num4)
+			{
+				return;
+			}
+			num3 = (double)(-(double)base.owner.dir) * 0.2;
+			m.bump(num3, -0.1, null);
+		}
+
+		// Token: 0x0601141C RID: 70684 RVA: 0x0170C850 File Offset: 0x0170AA50
+		[HashlinkFIndex(35529)]
+		public void addDashKillWithoutHit()
+		{
+			int num = this.dashKillWithoutHitCount + 1;
+			this.dashKillWithoutHitCount = num;
+			if ((double)this.dashKillWithoutHitCount <= ((virtual_color_comment_id_tile_value0_value1_)Data.Class.truelle.byId.get("KatanaKillWithoutHit")).value0)
+			{
+				return;
+			}
+			if (base.owner._level.game.user.itemMeta.hasRevealedItem("KatanaZero"))
+			{
+				return;
+			}
+			if (base.owner._level.game.hero.hasBlueprint("KatanaZero"))
+			{
+				return;
+			}
+			bool flag = base.owner._level.game.user.itemMeta.unlockItem("KatanaZero");
+			base.owner._level.game.log.blueprint("KatanaZero", "Enigma", true, false);
+			base.owner._level.viewport.shakeS(0.4, 0.4, 0.4);
+			Hero owner = base.owner;
+			Hero owner2 = base.owner;
+			base.owner._level.fx.dust(((double)owner.cy + owner.yr) * 24.0 - owner.hei * 0.5, ((double)owner2.cy + owner2.yr) * 24.0 - owner2.hei * 0.5, 48.0, 60, 16777215);
+			double? num2 = 0.3;
+			double? num3 = (double)1;
+			double num4;
+			if (num3 == null)
+			{
+				num4 = 0.1;
+				num3 = num4;
+			}
+			if (num2 == null)
+			{
+				num4 = 0.35;
+				num2 = num4;
+			}
+			Fx fx = base.owner._level.fx;
+			num4 = num2;
+			double num5 = num3;
+			double fadeOutS = num3 * 1.5;
+			fx.customMask(16777215, num4, 0.04, num5, fadeOutS, null);
+			Hero owner3 = base.owner;
+			Hero owner4 = base.owner;
+			Fx fx2 = base.owner._level.fx;
+			num4 = ((double)owner3.cx + owner3.xr) * 24.0 + (double)(-(double)base.owner.dir * 10 * 24);
+			double fxDir = ((double)owner4.cy + owner4.yr) * 24.0 - owner4.hei * 0.5;
+			num = base.owner.dir;
+			if (base.owner.dir == 1)
+			{
+				num5 = 0.0;
+				fx2.katanaZeroHitLine(num4, fxDir, num, num5);
+				return;
+			}
+			num5 = dc.Math.Class.PI;
+			fx2.katanaZeroHitLine(num4, fxDir, num, num5);
+		}
+
+		// Token: 0x0601141D RID: 70685 RVA: 0x0170CC70 File Offset: 0x0170AE70
+		[HashlinkFIndex(35530)]
+		public void onOwnerAttackResultReceived(AttackData a)
+		{
+			this.dashKillWithoutHitCount = 0;
+		}
+
+		// Token: 0x0601141E RID: 70686 RVA: 0x0170CC90 File Offset: 0x0170AE90
+		[HashlinkFIndex(35531)]
+		public void cancelDashCharge()
+		{
+			this.interrupt();
+			this.nextIsChargeAtk = false;
+		}
+
+		// Token: 0x0601141F RID: 70687 RVA: 0x0170CCB4 File Offset: 0x0170AEB4
+		[HashlinkFIndex(35532)]
+		public override void dispose()
+		{
+			base.dispose();
+			base.owner.heroSignals.attackReceivedSignal.remove(new HlAction<AttackData>(this.onOwnerAttackResultReceived));
+			IntPtr typeFromHandle = typeof(dc.en.Mob);
+			ArrayObj mobsToHit = _AssetsLibManager.ArrowFunction___inst_construct___6000(Lib_std.alloc_array.Invoke(typeFromHandle, 0));
+			this.mobsToHit = mobsToHit;
+		}
+
+		// Token: 0x06011420 RID: 70688 RVA: 0x0170CD20 File Offset: 0x0170AF20
+		[HashlinkFIndex(36270)]
+		public static int ArrowFunction_onExecute_36270(dc.en.Mob a, dc.en.Mob b)
+		{
+			double num;
+			if (a.spr != null)
+			{
+				num = a.spr.x;
+			}
+			else
+			{
+				num = ((double)a.cx + a.xr) * 24.0;
+			}
+			double num2;
+			if (b.spr != null)
+			{
+				num2 = b.spr.x;
+			}
+			else
+			{
+				num2 = ((double)b.cx + b.xr) * 24.0;
+			}
+			if (num < num2)
+			{
+				return -1;
+			}
+			if (a.spr != null)
+			{
+				num = a.spr.x;
+			}
+			else
+			{
+				num = ((double)a.cx + a.xr) * 24.0;
+			}
+			if (b.spr != null)
+			{
+				num2 = b.spr.x;
+			}
+			else
+			{
+				num2 = ((double)b.cx + b.xr) * 24.0;
+			}
+			if (num2 < num)
+			{
+				return 1;
+			}
+			return 0;
+		}
+
+		// Token: 0x06011421 RID: 70689 RVA: 0x0170CE90 File Offset: 0x0170B090
+		[HashlinkFIndex(36272)]
+		public static int ArrowFunction_onExecute_36272(dc.en.Mob a, dc.en.Mob b)
+		{
+			double num;
+			if (a.spr != null)
+			{
+				num = a.spr.x;
+			}
+			else
+			{
+				num = ((double)a.cx + a.xr) * 24.0;
+			}
+			double num2;
+			if (b.spr != null)
+			{
+				num2 = b.spr.x;
+			}
+			else
+			{
+				num2 = ((double)b.cx + b.xr) * 24.0;
+			}
+			if (num2 < num)
+			{
+				return -1;
+			}
+			if (a.spr != null)
+			{
+				num = a.spr.x;
+			}
+			else
+			{
+				num = ((double)a.cx + a.xr) * 24.0;
+			}
+			if (b.spr != null)
+			{
+				num2 = b.spr.x;
+			}
+			else
+			{
+				num2 = ((double)b.cx + b.xr) * 24.0;
+			}
+			if (num < num2)
+			{
+				return 1;
+			}
+			return 0;
+		}
+
+		// Token: 0x06011422 RID: 70690 RVA: 0x0170D000 File Offset: 0x0170B200
+		[HashlinkFIndex(36271)]
+		public static int ArrowFunction_onExecute_36271(HlFunc<int, dc.en.Mob, dc.en.Mob> arg1, dynamic arg2, dynamic arg3)
+		{
+			dc.en.Mob mob = (dc.en.Mob)arg2;
+			dc.en.Mob mob2 = (dc.en.Mob)arg3;
+			return arg1.Invoke(mob, mob2);
+		}
+	}
+}

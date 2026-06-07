@@ -119,7 +119,6 @@ namespace SampleSimple
         {
             try
             {
-                // 如果已经存在，先移除旧的
                 if (_boostDisplayText != null)
                 {
                     _boostDisplayText.remove();

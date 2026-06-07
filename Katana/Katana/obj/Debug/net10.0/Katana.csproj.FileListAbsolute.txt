@@ -1,0 +1,13 @@
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\Katana\katana\bin\Debug\net10.0\Katana.deps.json
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\Katana\katana\bin\Debug\net10.0\Katana.dll
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\Katana\katana\bin\Debug\net10.0\Katana.pdb
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\Katana\katana\obj\Debug\net10.0\Katana.csproj.AssemblyReference.cache
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\Katana\katana\obj\Debug\net10.0\Katana.GeneratedMSBuildEditorConfig.editorconfig
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\Katana\katana\obj\Debug\net10.0\Katana.AssemblyInfoInputs.cache
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\Katana\katana\obj\Debug\net10.0\Katana.AssemblyInfo.cs
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\Katana\katana\obj\Debug\net10.0\Katana.csproj.CoreCompileInputs.cache
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\Katana\katana\obj\Debug\net10.0\Katana.sourcelink.json
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\Katana\katana\obj\Debug\net10.0\Katana.dll
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\Katana\katana\obj\Debug\net10.0\refint\Katana.dll
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\Katana\katana\obj\Debug\net10.0\Katana.pdb
+D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\Katana\katana\obj\Debug\net10.0\ref\Katana.dll
