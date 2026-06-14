@@ -1,6 +1,0 @@
-D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\ControlEnforcerMod\ControlEnforcerMod\obj\Debug\net10.0\ControlEnforcerMod.csproj.AssemblyReference.cache
-D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\ControlEnforcerMod\ControlEnforcerMod\obj\Debug\net10.0\ControlEnforcerMod.GeneratedMSBuildEditorConfig.editorconfig
-D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\ControlEnforcerMod\ControlEnforcerMod\obj\Debug\net10.0\ControlEnforcerMod.AssemblyInfoInputs.cache
-D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\ControlEnforcerMod\ControlEnforcerMod\obj\Debug\net10.0\ControlEnforcerMod.AssemblyInfo.cs
-D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\ControlEnforcerMod\ControlEnforcerMod\obj\Debug\net10.0\ControlEnforcerMod.csproj.CoreCompileInputs.cache
-D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\ControlEnforcerMod\ControlEnforcerMod\obj\Debug\net10.0\ControlEnforcerMod.sourcelink.json

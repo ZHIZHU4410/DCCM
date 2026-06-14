@@ -1,0 +1,17 @@
+# .NET 编译生成文件
+**/bin/
+**/obj/
+
+# VS Code
+.vs/
+.vscode/
+
+# 用户文件
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Windows
+Thumbs.db
+Desktop.ini

@@ -1,6 +1,0 @@
-d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\Boken\Boken\obj\Debug\net10.0\Boken.csproj.AssemblyReference.cache
-d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\Boken\Boken\obj\Debug\net10.0\Boken.GeneratedMSBuildEditorConfig.editorconfig
-d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\Boken\Boken\obj\Debug\net10.0\Boken.AssemblyInfoInputs.cache
-d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\Boken\Boken\obj\Debug\net10.0\Boken.AssemblyInfo.cs
-d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\Boken\Boken\obj\Debug\net10.0\Boken.csproj.CoreCompileInputs.cache
-d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\Boken\Boken\obj\Debug\net10.0\Boken.sourcelink.json

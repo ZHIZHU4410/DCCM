@@ -1,6 +1,0 @@
-d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\addshanghai\addshanghai\obj\Debug\net10.0\addshanghai.csproj.AssemblyReference.cache
-d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\addshanghai\addshanghai\obj\Debug\net10.0\addshanghai.GeneratedMSBuildEditorConfig.editorconfig
-d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\addshanghai\addshanghai\obj\Debug\net10.0\addshanghai.AssemblyInfoInputs.cache
-d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\addshanghai\addshanghai\obj\Debug\net10.0\addshanghai.AssemblyInfo.cs
-d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\addshanghai\addshanghai\obj\Debug\net10.0\addshanghai.csproj.CoreCompileInputs.cache
-d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\addshanghai\addshanghai\obj\Debug\net10.0\addshanghai.sourcelink.json
