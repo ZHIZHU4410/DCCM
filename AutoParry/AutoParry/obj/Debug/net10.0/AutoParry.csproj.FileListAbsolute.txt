@@ -1,0 +1,13 @@
+d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\AutoParry\AutoParry\obj\Debug\net10.0\AutoParry.csproj.AssemblyReference.cache
+d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\AutoParry\AutoParry\obj\Debug\net10.0\AutoParry.GeneratedMSBuildEditorConfig.editorconfig
+d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\AutoParry\AutoParry\obj\Debug\net10.0\AutoParry.AssemblyInfoInputs.cache
+d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\AutoParry\AutoParry\obj\Debug\net10.0\AutoParry.AssemblyInfo.cs
+d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\AutoParry\AutoParry\obj\Debug\net10.0\AutoParry.csproj.CoreCompileInputs.cache
+d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\AutoParry\AutoParry\obj\Debug\net10.0\AutoParry.sourcelink.json
+d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\AutoParry\AutoParry\bin\Debug\net10.0\AutoParry.deps.json
+d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\AutoParry\AutoParry\bin\Debug\net10.0\AutoParry.dll
+d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\AutoParry\AutoParry\bin\Debug\net10.0\AutoParry.pdb
+d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\AutoParry\AutoParry\obj\Debug\net10.0\AutoParry.dll
+d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\AutoParry\AutoParry\obj\Debug\net10.0\refint\AutoParry.dll
+d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\AutoParry\AutoParry\obj\Debug\net10.0\AutoParry.pdb
+d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\AutoParry\AutoParry\obj\Debug\net10.0\ref\AutoParry.dll

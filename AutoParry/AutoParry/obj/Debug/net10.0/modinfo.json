@@ -1,0 +1,12 @@
+{
+  "name": "AutoParry",
+  "version": "1.0.0",
+  "type": "mod",
+  "tags": [],
+  "dccmversion": "35.9.18",
+  "assemblies": [
+    "AutoParry.dll"
+  ],
+  "main": "AutoParry.AutoParryMain",
+  "dependencies": []
+}

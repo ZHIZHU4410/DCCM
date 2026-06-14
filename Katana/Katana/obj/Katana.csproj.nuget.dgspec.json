@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\steama\\steamapps\\common\\Dead Cells\\coremod\\DCCMDEAD CELLS\\Katana\\katana\\Katana.csproj": {}
+    "d:\\steama\\steamapps\\common\\Dead Cells\\coremod\\DCCMDEAD CELLS\\Katana\\Katana\\Katana.csproj": {}
   },
   "projects": {
-    "D:\\steama\\steamapps\\common\\Dead Cells\\coremod\\DCCMDEAD CELLS\\Katana\\katana\\Katana.csproj": {
+    "d:\\steama\\steamapps\\common\\Dead Cells\\coremod\\DCCMDEAD CELLS\\Katana\\Katana\\Katana.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\steama\\steamapps\\common\\Dead Cells\\coremod\\DCCMDEAD CELLS\\Katana\\katana\\Katana.csproj",
+        "projectUniqueName": "d:\\steama\\steamapps\\common\\Dead Cells\\coremod\\DCCMDEAD CELLS\\Katana\\Katana\\Katana.csproj",
         "projectName": "Katana",
-        "projectPath": "D:\\steama\\steamapps\\common\\Dead Cells\\coremod\\DCCMDEAD CELLS\\Katana\\katana\\Katana.csproj",
+        "projectPath": "d:\\steama\\steamapps\\common\\Dead Cells\\coremod\\DCCMDEAD CELLS\\Katana\\Katana\\Katana.csproj",
         "packagesPath": "C:\\Users\\10113\\.nuget\\packages\\",
-        "outputPath": "D:\\steama\\steamapps\\common\\Dead Cells\\coremod\\DCCMDEAD CELLS\\Katana\\katana\\obj\\",
+        "outputPath": "d:\\steama\\steamapps\\common\\Dead Cells\\coremod\\DCCMDEAD CELLS\\Katana\\Katana\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\10113\\AppData\\Roaming\\NuGet\\NuGet.Config"

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Katana")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d2ac9c539573af1d60712a6dface408f52c62418")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4db24a6d6791a8555b3dd9094a05597370b2c20b")]
 [assembly: System.Reflection.AssemblyProductAttribute("Katana")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Katana")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

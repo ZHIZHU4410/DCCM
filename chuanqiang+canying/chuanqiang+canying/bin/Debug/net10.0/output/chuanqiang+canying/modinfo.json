@@ -1,0 +1,12 @@
+{
+  "name": "chuanqiang+canying",
+  "version": "1.0.0",
+  "type": "mod",
+  "tags": [],
+  "dccmversion": "35.9.18",
+  "assemblies": [
+    "chuanqiang+canying.dll"
+  ],
+  "main": "chuanqiang_canying.chuanqiang_canyingMain",
+  "dependencies": []
+}
