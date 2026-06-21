@@ -257,12 +257,11 @@ namespace chuanqiang_canying
             }
         }
 
-        // ---------- 资源加载（移除了 CDBManager 相关代码） ----------
+        // ---------- 资源加载 ----------
         void IOnGameEndInit.OnGameEndInit()
         {
-            var res = Info.ModRoot!.GetFilePath("res.pak");
-            if (System.IO.File.Exists(res))
-                FsPak.Instance.FileSystem.loadPak(res.AsHaxeString());
+            string res = Info.ModRoot!.GetFilePath("res.pak");
+            FsPak.Instance.FileSystem.loadPak(res.AsHaxeString());
         }
 
         // ---------- 按键功能（保留原有） ----------
