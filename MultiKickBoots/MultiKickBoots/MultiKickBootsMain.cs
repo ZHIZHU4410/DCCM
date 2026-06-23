@@ -96,7 +96,7 @@ namespace MultiKickBootsMod
 
             // 1. kickShockWave — 画面扭曲波纹（纯视觉，每段都放）
             int fxColor = weapon.get_curSkillInf().fxProps.fxInnerColor ?? 0;
-            owner._level.fx.kickShockWave(worldX, worldY, 60.0, fxColor);
+            owner._level.fx.kickShockWave(worldX, worldY, 120.0, fxColor);
 
             // 2. 遍历敌人施加效果（原版用 team.opponentsIterator）
             TeamIterator? it = null;

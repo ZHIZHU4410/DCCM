@@ -50,7 +50,7 @@ using System.Runtime.InteropServices;
 
 namespace Katana
 {
-    public class KatanaMain : ModBase, IOnHeroUpdate, IOnGameExit
+    public class KatanaMain : ModBase, IOnHeroUpdate, IOnGameExit, IOnGameEndInit
     {
         public KatanaMain(ModInfo info) : base(info) { }
 
@@ -143,6 +143,13 @@ namespace Katana
             if (self != null && _invincibleTimer > 0)
                 return;
             orig(self, attack);
+        }
+
+        // ---------- 资源加载 ----------
+        void IOnGameEndInit.OnGameEndInit()
+        {
+            string res = Info.ModRoot!.GetFilePath("res.pak");
+            FsPak.Instance.FileSystem.loadPak(res.AsHaxeString());
         }
 
         void IOnHeroUpdate.OnHeroUpdate(double dt)
