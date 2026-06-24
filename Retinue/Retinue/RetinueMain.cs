@@ -2,6 +2,7 @@ using dc;
 using dc.en;
 using dc.h2d;
 using dc.hxd.fs;
+using dc.ui;
 using dc.libs.heaps.slib;
 using dc.pr;
 using dc.tool;
@@ -37,7 +38,10 @@ namespace Retinue
         private const int MAX_FRAMES = 80;
 
         /// <summary>帧间隔（秒）</summary>
-        private const double INTERVAL = 0.2;
+        private const double INTERVAL = 0.05;
+
+        /// <summary>OnionSkin 生成间隔（秒），避免每帧创建压垮渲染器</summary>
+        private const double SPAWN_INTERVAL = 0.05;
 
         /// <summary>缩放</summary>
         private const double SCALE = 0.1;
@@ -60,6 +64,7 @@ namespace Retinue
         private List<int> _frames = new();        // 帧序号列表
         private int _idx;
         private double _timer;
+        private double _spawnTimer;
         private string? _levelId;
         private bool _probed;
 
@@ -70,17 +75,31 @@ namespace Retinue
         private bool _firstSpawn = true;           // 首次生成时快照位置
         private int _lastHeroDir = 1;              // 上次 hero 朝向，用于检测转身
         private readonly Random _rng = new();
+        private bool _disposed;
 
         public RetinueMain(ModInfo info) : base(info) { }
 
         public override void Initialize()
         {
             base.Initialize();
+            _disposed = false;
+            // 与 AssistMode UI 同步生命周期：死亡/换关/复活时重新快照位置
+            Hook_HUD.initHero += OnRetinueHUDInit;
             System.Console.WriteLine("[Retinue] 永久 FlyingSword 随从已加载");
+        }
+
+        // ── HUD 初始化 hook：与 AssistMode UI 同步，死亡/复活时重置随从位置 ──
+        private void OnRetinueHUDInit(Hook_HUD.orig_initHero orig, HUD self)
+        {
+            orig(self);
+            if (_disposed) return;
+            // 强制下次 Update 快照到 hero 位置，避免从旧坐标 lerp
+            _firstSpawn = true;
         }
 
         void IOnHeroUpdate.OnHeroUpdate(double dt)
         {
+            if (_disposed) return;
             Hero? h = ModCore.Modules.Game.Instance.HeroInstance;
             if (h?._level == null) return;
 
@@ -88,10 +107,8 @@ namespace Retinue
             if (_levelId != id)
             {
                 _levelId = id; _lib = null; _frames.Clear(); _probed = false;
-                _timer = 0; _idx = 0; _curX = _curY = _tgtX = _tgtY = 0; _backOrForth = false; _firstSpawn = true; _lastHeroDir = 1;
+                _timer = 0; _spawnTimer = 0; _idx = 0; _curX = _curY = _tgtX = _tgtY = 0; _backOrForth = false; _firstSpawn = true; _lastHeroDir = 1;
             }
-
-            // —— 图集（照抄 FlyingSword） ——
             if (_lib == null)
             {
                 try { _lib = Assets.Class.lib.get(ATLAS_PATH.AsHaxeString()); }
@@ -137,10 +154,27 @@ namespace Retinue
                 _timer -= INTERVAL;
                 _idx = (_idx + 1) % _frames.Count;
             }
-            SpawnAt(h);
+
+            // 按冷却间隔生成 OnionSkin，避免每帧创建压垮渲染器
+            _spawnTimer += dt;
+            if (_spawnTimer >= SPAWN_INTERVAL)
+            {
+                _spawnTimer -= SPAWN_INTERVAL;
+                SpawnAt(h);
+            }
         }
 
-        void IOnGameExit.OnGameExit() { _lib = null; _levelId = null; }
+        void IOnGameExit.OnGameExit()
+        {
+            Hook_HUD.initHero -= OnRetinueHUDInit;
+            _disposed = true;
+            _lib = null;
+            _levelId = null;
+            _frames.Clear();
+            _probed = false;
+            _firstSpawn = true;
+            System.Console.WriteLine("[Retinue] 已卸载");
+        }
 
         void IOnGameEndInit.OnGameEndInit()
         {
@@ -225,13 +259,13 @@ namespace Retinue
                 double px = _curX - heroWorldX;
                 double py = _curY - heroWorldY;
 
-                var s = OnionSkin.Class.fromEntity(h, t, TINT,
-                    Ref<double>.In(1.0), Ref<double>.In(INTERVAL + 0.05),
+                var s = OnionSkin.Class.fromEntity(h, t, null,
+                    Ref<double>.In(0.5), Ref<double>.In(SPAWN_INTERVAL + 0.1),
                     Ref<bool>.Null, Ref<bool>.Null, Ref<double>.Null);
                 if (s == null) return;
 
                 s.offset(px, py);
-                s.dx = 0; s.ds = 0; s.frict = 1;
+                s.dx = 0; s.frict = 1;
                 s.scaleX *= SCALE; s.scaleY *= SCALE;
             }
             catch { }
