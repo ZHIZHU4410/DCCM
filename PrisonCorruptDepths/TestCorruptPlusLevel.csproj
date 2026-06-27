@@ -1,0 +1,66 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <AssemblyName>TestCorruptPlusLevel</AssemblyName>
+    <RootNamespace>TestCorruptPlusLevel</RootNamespace>
+
+    <ModType>mod</ModType>
+    <ModMain>TestCorruptPlusLevel.TestCorruptPlusLevelMain</ModMain>
+
+    <AutoInstallMod>true</AutoInstallMod>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DeadCellsCoreModding.MDK" Version="1.0.1" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <GenerateDiffCDB>false</GenerateDiffCDB>
+    <GameVersion>35</GameVersion>
+    <GenerateSinglePakFile>false</GenerateSinglePakFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Update="data.cdb">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <!-- minimal.cdb → 复制为 data.cdb_
+         游戏 CDBManager 会自动加载 data.cdb_ 并合并到 data.cdb 上 -->
+    <None Update="minimal.cdb">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>data.cdb_</TargetPath>
+    </None>
+    <None Update="res.pak" Condition="Exists('res.pak')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- 在 MDK 打包前，把 data.cdb、data.cdb_ 和 res.pak 放入 output 目录 -->
+  <Target Name="StageExtraAssets" BeforeTargets="GenerateModPackage">
+    <ItemGroup>
+      <ExtraAssets Include="$(OutputPath)data.cdb" />
+      <ExtraAssets Include="$(OutputPath)data.cdb_" Condition="Exists('$(OutputPath)data.cdb_')" />
+      <ExtraAssets Include="$(OutputPath)res.pak" Condition="Exists('$(OutputPath)res.pak')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(ExtraAssets)" DestinationFolder="$(OutputPath)output\$(AssemblyName)\" SkipUnchangedFiles="false" />
+  </Target>
+
+  <!-- MDK AutoInstallMod 之后，同步到开发目录 -->
+  <Target Name="CopyToDevMods" AfterTargets="AutoInstallMod">
+    <PropertyGroup>
+      <DevModsDir>d:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS\coremod\mods\TestCorruptPlusLevel</DevModsDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(DevModsDir)" />
+    <ItemGroup>
+      <ModOutputFiles Include="d:\steama\steamapps\common\Dead Cells\coremod\mods\TestCorruptPlusLevel\**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(ModOutputFiles)" DestinationFolder="$(DevModsDir)\%(RecursiveDir)" SkipUnchangedFiles="false" />
+    <Message Text="[TestCorruptPlusLevel] V32 已同步到开发目录" Importance="high" />
+  </Target>
+
+</Project>
