@@ -113,12 +113,15 @@ namespace TestCorruptPlusLevel
                 _fogApplied = true;
                 var s = level.scroller;
                 var refl = new _Reflect();
-                refl.setField(s, ToHLString("fogFactor"), 5.0);
+
+                // 背景雾
+                refl.setField(s, ToHLString("fogFactor"), 1.2);
                 dynamic fc = s.fogColor;
-                fc.x = 0.0;
-                fc.y = 0.0;
-                fc.z = 0.0;
-                fc.w = 5.0;
+                fc.x = 0.02;
+                fc.y = 0.02;
+                fc.z = 0.02;
+                fc.w = 3.0;
+
                 Log("BlackFog: applied to " + lid);
             }
             catch (Exception ex) { Log("BlackFog err: " + RealError(ex)); _fogApplied = true; }
