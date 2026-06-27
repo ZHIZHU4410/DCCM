@@ -4,6 +4,7 @@ using dc;
 using dc.cine;
 using dc.level;
 using dc.libs;
+using dc.pr;
 using Hashlink.Virtuals;
 using HaxeProxy.Runtime;
 using ModCore.Events.Interfaces.Game;
@@ -36,6 +37,7 @@ namespace TestCorruptPlusLevel
         private static string _savedAtlasName;
         private bool _pWasDown, _oWasDown, _bWasDown, _tWasDown;
         private bool _cdbReady;
+        private bool _fogApplied;
 
         public TestCorruptPlusLevelMain(ModInfo info) : base(info) { }
 
@@ -83,10 +85,43 @@ namespace TestCorruptPlusLevel
                 }
             }
 
+            // 黑雾：关卡加载后设置 scroller.fogFactor
+            if (!_fogApplied) ApplyBlackFog();
+
             if (KeyPressed(VK_P, ref _pWasDown)) OnPPressed();
             if (KeyPressed(VK_O, ref _oWasDown)) OnOPressed();
             if (KeyPressed(VK_B, ref _bWasDown)) OnBPressed();
             if (KeyPressed(VK_T, ref _tWasDown)) OnTPressed();
+        }
+
+        /// <summary>给 PrisonCorruptDepths 加黑雾</summary>
+        private void ApplyBlackFog()
+        {
+            try
+            {
+                if (!_injected) return;
+                var game = dc.pr.Game.Class?.ME;
+                var level = game?.curLevel;
+                if (level?.scroller == null || level.map == null) return;
+
+                string lid = "";
+                try { lid = level.map.id?.ToString(); } catch { }
+                if (string.IsNullOrEmpty(lid)) return;
+
+                if (!SameId(lid, MainLevelId) && !SameId(lid, BossArenaId)) return;
+
+                _fogApplied = true;
+                var s = level.scroller;
+                var refl = new _Reflect();
+                refl.setField(s, ToHLString("fogFactor"), 5.0);
+                dynamic fc = s.fogColor;
+                fc.x = 0.0;
+                fc.y = 0.0;
+                fc.z = 0.0;
+                fc.w = 5.0;
+                Log("BlackFog: applied to " + lid);
+            }
+            catch (Exception ex) { Log("BlackFog err: " + RealError(ex)); _fogApplied = true; }
         }
 
         private bool KeyPressed(int key, ref bool wasDown)
@@ -415,9 +450,8 @@ namespace TestCorruptPlusLevel
             string id = "";
             try { if (level?.id != null) id = Norm(level.id.ToString()); } catch { }
 
+            _fogApplied = false;
             // ══ 在 LevelStruct 创建前精准 swap biome atlas ══
-            // 原理：所有使用 PrisonCorrupt biome 的关卡共享同一个 biome CDB 对象
-            // 在关卡创建前 swap atlasName，让正确的图集被加载
             if (SameId(id, PrisonCorruptId))
             {
                 // 腐化牢房 → 原始纹理
