@@ -8,7 +8,7 @@
       {"typeStr": "3", "name": "worldDepth"},
       {"typeStr": "3", "name": "mapDepth"},
       {"typeStr": "3", "name": "group"},
-      {"typeStr": "8", "name": "mobs"},
+      {"typeStr": "8", "display": null, "name": "mobs"},
       {"typeStr": "17", "name": "props"},
       {"typeStr": "8", "name": "nextLevels"},
       {"typeStr": "4", "display": 1, "name": "mobDensity"},
@@ -39,8 +39,7 @@
           {"mob": "ClusterGrenader", "quantityFactor": 0.3, "minDifficulty": 3, "minCombatRoomsBefore": 0},
           {"mob": "Ninja", "quantityFactor": 0.5, "minDifficulty": 2, "minCombatRoomsBefore": 0},
           {"mob": "AggressiveZombie", "quantityFactor": 0.3, "minDifficulty": 4, "minCombatRoomsBefore": 0},
-          {"mob": "BatKamikaze", "quantityFactor": 2.0, "minDifficulty": 1, "minCombatRoomsBefore": 0},
-          {"mob": "Fogger", "quantityFactor": 2.5, "minDifficulty": 1, "minCombatRoomsBefore": 0}
+          {"mob": "BatKamikaze", "quantityFactor": 2.0, "minDifficulty": 1, "minCombatRoomsBefore": 0}
         ],
         "nextLevels": [{"gates": 0, "level": "DeathArena"}],
         "mobDensity": 1.1,
@@ -83,153 +82,6 @@
         "nextLevels": [{"gates": 0, "level": "PrisonCorruptDepths"}],
         "props": {"viewerOffsetX": -1, "perfectKillsDoor": 1, "musicLoop": "music/default/dc_colletor2.ogg", "zDoorColor": 389267, "viewerY": 4, "biomeType": 2},
         "flagsProps": {"lootFlags": 27, "visualFlags": 0, "metaFlags": 0, "gameplayFlags": 0, "genFlags": 16384}
-      }
-    ]
-  },
-  {
-    "name": "biome",
-    "columns": [
-      {"typeStr": "0", "name": "id"},
-      {"typeStr": "0", "name": "atlasName"},
-      {"typeStr": "3", "display": 1, "name": "commonAtlas"},
-      {"typeStr": "3", "name": "ambient"},
-      {"typeStr": "4", "display": 1, "name": "ambientScale"},
-      {"typeStr": "3", "name": "celShadow"},
-      {"typeStr": "3", "name": "smoke"},
-      {"typeStr": "3", "name": "water"},
-      {"typeStr": "3", "name": "cloud"},
-      {"typeStr": "3", "name": "waterLight"},
-      {"typeStr": "3", "name": "fog"},
-      {"typeStr": "3", "name": "lavaBg"},
-      {"typeStr": "3", "name": "lavaSurface"},
-      {"typeStr": "8", "name": "glowData"},
-      {"typeStr": "4", "display": 1, "name": "fogScale"},
-      {"typeStr": "4", "display": 1, "name": "vegetation"},
-      {"typeStr": "4", "display": 1, "name": "floorStamps"},
-      {"typeStr": "4", "display": 1, "name": "floorJunkDensity"},
-      {"typeStr": "4", "display": 1, "name": "wallJunkDensity"},
-      {"typeStr": "8", "name": "layers"},
-      {"typeStr": "8", "name": "lightColors"},
-      {"typeStr": "17", "name": "smokeShader"},
-      {"typeStr": "17", "name": "camEffects"},
-      {"typeStr": "17", "name": "scatterConf"},
-      {"typeStr": "1", "display": 1, "name": "vegetationRandScale"},
-      {"typeStr": "1", "name": "oneWayOpaque"},
-      {"typeStr": "3", "name": "reverbKind"},
-      {"typeStr": "4", "display": 1, "name": "reverbMix"},
-      {"typeStr": "17", "name": "uiProps"}
-    ],
-    "lines": [
-      {
-        "id": "PrisonCorruptDark",
-        "atlasName": "jidufuh",
-        "commonAtlas": 1,
-        "ambient": 0,
-        "celShadow": 0,
-        "smoke": 0,
-        "water": 3551593,
-        "waterLight": 12820189,
-        "fog": 0,
-        "fogScale": 0.05,
-        "vegetation": 0.6,
-        "floorStamps": 0.7,
-        "floorJunkDensity": 0.8,
-        "wallJunkDensity": 1,
-        "vegetationRandScale": false,
-        "oneWayOpaque": false,
-        "reverbKind": 26,
-        "reverbMix": 0.15,
-        "camEffects": {
-          "lensDustBigAlpha": 2,
-          "lensDustSmallAlpha": 2,
-          "camFogBotAlpha": 1.0,
-          "camFogTopAlpha": 1.0
-        },
-        "smokeShader": {
-          "speed": 0.02,
-          "power": 5.0,
-          "alpha": 1.0,
-          "mode": 2,
-          "contrib": 10.0
-        },
-        "lightColors": [
-          {"conf": "Hero", "color": 15473821},
-          {"conf": "Brasero", "color": 15379478},
-          {"conf": "Candle", "color": 16743424},
-          {"conf": "Torch", "color": 16720384}
-        ],
-        "layers": [
-          {"lightType": 0, "layer": "BackgroundFar"},
-          {"lightType": 0, "layer": "BackgroundNear"},
-          {"lightType": 1, "gradientScale": 0.5, "gradientName": "prisonStart_L2Main", "layer": "MainBackWalls", "lightDepth": 1},
-          {"lightType": 1, "gradientScale": 0.3, "gradientName": "prisonStart_L2Main", "layer": "MainBackProps", "lightDepth": 0.76},
-          {"lightType": 1, "gradientScale": 0.3, "gradientName": "prisonStart_L2Main", "layer": "MainBack", "lightDepth": 0.76},
-          {"lightType": 1, "gradientScale": 0.3, "gradientName": "prisonStart_L2Main", "layer": "MainProps", "lightDepth": 0.36},
-          {"lightType": 2, "layer": "MainAction"},
-          {"lightType": 0, "gradientScale": 0.45, "gradientName": "prisonStart_L2FrontWalls", "layer": "MainFrontWalls"}
-        ],
-        "uiProps": {
-          "alphaBlack": 1.0,
-          "alphaBlue": 0.8,
-          "alphaGradientBot": 1.0
-        }
-      },
-      {
-        "id": "PrisonCorruptLight",
-        "atlasName": "prison_L2",
-        "commonAtlas": 1,
-        "ambient": 8472171,
-        "celShadow": 403028,
-        "smoke": 13246292,
-        "water": 3551593,
-        "waterLight": 12820189,
-        "fog": 3216165,
-        "fogScale": 0.75,
-        "vegetation": 0.6,
-        "floorStamps": 0.7,
-        "floorJunkDensity": 0.8,
-        "wallJunkDensity": 1,
-        "vegetationRandScale": false,
-        "oneWayOpaque": false,
-        "reverbKind": 26,
-        "reverbMix": 0.15,
-        "camEffects": {
-          "camFogTopColor": 2953607,
-          "lensDustBigAlpha": 2,
-          "lensDustSmallAlpha": 2,
-          "camFogBotAlpha": 0.5,
-          "camFogBotColor": 6885906,
-          "camFogTopAlpha": 0.5
-        },
-        "smokeShader": {
-          "speed": 0.05,
-          "power": 0.7,
-          "alpha": 0.5,
-          "mode": 0,
-          "scale": 0.8,
-          "contrib": 1.3
-        },
-        "lightColors": [
-          {"conf": "Hero", "color": 15473821},
-          {"conf": "Brasero", "color": 15379478},
-          {"conf": "Candle", "color": 16743424},
-          {"conf": "Torch", "color": 16720384}
-        ],
-        "layers": [
-          {"lightType": 0, "layer": "BackgroundFar"},
-          {"lightType": 0, "layer": "BackgroundNear"},
-          {"lightType": 1, "gradientScale": 0.5, "gradientName": "prisonStart_L2Main", "layer": "MainBackWalls", "lightDepth": 1},
-          {"lightType": 1, "gradientScale": 0.3, "gradientName": "prisonStart_L2Main", "layer": "MainBackProps", "lightDepth": 0.76},
-          {"lightType": 1, "gradientScale": 0.3, "gradientName": "prisonStart_L2Main", "layer": "MainBack", "lightDepth": 0.76},
-          {"lightType": 1, "gradientScale": 0.3, "gradientName": "prisonStart_L2Main", "layer": "MainProps", "lightDepth": 0.36},
-          {"lightType": 2, "layer": "MainAction"},
-          {"lightType": 0, "gradientScale": 0.45, "gradientName": "prisonStart_L2FrontWalls", "layer": "MainFrontWalls"}
-        ],
-        "uiProps": {
-          "alphaBlack": 0.5,
-          "alphaBlue": 0.8,
-          "alphaGradientBot": 0.2
-        }
       }
     ]
   }
