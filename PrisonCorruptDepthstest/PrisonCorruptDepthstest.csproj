@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ModType>mod</ModType>
+    <ModName>PrisonCorruptDepthstest</ModName>
+    <ModMain>PrisonCorruptDepthstest.EntryPoint.ModInitializer</ModMain>
+    <AutoInstallMod Condition="'$(Configuration)' == 'Debug'">true</AutoInstallMod>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <GenerateDiffCDB>false</GenerateDiffCDB>
+    <GameVersion>35</GameVersion>
+    <GenerateSinglePakFile>true</GenerateSinglePakFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackAssets Include="Assets/**/*" RootInPak="" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="res.pak" Condition="Exists('res.pak')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DeadCellsCoreModding.MDK" Version="1.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <OutputFiles Include="$(OutputPath)res.pak" Condition="Exists('$(OutputPath)res.pak')" />
+  </ItemGroup>
+
+</Project>
