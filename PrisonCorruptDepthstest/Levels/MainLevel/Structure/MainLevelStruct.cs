@@ -35,8 +35,26 @@ public class MainLevelStruct : LevelStruct
         combat2.set_parent(combat1);
         Log.Debug("[PrisonCorruptDepthstest] Combat 2 created");
 
+        RoomNode combat3 = base.createNode("Combat".AsHlxStr(), null, null, "combat_3".AsHlxStr());
+        combat3.set_parent(combat2);
+        RoomNode combat4 = base.createNode("Combat".AsHlxStr(), null, null, "combat_4".AsHlxStr());
+        combat4.set_parent(combat3);
+        RoomNode combat5 = base.createNode("Combat".AsHlxStr(), null, null, "combat_5".AsHlxStr());
+        combat5.set_parent(combat4);
+        RoomNode combat6 = base.createNode("Combat".AsHlxStr(), null, null, "combat_6".AsHlxStr());
+        combat6.set_parent(combat5);
+        RoomNode combat7 = base.createNode("Combat".AsHlxStr(), null, null, "combat_7".AsHlxStr());
+        combat7.set_parent(combat6);
+        RoomNode combat8 = base.createNode("Combat".AsHlxStr(), null, null, "combat_8".AsHlxStr());
+        combat8.set_parent(combat7);
+        RoomNode combat9 = base.createNode("Combat".AsHlxStr(), null, null, "combat_9".AsHlxStr());
+        combat9.set_parent(combat8);
+        RoomNode combat10 = base.createNode("Combat".AsHlxStr(), null, null, "combat_10".AsHlxStr());
+        combat10.set_parent(combat9);
+        Log.Debug("[PrisonCorruptDepthstest] Combat 3-10 created");
+
         RoomNode exit = base.createExit("DeathArena".AsHlxStr(), null, null, "exit".AsHlxStr());
-        exit.set_parent(combat2);
+        exit.set_parent(combat10);
         Log.Debug("[PrisonCorruptDepthstest] Exit -> DeathArena created");
 
         Log.Debug("[PrisonCorruptDepthstest] buildMainRooms complete");

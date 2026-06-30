@@ -85511,7 +85511,7 @@
 						"loadingDescColor": 4312202,
 						"loadingColor": 399638
 					},
-					"biome": "DeathArena",
+					"biome": "PrisonCourtyard2",
 					"doubleUps": 0,
 					"group": 0,
 					"quarterUpsBC3": 2,
@@ -85519,7 +85519,7 @@
 					"eliteWanderChance": 0,
 					"index": 38,
 					"id": "DeathArena",
-					"dlc": "Purple",
+					"dlc": null,
 					"worldDepth": 3,
 					"icon": {
 						"x": 64,
@@ -85529,7 +85529,7 @@
 					},
 					"cellBonus": 0,
 					"mobs": [],
-					"name": "DLCP_DEATH_ARENA_NAME",
+					"name": "死亡竞技场",
 					"mobDensity": 0,
 					"specificLoots": [],
 					"mapDepth": 4,
@@ -85539,7 +85539,7 @@
 					"nextLevels": [
 						{
 							"gates": 0,
-							"level": "T_AfterDeathArena"
+							"level": "T_Bridge"
 						}
 					],
 					"flagsProps": {
@@ -94536,58 +94536,6 @@
 					],
 					"parallax": [],
 					"bonusTripleScrollAfterBC": "VeryHard"
-				},
-				{
-					"eliteRoomChance": 0,
-					"props": {
-						"doorColor": 15393813,
-						"viewerColor": 51036,
-						"musicLoop": "music/default/death_arena_amb.ogg",
-						"zDoorColor": 6897664,
-						"chromaColor": 62719,
-						"biomeType": 2,
-						"loadingDescColor": 4312202,
-						"loadingColor": 399638
-					},
-					"biome": "PrisonCorruptDepthsBiome",
-					"doubleUps": 0,
-					"group": 0,
-					"quarterUpsBC3": 0,
-					"quarterUpsBC4": 0,
-					"eliteWanderChance": 0,
-					"id": "DeathArena",
-					"worldDepth": 3,
-					"cellBonus": 0,
-					"mobs": [],
-					"name": "死亡竞技场",
-					"mobDensity": 0,
-					"specificLoots": [],
-					"mapDepth": 4,
-					"specificSubBiome": [],
-					"minGold": 2500,
-					"tripleUps": 0,
-					"nextLevels": [
-						{
-							"gates": 0,
-							"level": "T_Bridge"
-						}
-					],
-					"flagsProps": {
-						"lootFlags": 0,
-						"visualFlags": 0,
-						"metaFlags": 1,
-						"gameplayFlags": 4,
-						"genFlags": 1
-					},
-					"baseLootLevel": 5,
-					"loreDescriptions": [],
-					"parallax": [],
-					"icon": {
-						"x": 64,
-						"y": 3,
-						"file": "cardIcons.png",
-						"size": 24
-					}
 				}
 			],
 			"separators": [

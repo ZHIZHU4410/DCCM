@@ -12,7 +12,7 @@ public class DeathArenaConfig
 {
     public string LevelId { get; set; } = "DeathArena";
     public string DisplayName { get; set; } = "死亡竞技场";
-    public string Biome { get; set; } = "PrisonCorruptDepthsBiome";
+    public string Biome { get; set; } = "PrisonCourtyard2";
     public string NextLevel { get; set; } = "T_Bridge";
 }
 

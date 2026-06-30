@@ -37,14 +37,20 @@ public class PrisonCorruptModLevelStruct : LevelStruct
         RoomNode c3 = base.createNode("Combat".AsHlxStr(), null, null, "c3".AsHlxStr());
         c3.set_parent(c2);
 
+        RoomNode c4 = base.createNode("Combat".AsHlxStr(), null, null, "c4".AsHlxStr());
+        c4.set_parent(c3);
+
+        RoomNode c5 = base.createNode("Combat".AsHlxStr(), null, null, "c5".AsHlxStr());
+        c5.set_parent(c4);
+
         RoomNode exitSewer = base.createExit("T_SewerDepthsAfterPrison".AsHlxStr(), null, null, "exit_sewer".AsHlxStr());
-        exitSewer.set_parent(c3);
+        exitSewer.set_parent(c5);
 
         RoomNode exitRoof = base.createExit("T_RoofAfterPrison".AsHlxStr(), null, null, "exit_roof".AsHlxStr());
-        exitRoof.set_parent(c3);
+        exitRoof.set_parent(c5);
 
         RoomNode exitDooku = base.createExit("T_DookuCastle".AsHlxStr(), null, null, "exit_dooku".AsHlxStr());
-        exitDooku.set_parent(c3);
+        exitDooku.set_parent(c5);
 
         Log.Debug("[PrisonCorruptDepthstest] PrisonCorruptMod buildMainRooms complete");
         return base.nodes.get("start".AsHlxStr());
