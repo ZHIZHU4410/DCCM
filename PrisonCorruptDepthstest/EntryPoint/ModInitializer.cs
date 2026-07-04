@@ -21,14 +21,14 @@ public class ModInitializer(ModInfo info) : ModBase(info), IOnGameEndInit, IOnHe
 {
     public static ModCore.Storage.Config<CoreConfig> Config = new("PrisonCorruptDepthstestCoreConfig");
 
-    // Keyboard key codes
-    private const int VK_P = 0x50;
-    private const int VK_O = 0x4F;
-    private const int VK_B = 0x42;
-    private const int VK_T = 0x54;
+    // Keyboard key codes: 1=腐化牢房 2=深层牢房 3=Boss
+    private const int VK_1 = 0x31;
+    private const int VK_2 = 0x32;
+    private const int VK_3 = 0x33;
 
     private LevelManager? _levelManager;
-    private bool _pWasDown, _oWasDown, _bWasDown, _tWasDown;
+    private EntityManager? _entityManager;
+    private bool _k1WasDown, _k2WasDown, _k3WasDown;
 
     public override void Initialize()
     {
@@ -41,9 +41,9 @@ public class ModInitializer(ModInfo info) : ModBase(info), IOnGameEndInit, IOnHe
         _ = new RoomGroup(this);
         _ = new DLCLang(this);
         _levelManager = new LevelManager(this);
-        _ = new EntityManager(this);
+        _entityManager = new EntityManager(this);
 
-        // Register hooks directly (same pattern as original TestCorruptPlusLevel)
+        // Register hooks directly
         _levelManager.RegisterHooks();
 
         Logger.Information("PrisonCorruptDepthstest initialisation complete");
@@ -67,7 +67,7 @@ public class ModInitializer(ModInfo info) : ModBase(info), IOnGameEndInit, IOnHe
             dc.Data.Class.loadJson(json, default);
             Logger.Information("CDB data loaded");
 
-            Logger.Information("等待 CDB 就绪... (O=腐化牢房 P=深层牢房 B=Boss)");
+            Logger.Information("等待 CDB 就绪... (1=腐化牢房 2=深层牢房 3=Boss)");
         }
         catch (Exception ex)
         {
@@ -83,71 +83,64 @@ public class ModInitializer(ModInfo info) : ModBase(info), IOnGameEndInit, IOnHe
         // Delegate fog application to LevelManager
         _levelManager?.TryApplyFog();
 
-        // Keyboard shortcuts
-        if (KeyPressed(VK_P, ref _pWasDown)) OnPPressed();
-        if (KeyPressed(VK_O, ref _oWasDown)) OnOPressed();
-        if (KeyPressed(VK_B, ref _bWasDown)) OnBPressed();
-        if (KeyPressed(VK_T, ref _tWasDown)) OnTPressed();
+        // Check mimic cleanup
+        _entityManager?.Update();
+
+        // Keyboard shortcuts: 1=腐化牢房 2=深层牢房 3=Boss
+        if (KeyPressed(VK_1, ref _k1WasDown)) On1Pressed();
+        if (KeyPressed(VK_2, ref _k2WasDown)) On2Pressed();
+        if (KeyPressed(VK_3, ref _k3WasDown)) On3Pressed();
     }
 
     // ═══════════════════════════════════════════
     // Keyboard shortcuts
     // ═══════════════════════════════════════════
 
-    private void OnOPressed()
+    private void On1Pressed()
     {
         try
         {
-            Logger.Information("O → 腐化牢房");
+            Logger.Information("1 → 腐化牢房");
             _levelManager?.PatchLevelLogo();
             LevelTransition.Class.@goto(GameConstants.Levels.PrisonCorrupt.AsHlxStr());
         }
-        catch (Exception ex) { Logger.Error("O fail", ex); }
+        catch (Exception ex) { Logger.Error("1 fail", ex); }
     }
 
-    private void OnTPressed()
-    {
-        try
-        {
-            LevelTransition.Class.@goto("SewerShort".AsHlxStr());
-        }
-        catch { }
-    }
-
-    private void OnPPressed()
+    private void On2Pressed()
     {
         try
         {
             if (!_levelManager!.IsCDBReady)
             {
-                Logger.Information("P: CDB 未就绪");
+                Logger.Information("2: CDB 未就绪");
                 return;
             }
-            Logger.Information("P → 深层腐化牢房");
+            Logger.Information("2 → 深层腐化牢房");
             _levelManager.PatchLevelLogo();
             Ref<bool> nd = default;
             var trans = new LevelTransition(GameConstants.Levels.PrisonCorruptDepths.AsHlxStr(), null, null, null, nd);
             if (trans != null) trans.loadNewLevel();
         }
-        catch (Exception ex) { Logger.Error("P fail", ex); }
+        catch (Exception ex) { Logger.Error("2 fail", ex); }
     }
 
-    private void OnBPressed()
+    private void On3Pressed()
     {
         try
         {
             if (!_levelManager!.IsCDBReady)
             {
-                Logger.Information("B: CDB 未就绪");
+                Logger.Information("3: CDB 未就绪");
                 return;
             }
-            Logger.Information("B → Boss 房间");
+            Logger.Information("3 → Boss 房间");
             _levelManager.PatchLevelLogo();
             Ref<bool> nd = default;
             var trans = new LevelTransition(GameConstants.Levels.DeathArena.AsHlxStr(), null, null, null, nd);
             if (trans != null) trans.loadNewLevel();
         }
-        catch (Exception ex) { Logger.Error("B fail", ex); }
+        catch (Exception ex) { Logger.Error("3 fail", ex); }
     }
 
     // ═══════════════════════════════════════════

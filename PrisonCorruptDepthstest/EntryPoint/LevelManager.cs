@@ -123,9 +123,10 @@ public class LevelManager
         string biomeId = "";
         try { biomeId = self.map?.biome?.id?.ToString() ?? ""; } catch { }
 
-        bool isOurBiome = SameId(biomeId, GameConstants.Levels.PrisonCorruptDepthsBiome);
+        bool isCorruptBiome = SameId(biomeId, GameConstants.Levels.PrisonCorruptDepthsBiome);
+        bool isDeathArenaSky = SameId(biomeId, "DeathArenaSky");
 
-        if (isOurBiome && Data.Class.biome?.byId != null)
+        if (isCorruptBiome && Data.Class.biome?.byId != null)
         {
             // Save original PrisonCorrupt atlas on first use
             if (_savedPrisonCorruptAtlas == null)
@@ -172,6 +173,17 @@ public class LevelManager
                 refl.setField(bio, "atlasName".AsHlxStr(), _savedPrisonCorruptAtlas!.AsHlxStr());
             }
             catch { }
+        }
+        else if (isDeathArenaSky)
+        {
+            // DeathArenaSky uses prisonCourtyard atlas + PrisonCourtyard2 disp
+            // Patch biome ID so game creates PrisonCourtyard disp (no atlas swap needed)
+            var origBiomeId = self.map.biome.id;
+            try { self.map.biome.id = "PrisonCourtyard2".AsHlxStr(); } catch { }
+
+            orig(self);
+
+            try { self.map.biome.id = origBiomeId; } catch { }
         }
         else
         {

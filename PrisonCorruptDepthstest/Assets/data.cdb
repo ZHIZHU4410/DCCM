@@ -39091,6 +39091,11 @@
 					"particles": [],
 					"blueprints": [
 						{
+							"rarity": "Always",
+							"item": "AnyUp",
+							"minDifficulty": 0
+						},
+						{
 							"rarity": "Common",
 							"item": "P_U28_PerkGoldShield",
 							"minDifficulty": 0
@@ -39120,7 +39125,7 @@
 						"size": 48
 					},
 					"life": [
-						2000
+						4000
 					],
 					"name": "U28_SHOP_MIMIC_NAME",
 					"minPfHeight": 0,
@@ -44101,7 +44106,7 @@
 							"chargeAnim": "hacheMenu_load",
 							"coolDown": 10,
 							"power": [
-								10
+								10.0
 							],
 							"props": {
 								"speed": 7,
@@ -44123,15 +44128,13 @@
 							"fxId": "FXAtkHacheMenu",
 							"disableAnnounceFx": false,
 							"hitFrame": 1,
-							"breachResistance": 100,
-							"lockAiAfter": 0,
-							"ignoreGlobalCD": true
+							"lockAiAfter": 0
 						},
 						{
 							"chargeAnim": "fauchageDown_load",
 							"coolDown": 6,
 							"power": [
-								25
+								25.0
 							],
 							"props": {
 								"x": 144,
@@ -44152,15 +44155,13 @@
 							"fxId": "FXAtkfauchageDown",
 							"disableAnnounceFx": false,
 							"hitFrame": 7,
-							"breachResistance": 100,
-							"lockAiAfter": 0,
-							"ignoreGlobalCD": true
+							"lockAiAfter": 0
 						},
 						{
 							"chargeAnim": "fauchageUp_load",
 							"coolDown": 0,
 							"power": [
-								25
+								25.0
 							],
 							"props": {
 								"x": -72,
@@ -44181,15 +44182,13 @@
 							"fxId": "FXAtkfauchageUp",
 							"disableAnnounceFx": false,
 							"hitFrame": 7,
-							"breachResistance": 100,
-							"lockAiAfter": 0,
-							"ignoreGlobalCD": true
+							"lockAiAfter": 0
 						},
 						{
 							"chargeAnim": "lanceFaux_load",
 							"coolDown": 8,
 							"power": [
-								15
+								15.0
 							],
 							"props": {},
 							"allowInAir": true,
@@ -44205,15 +44204,13 @@
 							"sfxRelease": "sfx/enm/purpleDLC_Death_scytheThrow_release.wav",
 							"disableAnnounceFx": false,
 							"hitFrame": 8,
-							"breachResistance": 100,
-							"lockAiAfter": 0,
-							"ignoreGlobalCD": true
+							"lockAiAfter": 0
 						},
 						{
 							"chargeAnim": "teteChercheuse_load",
 							"coolDown": 4,
 							"power": [
-								8
+								8.0
 							],
 							"props": {
 								"speed": 0.4,
@@ -44233,15 +44230,13 @@
 							"disableAnnounceFx": false,
 							"sfxHit": "sfx/enm/purpleDLC_Death_soulShot_hit.wav",
 							"hitFrame": 6,
-							"breachResistance": 100,
-							"lockAiAfter": 0,
-							"ignoreGlobalCD": true
+							"lockAiAfter": 0
 						},
 						{
 							"chargeAnim": "explosion_load",
 							"coolDown": 1.5,
 							"power": [
-								15
+								15.0
 							],
 							"props": {},
 							"allowInAir": true,
@@ -44257,9 +44252,7 @@
 							"sfxRelease": "sfx/enm/purpleDLC_Death_soulBlast_end.wav",
 							"disableAnnounceFx": false,
 							"hitFrame": 4,
-							"breachResistance": 100,
-							"lockAiAfter": 0,
-							"ignoreGlobalCD": true
+							"lockAiAfter": 0
 						},
 						{
 							"chargeAnim": "drain_load",
@@ -44280,9 +44273,7 @@
 							"fxId": "FXAtkDrain_end",
 							"disableAnnounceFx": true,
 							"hitFrame": 138,
-							"breachResistance": 100,
-							"lockAiAfter": 0,
-							"ignoreGlobalCD": true
+							"lockAiAfter": 0
 						}
 					]
 				},
@@ -85511,7 +85502,7 @@
 						"loadingDescColor": 4312202,
 						"loadingColor": 399638
 					},
-					"biome": "PrisonCourtyard2",
+					"biome": "DeathArenaSky",
 					"doubleUps": 0,
 					"group": 0,
 					"quarterUpsBC3": 2,
@@ -122694,6 +122685,118 @@
 					"commonAtlas": 1,
 					"smoke": 13246292,
 					"waterLight": 12820189
+				},
+				{
+					"camEffects": {
+						"lensDustBigAlpha": 2.5,
+						"lensDustSmallAlpha": 3,
+						"camFogBotAlpha": 1.8,
+						"camFogTopAlpha": 0.5,
+						"camFogTopColor": 16744576,
+						"camFogBotColor": 16737860
+					},
+					"floorJunkDensity": 0.8,
+					"water": 6610365,
+					"wallJunkDensity": 0.4,
+					"vegetation": 0.8,
+					"reverbMix": 0.15,
+					"reverbKind": 68,
+					"atlasName": "prisonCourtyard",
+					"smokeShader": {
+						"speed": 0.05,
+						"power": 1,
+						"alpha": 0.4,
+						"mode": 2,
+						"contrib": 1
+					},
+					"id": "DeathArenaSky",
+					"fog": 16737860,
+					"celShadow": 4473685,
+					"scatterConf": "Sky2",
+					"cloud": 2586305,
+					"ambient": 16755336,
+					"lightColors": [
+						{
+							"conf": "Hero",
+							"color": 9136193
+						},
+						{
+							"conf": "Lantern",
+							"color": 16731904
+						},
+						{
+							"conf": "Candle",
+							"color": 16726016
+						},
+						{
+							"conf": "Torch",
+							"color": 16731904
+						}
+					],
+					"fogScale": 0.5,
+					"oneWayOpaque": false,
+					"vegetationRandScale": true,
+					"uiProps": {
+						"alphaBlack": 0.5,
+						"alphaBlue": 0.8,
+						"alphaGradientBot": 0.2
+					},
+					"layers": [
+						{
+							"lightType": 0,
+							"gradientScale": 1,
+							"gradientName": "prisonCourtyard2Bg",
+							"layer": "BackgroundFar"
+						},
+						{
+							"lightType": 0,
+							"gradientScale": 1,
+							"gradientName": "prisonCourtyard2Fg",
+							"layer": "BackgroundNear"
+						},
+						{
+							"lightType": 1,
+							"gradientScale": 0.5,
+							"gradientName": "prisonCourtyard2Main",
+							"layer": "MainBackWalls",
+							"lightDepth": 1
+						},
+						{
+							"lightType": 1,
+							"gradientScale": 0.6,
+							"gradientName": "prisonCourtyard2Main",
+							"layer": "MainBackProps",
+							"lightDepth": 0.76
+						},
+						{
+							"lightType": 1,
+							"gradientScale": 0.6,
+							"gradientName": "prisonCourtyard2Main",
+							"layer": "MainBack",
+							"lightDepth": 0.76
+						},
+						{
+							"lightType": 1,
+							"gradientScale": 0,
+							"gradientName": "prisonCourtyard2Main",
+							"layer": "MainProps",
+							"lightDepth": 0.36
+						},
+						{
+							"lightType": 2,
+							"layer": "MainAction"
+						},
+						{
+							"lightType": 0,
+							"gradientScale": 0.5,
+							"gradientName": "prisonCourtyard2FrontWalls",
+							"layer": "MainFrontWalls"
+						}
+					],
+					"floorStamps": 1,
+					"smoke": 4205968,
+					"waterLight": 13498080,
+					"cloudColor": 16746581
 				}
 			],
 			"separators": []
