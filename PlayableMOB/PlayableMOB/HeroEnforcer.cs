@@ -32,7 +32,7 @@ public class HeroEnforcer : Enforcer
 
 	public static HeroEnforcer? inst { get; private set; }
 
-	public Dictionary<string, KeyBind> keys { get; private set; } = PlayableMOB.config.Value.enforcer.bindings;
+	public Dictionary<string, KeyBind> keys => PlayableMOB.config.Value.enforcer.bindings;
 
 	// Skill references from oldSkills array
 	private OldMobSkill? shieldBashSkill;
@@ -101,10 +101,6 @@ public class HeroEnforcer : Enforcer
 	public override void init()
 	{
 		Utils.mobInit((dc.en.Mob)this);
-		if (keys == null)
-		{
-			keys = PlayableMOB.config.Value.enforcer.bindings;
-		}
 
 		// Get skill references from end of oldSkills array
 		// Base Mob adds aggrTeleport+necromancedTeleport first,
@@ -150,6 +146,7 @@ public class HeroEnforcer : Enforcer
 
 		reset();
 		inst = this;
+		PlayableMOB.activeMonster = (Entity)this;
 	}
 
 	private void HijackInterrupt(OldMobSkill? skill)
@@ -177,13 +174,11 @@ public class HeroEnforcer : Enforcer
 
 	public override void fixedUpdate()
 	{
+		if (((Entity)this).destroyed) return;
 		base.fixedUpdate();
 
 		if (!PlayableMOB.config.Value.enabled)
 			return;
-
-		if (keys != PlayableMOB.config.Value.enforcer.bindings)
-			keys = PlayableMOB.config.Value.enforcer.bindings;
 
 		if (curState == MobState.Dead)
 			return;
@@ -211,7 +206,7 @@ public class HeroEnforcer : Enforcer
 		}
 
 		// Clear AI-set cooldowns when player wants to attack
-		if (Utils.pressed(keys["slash"]) || Utils.pressed(keys["shieldBash"]))
+		if (Utils.pressed(keys["skill1"]) || Utils.pressed(keys["skill2"]))
 		{
 			if (shieldBashSkill != null) shieldBashSkill.coolDownF = 0.0;
 			if (shieldedSlashSkill != null) shieldedSlashSkill.coolDownF = 0.0;
@@ -222,7 +217,7 @@ public class HeroEnforcer : Enforcer
 		// Player skill activation (only when idle)
 		if (curState == MobState.Idle)
 		{
-			if (Utils.pressed(keys["slash"]))
+			if (Utils.pressed(keys["skill1"]))
 			{
 				if (base.shielded && shieldedSlashSkill != null)
 					shieldedSlashSkill.prepare(null);
@@ -230,7 +225,7 @@ public class HeroEnforcer : Enforcer
 					shieldlessSlash1Skill.prepare(null);
 			}
 
-			if (base.shielded && Utils.pressed(keys["shieldBash"]) && shieldBashSkill != null)
+			if (base.shielded && Utils.pressed(keys["skill2"]) && shieldBashSkill != null)
 			{
 				shieldBashSkill.prepare(null);
 			}

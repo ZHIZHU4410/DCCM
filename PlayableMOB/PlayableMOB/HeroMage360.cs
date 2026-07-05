@@ -19,7 +19,7 @@ public class HeroMage360 : Mage360
 	private int jumpHoldFrames = 0;
 
 	public static HeroMage360? inst { get; private set; }
-	public Dictionary<string, KeyBind> keys { get; private set; } = PlayableMOB.config.Value.mage360.bindings;
+	public Dictionary<string, KeyBind> keys => PlayableMOB.config.Value.enforcer.bindings;
 
 	private OldMobSkill? shootSkill;
 
@@ -66,9 +66,6 @@ public class HeroMage360 : Mage360
 	public void playerInit()
 	{
 
-		if (keys == null)
-			keys = PlayableMOB.config.Value.mage360.bindings;
-
 		// Get shoot skill from end of oldSkills array
 		if (base.oldSkills != null)
 		{
@@ -102,6 +99,7 @@ public class HeroMage360 : Mage360
 
 		reset();
 		inst = this;
+		PlayableMOB.activeMonster = (Entity)this;
 	}
 
 	public override void fixedUpdate()
@@ -109,7 +107,6 @@ public class HeroMage360 : Mage360
 		base.fixedUpdate();
 
 		if (!PlayableMOB.config.Value.enabled) return;
-		if (keys != PlayableMOB.config.Value.mage360.bindings) keys = PlayableMOB.config.Value.mage360.bindings;
 		if (curState == MobState.Dead) return;
 		if (((Entity)this).isUnconscious()) { reset(); return; }
 
@@ -121,7 +118,7 @@ public class HeroMage360 : Mage360
 			if (stateCd <= 0.0) reset();
 		}
 
-		if (Utils.pressed(keys["shoot"]) || Utils.pressed(keys["dodge"]))
+		if (Utils.pressed(keys["skill1"]) || Utils.pressed(keys["skill2"]))
 		{
 			if (shootSkill != null) shootSkill.coolDownF = 0.0;
 			if (base.dodge != null) base.dodge.coolDownF = 0.0;
@@ -129,9 +126,9 @@ public class HeroMage360 : Mage360
 
 		if (curState == MobState.Idle)
 		{
-			if (Utils.pressed(keys["shoot"]) && shootSkill != null)
+			if (Utils.pressed(keys["skill1"]) && shootSkill != null)
 				shootSkill.prepare(null);
-			if (Utils.pressed(keys["dodge"]) && base.dodge != null)
+			if (Utils.pressed(keys["skill2"]) && base.dodge != null)
 				base.dodge.prepare(null);
 		}
 

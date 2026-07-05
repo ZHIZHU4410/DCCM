@@ -141,6 +141,46 @@ public static class Utils
 		((Entity)e).removeAllAffects(5);
 	}
 
+	public static void bossInit(dc.en.mob.Boss e)
+	{
+		((Entity)e).delayer = new Delayer(60.0);
+		((Entity)e).tw = new Tweenie(60.0);
+		((Entity)e).createAttackSource();
+		((Entity)e).createAttackTarget();
+		((Entity)e).initGfx();
+		((Entity)e).initClonesGfx();
+		if (((Entity)e)._level != null && ((Entity)e)._level.minimap != null && !((Process)((Entity)e)._level.minimap).destroyed)
+			((Entity)e).minimapTracking();
+		((Entity)e).initDone = true;
+		((Entity)e).isOnScreen = false;
+		((Entity)e).isOutOfGame = true;
+		if (((Entity)e).isInQuadTree())
+			((Entity)e)._level.qTree.tryInsert(((Entity)e).cx, ((Entity)e).cy, (Entity)(object)e);
+		((dc.en.Mob)e).initCDBData();
+		((dc.en.Mob)e).baseMoveSpeedMul = (((dc.en.Mob)e)._infos.props.moveSpeedMul.HasValue ? ((dc.en.Mob)e)._infos.props.moveSpeedMul.Value : 1.0);
+		((dc.en.Mob)e).baseMovePauseMul = (((dc.en.Mob)e)._infos.props.movePauseMul.HasValue ? ((dc.en.Mob)e)._infos.props.movePauseMul.Value : 1.0);
+		if (((dc.en.Mob)e)._infos != null && ((dc.en.Mob)e)._infos.glowInnerColor.HasValue)
+		{
+			int value = ((dc.en.Mob)e)._infos.glowInnerColor.Value;
+			int? num = null;
+			try { num = ((dc.en.Mob)e)._infos.glowOuterColor; } catch { }
+			((Entity)e).setGlowColor(value, num, (double?)null, (HSprite)null);
+		}
+		((dc.en.Mob)e).initSkills();
+		((dc.en.Mob)e).initMove();
+		if (DLC.Class.mobIsPressHidden.Invoke(((dc.en.Mob)e).type))
+			((Entity)e).destroy();
+		if (((dc.en.Mob)e).canApplyColorSwap())
+			((dc.en.Mob)e).applyColorSwap();
+		((Entity)e).onSprAlphaChanged = ((dc.en.Mob)e).onMobAlphaChanged;
+		// Boss-specific: get boss room (may return current room if no boss room)
+		try { e.bossRoom = e.getBossRoom(); } catch { e.bossRoom = ((Entity)e)._level.map.getRoomAt(((Entity)e).cx, ((Entity)e).cy); }
+		((dc.en.Mob)e).removeFlawlessLoots();
+		e.cameraTrackingDisabled = true;
+		e.ready = true;
+		((Entity)e).removeAllAffects(5);
+	}
+
 	public static dc.level._LevelAudio.Event playEvent(string path)
 	{
 		dc.level.LevelAudio lAudio = Game.Class.ME.curLevel.lAudio;

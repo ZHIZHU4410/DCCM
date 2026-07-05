@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using HaxeProxy.Runtime;
 using ModCore;
 using ModCore.Events.Interfaces.Game.Hero;
@@ -20,11 +21,36 @@ public class PlayableMOB : ModBase, IOnHeroUpdate, IModMenu
 	private bool overridden = false;
 
 	public static PlayableMOB? inst { get; private set; }
-
 	public static Config<Configs> config { get; } = new Config<Configs>("PlayableMOB");
 
-	public PlayableMOB(ModInfo info)
-		: base(info)
+	// Active monster tracking — each Hero class sets this in create() and clears in destroy()
+	public static Entity? activeMonster;
+
+	// Monster registry — index 0 = Enforcer, cycle with keys 1/2
+	private static readonly List<Action<Hero>> monsterFactories = new()
+	{
+		HeroEnforcer.create,
+		HeroMage360.create,
+		HeroShield.create,
+		HeroBomber.create,
+		HeroGolem.create,
+		HeroFatZombie.create,
+		HeroEarthquaker.create,
+		HeroStomper.create,
+		HeroRampager.create,
+		HeroArbiter.create,
+		HeroTick.create,
+		HeroShopMimic.create,
+		// Boss: only Collector works (PlayableBoss-tested pattern)
+		// TimeKeeper, KingsHand, Queen: bossInit() doesn't set collisionMode,
+		// causing "Null access .collisionMode" when enemies nearby
+		HeroCollectorBoss.create,
+	};
+
+	private static int currentIndex = 0;
+	private static int MonsterCount => monsterFactories.Count;
+
+	public PlayableMOB(ModInfo info) : base(info)
 	{
 		inst = this;
 		info.Version = "1.0.0";
@@ -36,41 +62,26 @@ public class PlayableMOB : ModBase, IOnHeroUpdate, IModMenu
 		((Module)this).Logger.Information("PlayableMOB mod initialized");
 	}
 
-	public string GetName()
-	{
-		return "Playable Enforcer";
-	}
+	public string GetName() => "Playable MOB";
 
 	public void BuildMenu(dc.ui.Options options)
 	{
-		((dc.ui.Text)((dc.ui.OptionsBase)options).title).set_text(StringUtils.AsHaxeString("Playable Enforcer Settings".ToUpper()));
+		((dc.ui.Text)((dc.ui.OptionsBase)options).title).set_text(StringUtils.AsHaxeString("Playable MOB Settings".ToUpper()));
 		((dc.ui.OptionsBase)options).createScroller(0.0);
 
 		bool enabled = config.Value.enabled;
 		((dc.ui.OptionsBase)options).addToggleWidget(
 			StringUtils.AsHaxeString("Activate mod"),
-			StringUtils.AsHaxeString("Achievements are disabled while this mod is activated"),
-			(HlFunc<bool>)delegate
-			{
-				config.Value.enabled = !config.Value.enabled;
-				return config.Value.enabled;
-			},
-			new Ref<bool>(ref enabled),
-			((dc.ui.OptionsBase)options).scrollerFlow
-		);
+			StringUtils.AsHaxeString("Achievements disabled while active"),
+			(HlFunc<bool>)delegate { config.Value.enabled = !config.Value.enabled; return config.Value.enabled; },
+			new Ref<bool>(ref enabled), ((dc.ui.OptionsBase)options).scrollerFlow);
 
 		bool flag = !config.Value.enforcer.overrideHero;
 		((dc.ui.OptionsBase)options).addToggleWidget(
 			StringUtils.AsHaxeString("Disable override"),
-			StringUtils.AsHaxeString("Play as both the Enforcer and the Beheaded"),
-			(HlFunc<bool>)delegate
-			{
-				config.Value.enforcer.overrideHero = !config.Value.enforcer.overrideHero;
-				return !config.Value.enforcer.overrideHero;
-			},
-			new Ref<bool>(ref flag),
-			((dc.ui.OptionsBase)options).scrollerFlow
-		);
+			StringUtils.AsHaxeString("Play as both mob and Beheaded"),
+			(HlFunc<bool>)delegate { config.Value.enforcer.overrideHero = !config.Value.enforcer.overrideHero; return !config.Value.enforcer.overrideHero; },
+			new Ref<bool>(ref flag), ((dc.ui.OptionsBase)options).scrollerFlow);
 
 		((dc.ui.OptionsBase)options).updateScroller();
 	}
@@ -111,86 +122,70 @@ public class PlayableMOB : ModBase, IOnHeroUpdate, IModMenu
 		}
 	}
 
+	private static bool AnyAlive => activeMonster != null && !activeMonster.destroyed;
+
+	private static void DestroyCurrent()
+	{
+		activeMonster?.destroy();
+		activeMonster = null;
+	}
+
+	private static void CreateByIndex(Hero hero, int index)
+	{
+		if (index >= 0 && index < MonsterCount)
+		{
+			try
+			{
+				monsterFactories[index](hero);
+			}
+			catch (Exception ex)
+			{
+				((Module)inst!).Logger.Error($"Failed to create monster at index {index}: {ex.Message}");
+				// Skip to next monster on failure
+				currentIndex = (index + 1) % MonsterCount;
+			}
+		}
+	}
+
 	void IOnHeroUpdate.OnHeroUpdate(double dt)
 	{
 		Hero hero = dc.pr.Game.Class.ME.hero;
-		if (hero == null || (hero != null && ((Entity)hero)._level == null))
-		{
-			return;
-		}
+		if (hero == null || ((Entity)hero)._level == null) return;
 		dc.level.Room roomAt = dc.pr.Game.Class.ME.curLevel.map.getRoomAt(((Entity)hero).cx, ((Entity)hero).cy);
-		if (((dc.libs.Process)dc.pr.Game.Class.ME).paused)
-		{
-			return;
-		}
+		if (((dc.libs.Process)dc.pr.Game.Class.ME).paused) return;
+
 		if (config.Value.enforcer.overrideHero)
 		{
-			if ((HeroEnforcer.inst != null || HeroMage360.inst != null) && !overridden)
-			{
-				disableHero();
-			}
-			else if (HeroEnforcer.inst == null && HeroMage360.inst == null && overridden)
-			{
-				enableHero();
-			}
+			if (AnyAlive && !overridden) disableHero();
+			else if (!AnyAlive && overridden) enableHero();
 		}
-		else if (overridden)
+		else if (overridden) { enableHero(); }
+
+		if (!config.Value.enabled) return;
+
+		// Key 1: previous monster
+		if (Utils.pressed(config.Value.enforcer.bindings["cyclePrev"]))
 		{
-			enableHero();
+			DestroyCurrent();
+			currentIndex = (currentIndex - 1 + MonsterCount) % MonsterCount;
+			if (roomAt != null) CreateByIndex(hero, currentIndex);
+			((Entity)hero).set_sprAlpha(1.0);
 		}
-		if (!config.Value.enabled)
+		// Key 2: next monster
+		if (Utils.pressed(config.Value.enforcer.bindings["cycleNext"]))
 		{
-			return;
+			DestroyCurrent();
+			currentIndex = (currentIndex + 1) % MonsterCount;
+			if (roomAt != null) CreateByIndex(hero, currentIndex);
+			((Entity)hero).set_sprAlpha(1.0);
 		}
-		// Key 1: toggle Enforcer (create/destroy)
-		if (Utils.pressed(config.Value.enforcer.bindings["switchEnforcer"]))
-		{
-			if (roomAt != null && HeroEnforcer.inst == null)
-			{
-				if (HeroMage360.inst != null) ((Entity)HeroMage360.inst).destroy();
-				HeroEnforcer.create(hero);
-			}
-			else if (HeroEnforcer.inst != null && !((Entity)HeroEnforcer.inst).destroyed)
-			{
-				((Entity)HeroEnforcer.inst).destroy();
-				((Entity)hero).set_sprAlpha(1.0);
-			}
-		}
-		// Key 2: toggle Mage360 (create/destroy)
-		if (Utils.pressed(config.Value.enforcer.bindings["switchMage"]))
-		{
-			if (roomAt != null && HeroMage360.inst == null)
-			{
-				if (HeroEnforcer.inst != null) ((Entity)HeroEnforcer.inst).destroy();
-				HeroMage360.create(hero);
-			}
-			else if (HeroMage360.inst != null && !((Entity)HeroMage360.inst).destroyed)
-			{
-				((Entity)HeroMage360.inst).destroy();
-				((Entity)hero).set_sprAlpha(1.0);
-			}
-		}
-		// Key P: generic toggle (destroy whichever exists, or create Enforcer)
+		// Key P: toggle (destroy or create current)
 		if (Utils.pressed(config.Value.enforcer.bindings["toggle"]))
 		{
-			if (roomAt != null && HeroEnforcer.inst == null && HeroMage360.inst == null)
-			{
-				HeroEnforcer.create(hero);
-			}
-			else if (HeroEnforcer.inst != null && !((Entity)HeroEnforcer.inst).destroyed)
-			{
-				((Entity)HeroEnforcer.inst).destroy();
-				((Entity)hero).set_sprAlpha(1.0);
-			}
-			else if (HeroMage360.inst != null && !((Entity)HeroMage360.inst).destroyed)
-			{
-				((Entity)HeroMage360.inst).destroy();
-				((Entity)hero).set_sprAlpha(1.0);
-			}
+			if (AnyAlive) { DestroyCurrent(); ((Entity)hero).set_sprAlpha(1.0); }
+			else if (roomAt != null) CreateByIndex(hero, currentIndex);
 		}
-		if (HeroEnforcer.inst != null)
-			heroTrack((Entity?)(object)HeroEnforcer.inst);
-		else if (HeroMage360.inst != null)
-			heroTrack((Entity?)(object)HeroMage360.inst);
+
+		if (activeMonster != null && !activeMonster.destroyed) heroTrack(activeMonster);
 	}
 }

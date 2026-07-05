@@ -6,91 +6,20 @@ public class Configs
 {
 	public bool enabled = true;
 
+	// Shared config: enforcer section holds global keys + override flag
 	public MobConfig enforcer = new MobConfig(new Dictionary<string, KeyBind>
 	{
-		{
-			"toggle",
-			new KeyBind
-			{
-				primary = 80
-			}
-		},
-		{
-			"up",
-			new KeyBind
-			{
-				primary = 87
-			}
-		},
-		{
-			"left",
-			new KeyBind
-			{
-				primary = 65
-			}
-		},
-		{
-			"down",
-			new KeyBind
-			{
-				primary = 83
-			}
-		},
-		{
-			"right",
-			new KeyBind
-			{
-				primary = 68
-			}
-		},
-		{
-			"shieldBash",
-			new KeyBind
-			{
-				primary = 81
-			}
-		},
-		{
-			"slash",
-			new KeyBind
-			{
-				primary = 74
-			}
-		},
-		{
-			"jump",
-			new KeyBind
-			{
-				primary = 87
-			}
-		},
-		{
-			"switchEnforcer",
-			new KeyBind
-			{
-				primary = 49
-			}
-		},
-		{
-			"switchMage",
-			new KeyBind
-			{
-				primary = 50
-			}
-		}
-	});
-
-	public MobConfig mage360 = new MobConfig(new Dictionary<string, KeyBind>
-	{
-		{ "toggle",          new KeyBind { primary = 80 } },
-		{ "up",              new KeyBind { primary = 87 } },
-		{ "left",            new KeyBind { primary = 65 } },
-		{ "down",            new KeyBind { primary = 83 } },
-		{ "right",           new KeyBind { primary = 68 } },
-		{ "jump",            new KeyBind { primary = 87 } },
-		{ "shoot",           new KeyBind { primary = 74 } },
-		{ "dodge",           new KeyBind { primary = 75 } },
-		{ "switchEnforcer",  new KeyBind { primary = 49 } },
-		{ "switchMage",      new KeyBind { primary = 50 } },
+		{ "toggle",    new KeyBind { primary = 80 } },  // P
+		{ "cyclePrev", new KeyBind { primary = 49 } },  // 1
+		{ "cycleNext", new KeyBind { primary = 50 } },  // 2
+		{ "jump",      new KeyBind { primary = 87 } },  // W
+		{ "left",      new KeyBind { primary = 65 } },  // A
+		{ "right",     new KeyBind { primary = 68 } },  // D
+		{ "down",      new KeyBind { primary = 83 } },  // S
+		{ "skill1",    new KeyBind { primary = 74 } },  // J
+		{ "skill2",    new KeyBind { primary = 75 } },  // K
+		{ "skill3",    new KeyBind { primary = 76 } },  // L
+		{ "skill4",    new KeyBind { primary = 85 } },  // U
+		{ "skill5",    new KeyBind { primary = 73 } },  // I
 	});
 }
