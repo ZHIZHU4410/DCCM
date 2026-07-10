@@ -41,10 +41,13 @@ public class PlayableMOB : ModBase, IOnHeroUpdate, IModMenu
 		HeroArbiter.create,
 		HeroTick.create,
 		HeroShopMimic.create,
-		// Boss: only Collector works (PlayableBoss-tested pattern)
-		// TimeKeeper, KingsHand, Queen: bossInit() doesn't set collisionMode,
-		// causing "Null access .collisionMode" when enemies nearby
-		HeroCollectorBoss.create,
+		HeroComboter.create,
+		HeroU28VacuumCleaner.create,
+		HeroHurler.create,
+		HeroBatKamikaze.create,
+		HeroLibrarian.create,
+		HeroMedusa.create,
+		HeroAxeStatue.create,
 	};
 
 	private static int currentIndex = 0;
@@ -115,7 +118,7 @@ public class PlayableMOB : ModBase, IOnHeroUpdate, IModMenu
 	{
 		if (config.Value.enforcer.overrideHero && e != null)
 		{
-			Hero hero = dc.pr.Game.Class.ME.hero;
+		Hero hero = dc.pr.Game.Class.ME.hero;
 			((Entity)hero).cx = e.cx;
 			((Entity)hero).cy = e.cy;
 			((Entity)hero).dir = e.dir;

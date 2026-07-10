@@ -25,7 +25,6 @@ using dc.hxsl;
 using dc.level;
 using dc.light;
 using dc.pow;
-using dc.pr;
 using dc.shader;
 using dc.tool;
 using dc.tool.atk;
@@ -54,16 +53,10 @@ namespace Katana
     {
         public KatanaMain(ModInfo info) : base(info) { }
 
-        // ---------- 平砍无敌帧相关 ----------
+        // ---------- 无敌帧相关 ----------
         private double _invincibleTimer = 0.0;
-        // 无敌帧持续时间：覆盖 Katana 平砍动画（参考 onExecute 中普通攻击的 bump/slash 帧）
+        // 无敌帧持续时间：覆盖 Katana 攻击动画
         private const double INVINCIBLE_DURATION = 0.5;
-
-        // ---------- 残影参数（无敌帧期间附带残影效果） ----------
-        private double _trailAccumulator = 0.0;
-        private const double TRAIL_INTERVAL = 0.07;
-        private const double TRAIL_ALPHA = 0.5;
-        private const double TRAIL_DURATION = 0.3;
 
         public override void Initialize()
         {
@@ -79,8 +72,8 @@ namespace Katana
         }
 
         /// <summary>
-        /// 武器使用时触发。检测是否为 Katana 平砍（非蓄力冲刺），
-        /// 若是则激活短暂无敌帧。
+        /// 武器使用时触发。检测是否为 Katana 攻击（平砍+蓄力冲刺均触发），
+        /// 激活短暂无敌帧。
         /// </summary>
         private void OnWeaponUseHook(Hook_HeroWeaponsManager.orig_onWeaponUse orig, HeroWeaponsManager self, Weapon w, int slot)
         {
@@ -98,17 +91,10 @@ namespace Katana
 
             if (!isKatana) return;
 
-            var katana = w as dc.tool.weap.Katana;
-            // 仅平砍（非蓄力冲刺）时添加无敌帧
-            // Katana 的 nextIsChargeAtk 为 true 时表示蓄力冲刺攻击
-            if (katana != null && katana.nextIsChargeAtk)
-                return;
-
             Hero hero = self.hero;
 
-            // 激活无敌帧
+            // 平砍 + 蓄力冲刺均激活无敌帧
             _invincibleTimer = INVINCIBLE_DURATION;
-            _trailAccumulator = 0.0;
 
             double ignore = 0;
             var ignoreRef = new Ref<double>(ref ignore);
@@ -160,65 +146,12 @@ namespace Katana
                 _invincibleTimer -= dt;
                 if (_invincibleTimer < 0) _invincibleTimer = 0;
 
-                // 无敌期间产生残影特效
+                // 免疫眩晕：清除 stun affect（ID 8）
                 Hero? hero = ModCore.Modules.Game.Instance.HeroInstance;
                 if (hero != null && hero.life > 0)
                 {
-                    _trailAccumulator += dt;
-                    while (_trailAccumulator >= TRAIL_INTERVAL)
-                    {
-                        _trailAccumulator -= TRAIL_INTERVAL;
-                        CreateTrail(hero);
-                    }
+                    hero.removeAllAffects(8);
                 }
-            }
-            else
-            {
-                _trailAccumulator = 0.0;
-            }
-        }
-
-        /// <summary>
-        /// 创建残影特效（无敌帧期间视觉反馈）
-        /// </summary>
-        private void CreateTrail(Hero hero)
-        {
-            if (hero == null) return;
-            try
-            {
-                bool dummyBool = false;
-                double dummyDouble = 0.0;
-                var refBool1 = new Ref<bool>(ref dummyBool);
-                var refBool2 = new Ref<bool>(ref dummyBool);
-                var refDouble = new Ref<double>(ref dummyDouble);
-
-                // 白色残影
-                int trailColor = unchecked((int)0xFFFFFFFF);
-
-                var trail = OnionSkin.Class.fromEntity(
-                    hero,
-                    null,
-                    trailColor,
-                    Ref<double>.In(TRAIL_ALPHA),
-                    Ref<double>.In(TRAIL_DURATION),
-                    refBool1,
-                    refBool2,
-                    refDouble
-                );
-
-                if (trail != null)
-                {
-                    double offsetX = -hero.dir * 10.0;
-                    trail.offset(offsetX, 0.0);
-                    trail.scaleX *= 1.0;
-                    trail.scaleY *= 1.0;
-                    trail.ds = 0.0;
-                    trail.frict = 0.87;
-                }
-            }
-            catch
-            {
-                // 静默处理残影创建异常
             }
         }
 
