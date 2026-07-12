@@ -50,6 +50,49 @@ public class PlayableMOB : ModBase, IOnHeroUpdate, IModMenu
 		HeroAxeStatue.create,
 	};
 
+	// Monster display names — must match monsterFactories by index
+	private static readonly List<string> monsterNames = new()
+	{
+		"Enforcer",
+		"Mage 360",
+		"Shield",
+		"Bomber",
+		"Golem",
+		"Fat Zombie",
+		"Earthquaker",
+		"Stomper",
+		"Rampager",
+		"Arbiter",
+		"Tick",
+		"Shop Mimic",
+		"Comboter",
+		"Vacuum Cleaner",
+		"Hurler",
+		"Bat Kamikaze",
+		"Librarian",
+		"Medusa",
+		"Axe Statue",
+	};
+
+	/// <summary>Returns true if the monster at the given index is enabled (defaults to true).</summary>
+	private static bool IsMonsterEnabled(int index)
+	{
+		if (index < 0 || index >= monsterNames.Count) return false;
+		string name = monsterNames[index];
+		return !config.Value.monsterEnabled.TryGetValue(name, out bool en) || en;
+	}
+
+	/// <summary>Finds the next enabled monster index in the given direction, wrapping around.</summary>
+	private static int FindNextEnabled(int start, int direction)
+	{
+		for (int i = 1; i < MonsterCount; i++)
+		{
+			int idx = (start + direction * i + MonsterCount) % MonsterCount;
+			if (IsMonsterEnabled(idx)) return idx;
+		}
+		return start; // all disabled — stay put
+	}
+
 	private static int currentIndex = 0;
 	private static int MonsterCount => monsterFactories.Count;
 
@@ -85,6 +128,23 @@ public class PlayableMOB : ModBase, IOnHeroUpdate, IModMenu
 			StringUtils.AsHaxeString("Play as both mob and Beheaded"),
 			(HlFunc<bool>)delegate { config.Value.enforcer.overrideHero = !config.Value.enforcer.overrideHero; return !config.Value.enforcer.overrideHero; },
 			new Ref<bool>(ref flag), ((dc.ui.OptionsBase)options).scrollerFlow);
+
+		// ── Per-monster toggles ──
+		for (int i = 0; i < monsterNames.Count; i++)
+		{
+			string name = monsterNames[i];
+			int idx = i;
+			bool en = IsMonsterEnabled(idx);
+			((dc.ui.OptionsBase)options).addToggleWidget(
+				StringUtils.AsHaxeString(name),
+				StringUtils.AsHaxeString(""),
+				(HlFunc<bool>)delegate {
+					config.Value.monsterEnabled[name] = !IsMonsterEnabled(idx);
+					return config.Value.monsterEnabled[name];
+				},
+				new Ref<bool>(ref en),
+				((dc.ui.OptionsBase)options).scrollerFlow);
+		}
 
 		((dc.ui.OptionsBase)options).updateScroller();
 	}
@@ -137,6 +197,7 @@ public class PlayableMOB : ModBase, IOnHeroUpdate, IModMenu
 	{
 		if (index >= 0 && index < MonsterCount)
 		{
+			if (!IsMonsterEnabled(index)) return;
 			try
 			{
 				monsterFactories[index](hero);
@@ -170,7 +231,7 @@ public class PlayableMOB : ModBase, IOnHeroUpdate, IModMenu
 		if (Utils.pressed(config.Value.enforcer.bindings["cyclePrev"]))
 		{
 			DestroyCurrent();
-			currentIndex = (currentIndex - 1 + MonsterCount) % MonsterCount;
+			currentIndex = FindNextEnabled(currentIndex, -1);
 			if (roomAt != null) CreateByIndex(hero, currentIndex);
 			((Entity)hero).set_sprAlpha(1.0);
 		}
@@ -178,7 +239,7 @@ public class PlayableMOB : ModBase, IOnHeroUpdate, IModMenu
 		if (Utils.pressed(config.Value.enforcer.bindings["cycleNext"]))
 		{
 			DestroyCurrent();
-			currentIndex = (currentIndex + 1) % MonsterCount;
+			currentIndex = FindNextEnabled(currentIndex, 1);
 			if (roomAt != null) CreateByIndex(hero, currentIndex);
 			((Entity)hero).set_sprAlpha(1.0);
 		}
@@ -186,7 +247,7 @@ public class PlayableMOB : ModBase, IOnHeroUpdate, IModMenu
 		if (Utils.pressed(config.Value.enforcer.bindings["toggle"]))
 		{
 			if (AnyAlive) { DestroyCurrent(); ((Entity)hero).set_sprAlpha(1.0); }
-			else if (roomAt != null) CreateByIndex(hero, currentIndex);
+			else if (roomAt != null && IsMonsterEnabled(currentIndex)) CreateByIndex(hero, currentIndex);
 		}
 
 		if (activeMonster != null && !activeMonster.destroyed) heroTrack(activeMonster);

@@ -6,6 +6,9 @@ public class Configs
 {
 	public bool enabled = true;
 
+	// Per-monster toggle: key = monster name, value = enabled (defaults to true when absent)
+	public Dictionary<string, bool> monsterEnabled = new();
+
 	// Shared config: enforcer section holds global keys + override flag
 	public MobConfig enforcer = new MobConfig(new Dictionary<string, KeyBind>
 	{
