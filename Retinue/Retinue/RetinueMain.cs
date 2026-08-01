@@ -40,12 +40,12 @@ namespace Retinue
         /// <summary>缩放</summary>
         private const double SCALE = 0.3;
 
-        private const double OFFSET_X = 50.0;
-        private const double OFFSET_Y = -70.0;
+        private const double OFFSET_X = 90.0;
+        private const double OFFSET_Y = -100.0;
 
         // ── 来自 FlyingSword.onMoveTargetReached ──
         private const double MOVE_SPEED = 0.65;          // move.speed = 0.65
-        private const double BACK_FORTH_OFFSET = 1.0;   //  像素交替偏移
+        private const double BACK_FORTH_OFFSET = 0.0;   //  像素交替偏移
         private const double VERTICAL_RANDOM_MIN = 0.75; // offsetY * (0.75 + random*0.5)
 
         // ================================================================
@@ -223,7 +223,6 @@ namespace Retinue
                 h.spr.addChild(_hsprite);
 
                 // ── 参考: hsprite.get_anim().play(id, num3, null)
-                //         不调用 killAfterPlay()，因为随从需要循环播放 ──
                 int? loopCount = 99999;
                 bool? queueAnim = null;
                 _hsprite.get_anim().play(ANIM.AsHaxeString(), loopCount, queueAnim);
@@ -236,10 +235,6 @@ namespace Retinue
                 _hsprite = null;
             }
         }
-
-        /// <summary>
-        /// 销毁 HSprite（换关/退出时调用）。
-        /// </summary>
         private void DestroyHSprite()
         {
             if (_hsprite != null)

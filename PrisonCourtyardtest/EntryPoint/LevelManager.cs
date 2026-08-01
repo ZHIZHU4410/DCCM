@@ -6,9 +6,7 @@ using HaxeProxy.Runtime;
 using Hashlink.Virtuals;
 using PrisonCourtyardtest.Core.Interfaces;
 using PrisonCourtyardtest.Levels.MainLevel;
-using PrisonCourtyardtest.Levels.TransitionLevel;
 using PrisonCourtyardtest.Levels.MainLevel.Structure;
-using PrisonCourtyardtest.Levels.TransitionLevel.Structure;
 using PrisonCourtyardtest.Levels.T_RoofMod;
 using PrisonCourtyardtest.Utils;
 using LevelInfo = Hashlink.Virtuals.virtual_baseLootLevel_biome_bonusTripleScrollAfterBC_cellBonus_dlc_doubleUps_eliteRoomChance_eliteWanderChance_flagsProps_group_icon_id_index_loreDescriptions_mapDepth_minGold_mobDensity_mobs_name_nextLevels_parallax_props_quarterUpsBC3_quarterUpsBC4_specificLoots_specificSubBiome_transitionTo_tripleUps_worldDepth_;
@@ -20,8 +18,8 @@ public class LevelManager
     private readonly Serilog.ILogger _logger;
 
     private readonly MainLevel _mainLevel = new();
-    private readonly TransitionLevel _transitionLevel = new();
     private readonly T_RoofModLevel _tRoofModLevel = new();
+    private readonly ChaosGlitchFx _chaosFx;
 
     private string? _savedPrisonCourtyardAtlas;
     private bool _injected;
@@ -29,7 +27,13 @@ public class LevelManager
     public LevelManager(ModInitializer entry)
     {
         _logger = entry.Logger;
+        _chaosFx = new ChaosGlitchFx(_logger);
         _logger.Information("Level Manager initialisation commences");
+    }
+
+    public void UpdateChaosFx(double dt)
+    {
+        _chaosFx.Update(dt);
     }
 
     public void RegisterHooks()
@@ -79,9 +83,6 @@ public class LevelManager
 
         if (SameId(id, GameConstants.Levels.PrisonCourtyardTest))
             return _mainLevel.CreateLevelStruct(user, level, rng);
-
-        if (SameId(id, GameConstants.Levels.T_PrisonCourtyardTest))
-            return _transitionLevel.CreateLevelStruct(user, level, rng);
 
         return orig(user, level, rng);
     }
@@ -168,7 +169,8 @@ public class LevelManager
 
     // ═══════════════════════════════════════════
     // 确保自定义关卡在世界地图上可见
-    // canLevelBeDisplayed 要求: group==0 && (metaFlags & 4) != 0
+    // canLevelBeDisplayed 要求: group==0 && (metaFlags & 4) == 0
+    // （metaFlags 第 2 位置 1 反而会隐藏该关卡，见 _WorldMap.canLevelBeDisplayed）
     // ═══════════════════════════════════════════
 
     private void FixWorldMapVisibility()
@@ -178,8 +180,7 @@ public class LevelManager
             if (Data.Class.level?.byId == null || Data.Class.level?.all == null) return;
 
             foreach (var levelId in new[] {
-                GameConstants.Levels.PrisonCourtyardTest,
-                GameConstants.Levels.T_PrisonCourtyardTest
+                GameConstants.Levels.PrisonCourtyardTest
             })
             {
                 try
@@ -227,7 +228,7 @@ public class LevelManager
     }
 
     // ═══════════════════════════════════════════
-    // T_Roof CDB injection — append T_PrisonCourtyardTest to nextLevels
+    // T_Roof CDB injection — append PrisonCourtyardTest to nextLevels
     // ═══════════════════════════════════════════
 
     private void InjectTRoofNextLevels()
@@ -254,9 +255,9 @@ public class LevelManager
                 {
                     var entry = (virtual_gates_level_)((object[])arr.array)[i];
                     string existing = entry.level?.ToString() ?? "";
-                    if (SameId(existing, GameConstants.Levels.T_PrisonCourtyardTest))
+                    if (SameId(existing, GameConstants.Levels.PrisonCourtyardTest))
                     {
-                        _logger.Information("T_Roof nextLevels: already has T_PrisonCourtyardTest");
+                        _logger.Information("T_Roof nextLevels: already has PrisonCourtyardTest");
                         return;
                     }
                 }
@@ -266,10 +267,10 @@ public class LevelManager
             // Create new nextLevel entry and push
             var newEntry = new virtual_gates_level_();
             newEntry.gates = 0;
-            newEntry.level = GameConstants.Levels.T_PrisonCourtyardTest.AsHlxStr();
+            newEntry.level = GameConstants.Levels.PrisonCourtyardTest.AsHlxStr();
             arr.push(newEntry);
 
-            _logger.Information("T_Roof nextLevels: added " + GameConstants.Levels.T_PrisonCourtyardTest);
+            _logger.Information("T_Roof nextLevels: added " + GameConstants.Levels.PrisonCourtyardTest);
         }
         catch (Exception ex)
         {
@@ -304,8 +305,7 @@ public class LevelManager
             if (coord == null) return;
 
             foreach (var t in new[] {
-                GameConstants.Levels.PrisonCourtyardTest,
-                GameConstants.Levels.T_PrisonCourtyardTest
+                GameConstants.Levels.PrisonCourtyardTest
             })
                 try { logos.textureCoordinateByLevelKind.set.Invoke(t.AsHlxStr(), coord); } catch { }
 

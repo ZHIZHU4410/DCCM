@@ -91,6 +91,9 @@ public class ModInitializer(ModInfo info) : ModBase(info), IOnGameEndInit, IOnHe
         // Runtime CDB injection
         _levelManager?.TryInject();
 
+        // 混乱大道：花屏特效 + 环境互换
+        _levelManager?.UpdateChaosFx(dt);
+
         // Key 1: teleport to PrisonCourtyardTest
         if (KeyPressed(VK_1, ref _k1WasDown)) On1Pressed();
         // Key 2: teleport to T_Roof

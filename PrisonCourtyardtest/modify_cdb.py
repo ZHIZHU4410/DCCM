@@ -1,4 +1,9 @@
-"""修改 data.cdb — 追加 PrisonCourtyardTest (混乱大道) + T_PrisonCourtyardTest (过渡关)"""
+"""修改 data.cdb — 追加 PrisonCourtyardTest (混乱大道) + PrisonCourtyardTestBiome。
+
+说明：壁垒门 T_Roof 的休息区已由模组代码（T_RoofModLevelStruct）改为
+完整的标准休息区布局，泉水之后直接分叉两个出口（壁垒 / 混乱大道），
+因此不再需要单独的 T_PrisonCourtyardTest 过渡关卡。
+"""
 import json, copy, os, sys, shutil
 
 CDB_PATH = os.path.join(os.path.dirname(__file__), "Assets", "data.cdb")
@@ -24,137 +29,129 @@ if not all([biome_sheet, level_sheet]):
 
 changes = 0
 
+def exists(sheet_lines, key, value):
+    return any(line.get(key) == value for line in sheet_lines)
+
 # ═══════════════════════════════════════════
 # 1. 追加 biome: PrisonCourtyardTestBiome
 # ═══════════════════════════════════════════
-prison_courtyard_biome = None
-for line in biome_sheet['lines']:
-    if line.get('id') == 'PrisonCourtyard':
-        prison_courtyard_biome = copy.deepcopy(line)
-        break
-
-if prison_courtyard_biome:
-    new_biome = prison_courtyard_biome
-    new_biome['id'] = 'PrisonCourtyardTestBiome'
-    new_biome['atlasName'] = 'prisonCourtyardx'
-    biome_sheet['lines'].append(new_biome)
-    changes += 1
-    print(f"[biome] Added PrisonCourtyardTestBiome (atlas: prisonCourtyardx)")
+if exists(biome_sheet['lines'], 'id', 'PrisonCourtyardTestBiome'):
+    print("[biome] SKIP — PrisonCourtyardTestBiome already exists")
 else:
-    print("ERROR: PrisonCourtyard biome not found!")
+    prison_courtyard_biome = None
+    for line in biome_sheet['lines']:
+        if line.get('id') == 'PrisonCourtyard':
+            prison_courtyard_biome = copy.deepcopy(line)
+            break
 
-# ═══════════════════════════════════════════
-# 2. 追加 level: T_PrisonCourtyardTest (过渡关/休息房)
-#    clone from T_PrisonDepths (自带 Collector + PerkShop + Healing)
-# ═══════════════════════════════════════════
-t_depths_template = None
-for line in level_sheet['lines']:
-    if line.get('id') == 'T_PrisonDepths':
-        t_depths_template = copy.deepcopy(line)
-        break
-
-if t_depths_template:
-    t_trans = t_depths_template
-    t_trans['id'] = 'T_PrisonCourtyardTest'
-    t_trans['name'] = '通往混乱大道'
-    t_trans['biome'] = 'PrisonCourtyard'
-    t_trans['nextLevels'] = [{"gates": 0, "level": "PrisonCourtyardTest"}]
-    t_trans['group'] = 0
-    t_trans['worldDepth'] = 2
-    t_trans['mapDepth'] = 2
-
-    # Ensure world map visibility: canLevelBeDisplayed requires (metaFlags & 4) != 0
-    if 'flagsProps' in t_trans and 'metaFlags' in t_trans['flagsProps']:
-        t_trans['flagsProps']['metaFlags'] |= 4
+    if prison_courtyard_biome:
+        new_biome = prison_courtyard_biome
+        new_biome['id'] = 'PrisonCourtyardTestBiome'
+        new_biome['atlasName'] = 'prisonCourtyardx'
+        # 虚空腐化配色：与原版 PrisonCourtyard 环境形成明显差异，
+        # 配合运行时环境互换 + 花屏特效营造维度撕裂氛围
+        new_biome['fog'] = 3871584            # 0x3B1360 深紫黑
+        new_biome['fogScale'] = 0.75
+        new_biome['ambient'] = 6970061         # 0x6A5ACD 暗紫
+        new_biome['celShadow'] = 10173168      # 0x9B3AF0 亮紫影
+        new_biome['smoke'] = 1968950           # 0x1E0B36
+        new_biome['water'] = 3533000           # 0x35E8C8 毒青
+        new_biome['waterLight'] = 3204863      # 0x30E6FF
+        new_biome['smokeShader'] = {'speed': 0.12, 'power': 1.6, 'alpha': 0.8, 'mode': 2, 'contrib': 1.2}
+        new_biome['camEffects'] = {'lensDustBigAlpha': 2.2, 'lensDustSmallAlpha': 2.2, 'camFogBotAlpha': 2.5, 'camFogTopAlpha': 1.4}
+        new_biome['lightColors'] = [
+            {'conf': 'Hero', 'color': 10980351},      # 0xA78BFF
+            {'conf': 'Lantern', 'color': 16731096},   # 0xFF4BD8
+            {'conf': 'Candle', 'color': 5892095}      # 0x59E7FF
+        ]
+        biome_sheet['lines'].append(new_biome)
+        changes += 1
+        print("[biome] Added PrisonCourtyardTestBiome (atlas: prisonCourtyardx)")
     else:
-        if 'flagsProps' not in t_trans:
-            t_trans['flagsProps'] = {}
-        t_trans['flagsProps']['metaFlags'] = 4
-    print(f"[level] T_PrisonCourtyardTest metaFlags = {t_trans['flagsProps'].get('metaFlags', 'N/A')}")
-
-    level_sheet['lines'].append(t_trans)
-    changes += 1
-    print("[level] Added T_PrisonCourtyardTest (transition -> PrisonCourtyardTest)")
-else:
-    print("ERROR: T_PrisonDepths template not found!")
+        print("ERROR: PrisonCourtyard biome not found!")
 
 # ═══════════════════════════════════════════
-# 3. 追加 level: PrisonCourtyardTest (混乱大道)
+# 2. 追加 level: PrisonCourtyardTest (混乱大道)
 #    clone from PrisonCourtyard
 # ═══════════════════════════════════════════
-prison_courtyard_level = None
-for line in level_sheet['lines']:
-    if line.get('id') == 'PrisonCourtyard':
-        prison_courtyard_level = copy.deepcopy(line)
-        break
+if exists(level_sheet['lines'], 'id', 'PrisonCourtyardTest'):
+    print("[level] SKIP — PrisonCourtyardTest already exists")
+else:
+    prison_courtyard_level = None
+    for line in level_sheet['lines']:
+        if line.get('id') == 'PrisonCourtyard':
+            prison_courtyard_level = copy.deepcopy(line)
+            break
 
-if prison_courtyard_level:
-    main_level = prison_courtyard_level
-    main_level['id'] = 'PrisonCourtyardTest'
-    main_level['name'] = '混乱大道'
-    main_level['biome'] = 'PrisonCourtyardTestBiome'
-    main_level['group'] = 0
-    main_level['worldDepth'] = 2
-    main_level['mapDepth'] = 3
-    main_level['nextLevels'] = [{"gates": 0, "level": "T_PrisonDepths"}]
+    if prison_courtyard_level:
+        main_level = prison_courtyard_level
+        main_level['id'] = 'PrisonCourtyardTest'
+        main_level['name'] = '混乱大道'
+        main_level['biome'] = 'PrisonCourtyardTestBiome'
+        main_level['group'] = 0
+        main_level['worldDepth'] = 2
+        main_level['mapDepth'] = 3
+        # 中段分叉：两个出口分别指向监狱深处与腐化监狱
+        main_level['nextLevels'] = [
+            {"gates": 0, "level": "PrisonDepths"},
+            {"gates": 0, "level": "PrisonCorrupt"}
+        ]
+        main_level.pop('index', None)
 
-    # Keep PrisonCourtyard's mob/loot balance but tweak
-    main_level['mobDensity'] = 0.9
-    main_level['minGold'] = 1500
-    main_level['eliteWanderChance'] = 0.15
-    main_level['eliteRoomChance'] = 0.5
+        # Keep PrisonCourtyard's mob/loot balance but tweak
+        main_level['mobDensity'] = 0.9
+        main_level['minGold'] = 1500
+        main_level['eliteWanderChance'] = 0.15
+        main_level['eliteRoomChance'] = 0.5
 
-    # 卷轴设置：20 个卷轴（10 个三选一 + 10 个双选）
-    main_level['baseLootLevel'] = 5
-    main_level['tripleUps'] = 10
-    main_level['doubleUps'] = 10
-    main_level['quarterUpsBC3'] = 0
-    main_level['quarterUpsBC4'] = 0
-    main_level['cellBonus'] = 0.5
+        # 卷轴设置：3 个三选一 + 1 个双选
+        main_level['baseLootLevel'] = 5
+        main_level['tripleUps'] = 3
+        main_level['doubleUps'] = 1
+        main_level['quarterUpsBC3'] = 0
+        main_level['quarterUpsBC4'] = 0
+        main_level['cellBonus'] = 0.5
 
-    # Ensure world map visibility: canLevelBeDisplayed requires (metaFlags & 4) != 0
-    if 'flagsProps' in main_level and 'metaFlags' in main_level['flagsProps']:
-        main_level['flagsProps']['metaFlags'] |= 4
-    else:
-        # If flagsProps missing, create minimal structure
+        # World map visibility: canLevelBeDisplayed 要求 group==0 且 metaFlags 第 2 位为 0。
+        # 第 2 位置 1 反而会隐藏该关卡，所以这里确保清除第 2 位。
         if 'flagsProps' not in main_level:
             main_level['flagsProps'] = {}
-        main_level['flagsProps']['metaFlags'] = 4
-    print(f"[level] PrisonCourtyardTest metaFlags = {main_level['flagsProps'].get('metaFlags', 'N/A')}")
+        main_level['flagsProps']['metaFlags'] = main_level['flagsProps'].get('metaFlags', 0) & ~4
+        # 左右相反：genFlags 第 0 位 = 右→左布局（配合左门入口 BasicEntrance_L）
+        main_level['flagsProps']['genFlags'] = main_level['flagsProps'].get('genFlags', 0) | 1
+        print(f"[level] PrisonCourtyardTest metaFlags = {main_level['flagsProps'].get('metaFlags', 'N/A')}")
 
-    # Remove DLC field if present
-    if 'dlc' in main_level:
-        del main_level['dlc']
-    if 'bonusTripleScrollAfterBC' in main_level:
-        del main_level['bonusTripleScrollAfterBC']
+        # Remove DLC field if present
+        if 'dlc' in main_level:
+            del main_level['dlc']
+        if 'bonusTripleScrollAfterBC' in main_level:
+            del main_level['bonusTripleScrollAfterBC']
 
-    level_sheet['lines'].append(main_level)
+        level_sheet['lines'].append(main_level)
+        changes += 1
+        print("[level] Added PrisonCourtyardTest (biome: PrisonCourtyardTestBiome, exit -> T_PrisonDepths)")
+    else:
+        print("ERROR: PrisonCourtyard level template not found!")
+
+# ═══════════════════════════════════════════
+# 3. 清理：确保旧的 T_PrisonCourtyardTest 过渡关卡不再存在，
+#    也不出现在 PrisonCourtyard 的 nextLevels 里
+# ═══════════════════════════════════════════
+before = len(level_sheet['lines'])
+level_sheet['lines'] = [line for line in level_sheet['lines'] if line.get('id') != 'T_PrisonCourtyardTest']
+if len(level_sheet['lines']) != before:
     changes += 1
-    print("[level] Added PrisonCourtyardTest (biome: PrisonCourtyardTestBiome, exit -> T_PrisonDepths)")
-else:
-    print("ERROR: PrisonCourtyard level template not found!")
+    print("[level] Removed legacy T_PrisonCourtyardTest entry")
 
-# ═══════════════════════════════════════════
-# 4. 修改 PrisonCourtyard 的 nextLevels — 追加 T_PrisonCourtyardTest
-# ═══════════════════════════════════════════
-pc_found = False
 for line in level_sheet['lines']:
     if line.get('id') == 'PrisonCourtyard':
         next_levels = line.get('nextLevels', [])
-        # Check if already added
-        already = any(nl.get('level') == 'T_PrisonCourtyardTest' for nl in next_levels)
-        if not already:
-            next_levels.append({"gates": 0, "level": "T_PrisonCourtyardTest"})
-            line['nextLevels'] = next_levels
+        filtered = [nl for nl in next_levels if nl.get('level') != 'T_PrisonCourtyardTest']
+        if len(filtered) != len(next_levels):
+            line['nextLevels'] = filtered
             changes += 1
-            print("[level] PrisonCourtyard nextLevels += T_PrisonCourtyardTest")
-        else:
-            print("[level] SKIP — T_PrisonCourtyardTest already in PrisonCourtyard nextLevels")
-        pc_found = True
+            print("[level] PrisonCourtyard nextLevels -= T_PrisonCourtyardTest")
         break
-
-if not pc_found:
-    print("ERROR: PrisonCourtyard level not found in sheet!")
 
 # ═══════════════════════════════════════════
 # 保存
@@ -174,5 +171,5 @@ with open(CDB_PATH, 'w', encoding='utf-8') as f:
 print(f"\nDone! {changes} changes saved to {CDB_PATH}")
 print("Summary:")
 print("  biome: +1 (PrisonCourtyardTestBiome, atlas=prisonCourtyardx)")
-print("  level: +2 (PrisonCourtyardTest, T_PrisonCourtyardTest)")
-print("  mod:   PrisonCourtyard nextLevels += T_PrisonCourtyardTest")
+print("  level: +1 (PrisonCourtyardTest)")
+print("  legacy T_PrisonCourtyardTest removed from CDB")

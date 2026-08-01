@@ -8,14 +8,6 @@ public class MainLevelConfig
     public bool Enabled { get; set; } = true;
 }
 
-public class TransitionLevelConfig
-{
-    public string LevelId { get; set; } = "T_PrisonCourtyardTest";
-    public string DisplayName { get; set; } = "通往混乱大道";
-    public string Biome { get; set; } = "PrisonCourtyard";
-    public string NextLevel { get; set; } = "PrisonCourtyardTest";
-}
-
 public class T_RoofModConfig
 {
     public string LevelId { get; set; } = "T_Roof";

@@ -3,6 +3,7 @@ using dc.hl.types;
 using dc.level;
 using dc.libs;
 using Hashlink.Virtuals;
+using HaxeProxy.Runtime;
 using PrisonCourtyardtest.Utils;
 using Serilog;
 
@@ -24,44 +25,70 @@ public class MainLevelStruct : LevelStruct
     {
         Log.Debug("[PrisonCourtyardtest] buildMainRooms start");
 
-        RoomNode start = base.createNode("Entrance".AsHlxStr(), null, null, "start".AsHlxStr());
-        Log.Debug("[PrisonCourtyardtest] Entrance created");
+        // 左右相反：关卡为右→左布局，入口使用天然左门模板 BasicEntrance_L
+        RoomNode start = base.createNode(null, "BasicEntrance_L".AsHlxStr(), null, "start".AsHlxStr())
+            .addFlag(new RoomFlag.Outside());
+        Log.Debug("[PrisonCourtyardtest] Entrance created (BasicEntrance_L, R2L)");
 
-        RoomNode combat1 = base.createNode("Combat".AsHlxStr(), null, null, "combat_1".AsHlxStr());
+        // ── 前半段：5 个战斗房间（PrisonCourtyard 大道地形，group 35）──
+        RoomNode combat1 = base.createNode("Combat".AsHlxStr(), null, 35, "combat_1".AsHlxStr());
         combat1.set_parent(start);
 
-        RoomNode combat2 = base.createNode("Combat".AsHlxStr(), null, null, "combat_2".AsHlxStr());
+        RoomNode combat2 = base.createNode("Combat".AsHlxStr(), null, 35, "combat_2".AsHlxStr());
         combat2.set_parent(combat1);
 
-        RoomNode combat3 = base.createNode("Combat".AsHlxStr(), null, null, "combat_3".AsHlxStr());
+        RoomNode combat3 = base.createNode("Combat".AsHlxStr(), null, 35, "combat_3".AsHlxStr());
         combat3.set_parent(combat2);
 
-        RoomNode combat4 = base.createNode("Combat".AsHlxStr(), null, null, "combat_4".AsHlxStr());
+        RoomNode combat4 = base.createNode("Combat".AsHlxStr(), null, 35, "combat_4".AsHlxStr());
         combat4.set_parent(combat3);
 
-        RoomNode combat5 = base.createNode("Combat".AsHlxStr(), null, null, "combat_5".AsHlxStr());
+        RoomNode combat5 = base.createNode("Combat".AsHlxStr(), null, 35, "combat_5".AsHlxStr());
         combat5.set_parent(combat4);
 
-        RoomNode combat6 = base.createNode("Combat".AsHlxStr(), null, null, "combat_6".AsHlxStr());
-        combat6.set_parent(combat5);
+        // ── 中段分叉点（Combat，group 1，已证实支持多出口）──
+        RoomNode fork = base.createNode("Combat".AsHlxStr(), null, null, "fork".AsHlxStr());
+        fork.set_parent(combat5);
+        Log.Debug("[PrisonCourtyardtest] Mid fork created");
 
-        RoomNode combat7 = base.createNode("Combat".AsHlxStr(), null, null, "combat_7".AsHlxStr());
+        // ── 分支 A → PrisonDepths（监狱深处）──
+        RoomNode combat6 = base.createNode("Combat".AsHlxStr(), null, 35, "combat_6".AsHlxStr());
+        combat6.set_parent(fork);
+
+        RoomNode combat7 = base.createNode("Combat".AsHlxStr(), null, 35, "combat_7".AsHlxStr());
         combat7.set_parent(combat6);
 
-        RoomNode combat8 = base.createNode("Combat".AsHlxStr(), null, null, "combat_8".AsHlxStr());
-        combat8.set_parent(combat7);
+        RoomNode exitDepths = base.createExit("PrisonDepths".AsHlxStr(), null, null, "exit_depths".AsHlxStr());
+        exitDepths.set_parent(combat7);
+        Log.Debug("[PrisonCourtyardtest] Exit -> PrisonDepths");
 
-        RoomNode combat9 = base.createNode("Combat".AsHlxStr(), null, null, "combat_9".AsHlxStr());
+        // ── 分支 B → PrisonCorrupt（腐化监狱）──
+        RoomNode combat8 = base.createNode("Combat".AsHlxStr(), null, 35, "combat_8".AsHlxStr());
+        combat8.set_parent(fork);
+
+        RoomNode combat9 = base.createNode("Combat".AsHlxStr(), null, 35, "combat_9".AsHlxStr());
         combat9.set_parent(combat8);
 
-        RoomNode combat10 = base.createNode("Combat".AsHlxStr(), null, null, "combat_10".AsHlxStr());
-        combat10.set_parent(combat9);
+        RoomNode exitCorrupt = base.createExit("PrisonCorrupt".AsHlxStr(), null, null, "exit_corrupt".AsHlxStr());
+        exitCorrupt.set_parent(combat9);
+        Log.Debug("[PrisonCourtyardtest] Exit -> PrisonCorrupt");
 
-        RoomNode exit = base.createExit("T_PrisonDepths".AsHlxStr(), null, null, "exit".AsHlxStr());
-        exit.set_parent(combat10);
-        Log.Debug("[PrisonCourtyardtest] Exit -> T_PrisonDepths created");
+        // ── 商店：武器 + 技能（前半段侧支路）──
+        RoomNode shopWeapon = base.createNode("Shop".AsHlxStr(), null, null, "shop_weapon".AsHlxStr());
+        var weaponMerchant = new virtual_forcedMerchantType_();
+        weaponMerchant.forcedMerchantType = new MerchantType.Weapons();
+        shopWeapon.addGenData(weaponMerchant.ToVirtual<virtual_altarItemGroup_brLegendaryMultiTreasure_broken_cells_doorCost_doorCurse_flaskRefill_forcedMerchantType_forcePauseTimer_isCliffPath_itemInWall_itemLevelBonus_killsMultiTreasure_locked_maxPerks_mins_noHealingShop_shouldBeFlipped_specificBiome_subTeleportTo_timedMultiTreasure_zDoorLock_zDoorType_>());
+        shopWeapon.branchBetween("combat_2".AsHlxStr(), "combat_4".AsHlxStr(), null, null);
+        Log.Debug("[PrisonCourtyardtest] Weapon shop added (branch between combat_2 and combat_4)");
 
-        Log.Debug("[PrisonCourtyardtest] buildMainRooms complete (Entrance + 10 Combat + Exit)");
+        RoomNode shopSkill = base.createNode("Shop".AsHlxStr(), null, null, "shop_skill".AsHlxStr());
+        var skillMerchant = new virtual_forcedMerchantType_();
+        skillMerchant.forcedMerchantType = new MerchantType.Actives();
+        shopSkill.addGenData(skillMerchant.ToVirtual<virtual_altarItemGroup_brLegendaryMultiTreasure_broken_cells_doorCost_doorCurse_flaskRefill_forcedMerchantType_forcePauseTimer_isCliffPath_itemInWall_itemLevelBonus_killsMultiTreasure_locked_maxPerks_mins_noHealingShop_shouldBeFlipped_specificBiome_subTeleportTo_timedMultiTreasure_zDoorLock_zDoorType_>());
+        shopSkill.branchBetween("combat_3".AsHlxStr(), "combat_5".AsHlxStr(), null, null);
+        Log.Debug("[PrisonCourtyardtest] Skill shop added (branch between combat_3 and combat_5)");
+
+        Log.Debug("[PrisonCourtyardtest] buildMainRooms complete (Mid fork -> PrisonDepths | PrisonCorrupt)");
         return base.nodes.get("start".AsHlxStr());
     }
 

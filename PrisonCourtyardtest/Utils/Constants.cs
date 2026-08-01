@@ -7,7 +7,6 @@ public static class GameConstants
         public const string PrisonCourtyard = "PrisonCourtyard";
         public const string PrisonCourtyardTest = "PrisonCourtyardTest";
         public const string PrisonCourtyardTestBiome = "PrisonCourtyardTestBiome";
-        public const string T_PrisonCourtyardTest = "T_PrisonCourtyardTest";
         public const string T_Roof = "T_Roof";
         public const string PrisonDepths = "PrisonDepths";
     }

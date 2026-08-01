@@ -14,7 +14,10 @@ using dc.shader;
 using HaxeProxy.Runtime;
 using ModCore.Events.Interfaces.Game;
 using ModCore.Events.Interfaces.Game.Hero;
+using ModCore.Menu;
 using ModCore.Mods;
+using ModCore.Storage;
+using ModCore.Utilities;
 
 namespace EchoVision
 {
@@ -212,9 +215,16 @@ namespace EchoVision
         }
     }
 
-    public class EchoVisionMain : ModBase, IOnHeroUpdate, IOnGameExit
+    public class EchoVisionMain : ModBase, IOnHeroUpdate, IOnGameExit, IModMenu
     {
-        private static bool Enabled = true;
+        public static Config<Configs> config { get; } = new Config<Configs>("EchoVision");
+
+        /// <summary>Per-frame enabled flag — persisted via ModCore config. Toggled via F8 or mod menu.</summary>
+        private static bool Enabled
+        {
+            get => config.Value.enabled;
+            set => config.Value.enabled = value;
+        }
 
         // 场景纯黑程度
         private const double DarknessAlpha = 1.0;
@@ -352,6 +362,26 @@ namespace EchoVision
         {
             base.Initialize();
             System.Console.WriteLine("[EchoVision] V3 真轮廓版已加载：黑色剪影 + 白色描边 + 交互物/武器/部分特效。V=测试声波，F8=开关。");
+        }
+
+        // -- IModMenu --
+        public string GetName() => "EchoVision";
+
+        public void BuildMenu(dc.ui.Options options)
+        {
+            ((dc.ui.Text)((dc.ui.OptionsBase)options).title).set_text(
+                StringUtils.AsHaxeString("ECHOVISION SETTINGS"));
+            ((dc.ui.OptionsBase)options).createScroller(0.0);
+
+            bool enabled = config.Value.enabled;
+            ((dc.ui.OptionsBase)options).addToggleWidget(
+                StringUtils.AsHaxeString("Activate mod"),
+                StringUtils.AsHaxeString("Echolocation vision — see enemies & terrain through darkness"),
+                (HlFunc<bool>)delegate { Enabled = !Enabled; return Enabled; },
+                new Ref<bool>(ref enabled),
+                ((dc.ui.OptionsBase)options).scrollerFlow);
+
+            ((dc.ui.OptionsBase)options).updateScroller();
         }
 
         void IOnHeroUpdate.OnHeroUpdate(double dt)
@@ -2728,5 +2758,13 @@ namespace EchoVision
 
             return ex.Message;
         }
+    }
+
+    /// <summary>
+    /// Persistent config for the EchoVision mod.
+    /// </summary>
+    public class Configs
+    {
+        public bool enabled = true;
     }
 }
