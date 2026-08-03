@@ -9,6 +9,7 @@ using Hashlink.Virtuals;
 using HaxeProxy.Runtime;
 using ModCore.Events.Interfaces.Game;
 using ModCore.Events.Interfaces.Game.Hero;
+using ModCore.Menu;
 using ModCore.Mods;
 using ModCore.Modules;
 using ModCore.Utilities;
@@ -17,7 +18,7 @@ using PrisonCorruptDepthstest.Utils;
 
 namespace PrisonCorruptDepthstest.EntryPoint;
 
-public class ModInitializer(ModInfo info) : ModBase(info), IOnGameEndInit, IOnHeroUpdate
+public class ModInitializer(ModInfo info) : ModBase(info), IOnGameEndInit, IOnHeroUpdate, IModMenu
 {
     public static ModCore.Storage.Config<CoreConfig> Config = new("PrisonCorruptDepthstestCoreConfig");
 
@@ -49,6 +50,26 @@ public class ModInitializer(ModInfo info) : ModBase(info), IOnGameEndInit, IOnHe
         Logger.Information("PrisonCorruptDepthstest initialisation complete");
     }
 
+    // ── IModMenu ──
+    public string GetName() => "Prison Corrupt Depths";
+
+    public void BuildMenu(dc.ui.Options options)
+    {
+        ((dc.ui.Text)((dc.ui.OptionsBase)options).title).set_text(
+            StringUtils.AsHaxeString("PRISON CORRUPT DEPTHS SETTINGS"));
+        ((dc.ui.OptionsBase)options).createScroller(0.0);
+
+        bool enabled = Config.Value.enabled;
+        ((dc.ui.OptionsBase)options).addToggleWidget(
+            StringUtils.AsHaxeString("Activate mod"),
+            StringUtils.AsHaxeString("Adds Prison Corrupt Depths biome and boss arena"),
+            (HlFunc<bool>)delegate { Config.Value.enabled = !Config.Value.enabled; return Config.Value.enabled; },
+            new Ref<bool>(ref enabled),
+            ((dc.ui.OptionsBase)options).scrollerFlow);
+
+        ((dc.ui.OptionsBase)options).updateScroller();
+    }
+
     void IOnGameEndInit.OnGameEndInit()
     {
         try
@@ -77,6 +98,8 @@ public class ModInitializer(ModInfo info) : ModBase(info), IOnGameEndInit, IOnHe
 
     void IOnHeroUpdate.OnHeroUpdate(double dt)
     {
+        if (!Config.Value.enabled) return;
+
         // Delegate injection to LevelManager
         _levelManager?.TryInject();
 
