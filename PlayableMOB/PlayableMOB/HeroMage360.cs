@@ -29,7 +29,7 @@ public class HeroMage360 : Mage360
 		{
 			Level lvl = dc.pr.Game.Class.ME.curLevel;
 			if (lvl == null) return;
-			HeroMage360 mage = new HeroMage360(lvl, ((Entity)hero).cx, ((Entity)hero).cy, 38, 38);
+			HeroMage360 mage = new HeroMage360(lvl, ((Entity)hero).cx, ((Entity)hero).cy, Utils.DamageTier(), Utils.LifeTier());
 			((Entity)mage).dir = ((Entity)hero).dir;
 			// Go through Entity.init → Mage360.init (loads tracks) → Mob.init
 			((Entity)mage).init();

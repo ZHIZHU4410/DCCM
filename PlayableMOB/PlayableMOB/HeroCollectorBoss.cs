@@ -23,6 +23,7 @@ public class HeroCollectorBoss : Collector
 	private MobState curState = MobState.Idle;
 	private double moveMul = 1.0, stateCd;
 	private int jumpHoldFrames;
+	private int errLogCd;
 
 	public static HeroCollectorBoss? inst { get; private set; }
 	public Dictionary<string, KeyBind> keys => PlayableMOB.config.Value.enforcer.bindings;
@@ -33,7 +34,8 @@ public class HeroCollectorBoss : Collector
 
 	public static void create(Hero hero)
 	{
-		if (inst == null)
+		if (inst != null && !((Entity)inst).destroyed) return;
+		try
 		{
 			Room roomAt = dc.pr.Game.Class.ME.curLevel.map.getRoomAt(((Entity)hero).cx, ((Entity)hero).cy);
 			// Create battleZone marker if missing (like PlayableBoss)
@@ -46,9 +48,18 @@ public class HeroCollectorBoss : Collector
 				m0.customId = StringUtils.AsHaxeString("battleZone1");
 				roomAt.markers.push((object)m0);
 			}
-			var m = new HeroCollectorBoss(dc.pr.Game.Class.ME.curLevel, ((Entity)hero).cx, ((Entity)hero).cy, 38, 38);
+			var m = new HeroCollectorBoss(dc.pr.Game.Class.ME.curLevel, ((Entity)hero).cx, ((Entity)hero).cy, Utils.DamageTier(), Utils.LifeTier());
 			((Entity)m).dir = ((Entity)hero).dir;
 			((Entity)m).init();
+			Utils.log("HeroCollectorBoss created at " + ((Entity)m).cx + "," + ((Entity)m).cy
+				+ " dmgTier=" + Utils.DamageTier() + " lifeTier=" + Utils.LifeTier()
+				+ " scrolls=" + (hero.brutalityTier + hero.tacticTier + hero.survivalTier));
+		}
+		catch (Exception ex)
+		{
+			Utils.log("HeroCollectorBoss.create FAILED: " + ex.GetType().FullName + " | " + ex.Message + "\n" + ex.StackTrace);
+			if (inst != null) { try { inst.destroy(); } catch { } inst = null; }
+			PlayableMOB.activeMonster = null;
 		}
 	}
 
@@ -84,6 +95,7 @@ public class HeroCollectorBoss : Collector
 		var c = (Collector)this;
 		Utils.bossInit((dc.en.mob.Boss)this);
 		((Entity)this).isOutOfGame = false;
+		try { ((dc.en.mob.Boss)this).removeAllLevelUpSteps(); } catch { }
 		c.phase = 4;
 
 		Room roomAt = dc.pr.Game.Class.ME.curLevel.map.getRoomAt(((Entity)this).cx, ((Entity)this).cy);
@@ -91,6 +103,7 @@ public class HeroCollectorBoss : Collector
 		((Boss)this).battleZone = (Marker)(dynamic)(roomAt.getMarker(StringUtils.AsHaxeString("CustomSpot"), StringUtils.AsHaxeString("battleZone1"), new Ref<bool>(ref required)) ?? ((dynamic)roomAt.markers).getDyn(0));
 		c.rseed = new Rand(dc.pr.Game.Class.ME.curLevel.map.seed);
 		((Entity)this).set_team(dc.pr.Game.Class.ME.curLevel.teamHero);
+		((dc.en.Mob)this).aTarget = dc.pr.Game.Class.ME.hero;
 		((Boss)this).cameraTrackingDisabled = false;
 
 		// --- Dash (skill1): save originals, call them in our wrappers ---
@@ -138,13 +151,36 @@ public class HeroCollectorBoss : Collector
 		inst = this; PlayableMOB.activeMonster = (Entity)this;
 	}
 
+	public override void behaviourAi() { }
+
+	public override void queueAttack(OldMobSkill a, bool requiresTarget, int? data)
+	{
+		Utils.log("HeroCollectorBoss: AI attack swallowed (" + (a != null ? a.id.ToString() : "null") + ")");
+	}
+
+	public override void preUpdate()
+	{
+		try { base.preUpdate(); }
+		catch (Exception ex)
+		{
+			if (errLogCd <= 0) { Utils.log("HeroCollectorBoss base.preUpdate FAILED: " + ex); errLogCd = 300; }
+			else errLogCd--;
+		}
+	}
+
 	public override void fixedUpdate()
 	{
 		if (((Entity)this).destroyed) return;
-		base.fixedUpdate();
+		try { base.fixedUpdate(); }
+		catch (Exception ex)
+		{
+			if (errLogCd <= 0) { Utils.log("HeroCollectorBoss base.fixedUpdate FAILED: " + ex); errLogCd = 300; }
+			else errLogCd--;
+		}
 		if (!PlayableMOB.config.Value.enabled) return;
 		if (curState == MobState.Dead) return;
 		if (((Entity)this).isUnconscious()) { reset(); return; }
+		if (((dc.en.Mob)this).aTarget == null) ((dc.en.Mob)this).aTarget = dc.pr.Game.Class.ME.hero;
 
 		var c = (Collector)this;
 
@@ -158,11 +194,11 @@ public class HeroCollectorBoss : Collector
 
 		if (curState == MobState.Idle)
 		{
-			if (Utils.pressed(keys["skill1"])) { c.smallDashSkill.coolDownF = 0; c.smallDashSkill.prepare(null); }
-			if (Utils.pressed(keys["skill2"])) { c.spinSkill.coolDownF = 0; c.spinSkill.prepare(null); }
-			if (Utils.pressed(keys["skill3"])) { c.laserBeamSkill.coolDownF = 0; c.laserBeamSkill.prepare(null); }
-			if (Utils.pressed(keys["skill4"])) { c.bigStompSkill.coolDownF = 0; c.bigStompSkill.prepare(null); }
-			if (Utils.pressed(keys["skill5"])) { c.fireWallsSkill.coolDownF = 0; c.fireWallsSkill.prepare(null); }
+			if (Utils.pressed(keys["skill1"])) TryUse("J/dash", c.smallDashSkill);
+			if (Utils.pressed(keys["skill2"])) TryUse("K/spin", c.spinSkill);
+			if (Utils.pressed(keys["skill3"])) TryUse("L/laser", c.laserBeamSkill);
+			if (Utils.pressed(keys["skill4"])) TryUse("U/stomp", c.bigStompSkill);
+			if (Utils.pressed(keys["skill5"])) TryUse("I/fireWalls", c.fireWallsSkill);
 		}
 
 		// Spin speed ramp
@@ -181,6 +217,16 @@ public class HeroCollectorBoss : Collector
 		if (Utils.held(keys["jump"]) && jumpHoldFrames > 0 && ((Entity)this).dy < 0) { ((Entity)this).dy -= 0.06; jumpHoldFrames--; }
 		if (!Utils.held(keys["jump"])) jumpHoldFrames = 0;
 		if (Utils.held(keys["down"]) && onGround) ((Entity)this).dx = 0;
+	}
+
+	private void TryUse(string label, OldSkill sk)
+	{
+		Utils.SyncHeroToFront((Entity)this);
+		if (sk == null) { Utils.log("HeroCollectorBoss: " + label + " pressed but skill not loaded"); return; }
+		sk.coolDownF = 0;
+		if (sk is OldMobSkill oms) oms.prepareOnOwnerTarget(true, null);
+		else sk.prepare(null);
+		Utils.log("HeroCollectorBoss: " + label + " -> prepared");
 	}
 
 	public override void onDie()

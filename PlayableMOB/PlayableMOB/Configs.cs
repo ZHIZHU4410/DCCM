@@ -6,6 +6,15 @@ public class Configs
 {
 	public bool enabled = true;
 
+	// Transformed monsters' damage/life tier = hero total scrolls x this factor.
+	// 1.0 keeps the game's own power curve (tier ~ scroll count).
+	public double scrollPowerFactor = 1.0;
+
+	// Final damage/life multipliers applied on top of the scroll-derived tier
+	// (resolved exactly through the game's mob scaling curves).
+	public double damageMultiplier = 10.0;
+	public double lifeMultiplier = 10.0;
+
 	// Per-monster toggle: key = monster name, value = enabled (defaults to true when absent)
 	public Dictionary<string, bool> monsterEnabled = new();
 

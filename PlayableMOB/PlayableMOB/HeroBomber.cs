@@ -22,7 +22,7 @@ public class HeroBomber : Bomber
 	{
 		if (inst == null)
 		{
-			var m = new HeroBomber(dc.pr.Game.Class.ME.curLevel, ((Entity)hero).cx, ((Entity)hero).cy, 38, 38);
+			var m = new HeroBomber(dc.pr.Game.Class.ME.curLevel, ((Entity)hero).cx, ((Entity)hero).cy, Utils.DamageTier(), Utils.LifeTier());
 			((Entity)m).dir = ((Entity)hero).dir;
 			((Entity)m).init();
 			m.playerInit();

@@ -21,7 +21,7 @@ public class HeroLibrarian : Librarian
 	{
 		if (inst == null)
 		{
-			var m = new HeroLibrarian(dc.pr.Game.Class.ME.curLevel, ((Entity)h).cx, ((Entity)h).cy, 38, 38);
+			var m = new HeroLibrarian(dc.pr.Game.Class.ME.curLevel, ((Entity)h).cx, ((Entity)h).cy, Utils.DamageTier(), Utils.LifeTier());
 			((Entity)m).dir = ((Entity)h).dir;
 			((Entity)m).init(); m.playerInit();
 		}

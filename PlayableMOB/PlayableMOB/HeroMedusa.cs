@@ -31,7 +31,7 @@ public class HeroMedusa : Medusa
 				m0.kind = StringUtils.AsHaxeString("CustomSpot"); m0.cx = 0; m0.cy = 0; m0.width = 100; m0.height = 100;
 				m0.customId = StringUtils.AsHaxeString("battleZone"); room.markers.push((object)m0);
 			}
-			var m = new HeroMedusa(dc.pr.Game.Class.ME.curLevel, ((Entity)h).cx, ((Entity)h).cy, 38, 38);
+			var m = new HeroMedusa(dc.pr.Game.Class.ME.curLevel, ((Entity)h).cx, ((Entity)h).cy, Utils.DamageTier(), Utils.LifeTier());
 			((Entity)m).dir = ((Entity)h).dir;
 			((Entity)m).init(); m.playerInit();
 		}

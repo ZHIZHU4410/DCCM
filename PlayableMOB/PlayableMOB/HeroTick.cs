@@ -16,7 +16,7 @@ public class HeroTick : Tick
 	{
 		if (inst == null)
 		{
-			var m = new HeroTick(dc.pr.Game.Class.ME.curLevel, ((Entity)h).cx, ((Entity)h).cy, 38, 38);
+			var m = new HeroTick(dc.pr.Game.Class.ME.curLevel, ((Entity)h).cx, ((Entity)h).cy, Utils.DamageTier(), Utils.LifeTier());
 			((Entity)m).dir = ((Entity)h).dir;
 			// Tick overrides init() — go through Entity.init chain
 			((Entity)m).init(); m.playerInit();

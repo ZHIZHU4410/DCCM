@@ -16,7 +16,7 @@ public class HeroShopMimic : ShopMimic
 	{
 		if (inst == null)
 		{
-			var m = new HeroShopMimic(dc.pr.Game.Class.ME.curLevel, ((Entity)h).cx, ((Entity)h).cy, 38, 38, new MerchantType.Heals(), new BonusAttackType.All(), null);
+			var m = new HeroShopMimic(dc.pr.Game.Class.ME.curLevel, ((Entity)h).cx, ((Entity)h).cy, Utils.DamageTier(), Utils.LifeTier(), new MerchantType.Heals(), new BonusAttackType.All(), null);
 			((Entity)m).dir = ((Entity)h).dir;
 			// ShopMimic overrides init() — go through Entity.init chain
 			((Entity)m).init(); m.playerInit();

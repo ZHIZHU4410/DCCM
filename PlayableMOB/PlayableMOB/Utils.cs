@@ -4,6 +4,7 @@ using ModCore;
 using ModCore.Utilities;
 using dc;
 using dc.en;
+using dc.en.hero;
 using dc.hl;
 using dc.hxd;
 using dc.hxd.res;
@@ -22,6 +23,74 @@ public static class Utils
 	public static Random random = new Random();
 
 	public static bool[] VKB = new bool[255];
+
+	/// <summary>
+	/// Tier used when creating a transformed monster, derived from the hero's
+	/// current scroll count. The monster constructor maps this tier to both
+	/// damage (dmgTier -> mob stat tiers -> sourceTier in AttackData) and
+	/// life (lifeTier -> trueLifeTier -> scaleMobLifeToTier), so the monster's
+	/// damage and max HP grow with the hero's scrolls.
+	/// </summary>
+	public static int ScrollTier()
+	{
+		try
+		{
+			Hero hero = dc.pr.Game.Class.ME.hero;
+			if (hero == null) return 1;
+			int scrolls = hero.brutalityTier + hero.tacticTier + hero.survivalTier;
+			double factor = PlayableMOB.config.Value.scrollPowerFactor;
+			if (factor <= 0) factor = 1.0;
+			return System.Math.Max(1, (int)System.Math.Round(scrolls * factor));
+		}
+		catch
+		{
+			return 1;
+		}
+	}
+
+	/// <summary>Mob damage curve: base * 1.09^(t-1) * (1 + 0.55*(t-1)).</summary>
+	private static double DamageCurve(double tier)
+	{
+		double n = tier - 1;
+		return System.Math.Pow(1.09, n) * (1.0 + 0.55 * n);
+	}
+
+	/// <summary>Mob life curve: base * 1.08^(t-1) * (1 + 0.12*(t-1)).</summary>
+	private static double LifeCurve(double tier)
+	{
+		double n = tier - 1;
+		return System.Math.Pow(1.08, n) * (1.0 + 0.12 * n);
+	}
+
+	/// <summary>
+	/// Finds the tier whose curve value equals the base tier's curve value
+	/// multiplied by <paramref name="multiplier"/> (exact 10x boost etc.).
+	/// </summary>
+	private static int TierForMultiplier(double baseTier, double multiplier, bool damage)
+	{
+		double target = (damage ? DamageCurve(baseTier) : LifeCurve(baseTier)) * multiplier;
+		int lo = 1, hi = 200;
+		while (lo < hi)
+		{
+			int mid = (lo + hi) / 2;
+			double v = damage ? DamageCurve(mid) : LifeCurve(mid);
+			if (v >= target) hi = mid;
+			else lo = mid + 1;
+		}
+		return lo;
+	}
+
+	/// <summary>Damage tier: scroll tier boosted so final damage is x10 (configurable).</summary>
+	public static int DamageTier()
+	{
+		return TierForMultiplier(ScrollTier(), PlayableMOB.config.Value.damageMultiplier, true);
+	}
+
+	/// <summary>Life tier: scroll tier boosted so final max life is x10 (configurable).</summary>
+	public static int LifeTier()
+	{
+		return TierForMultiplier(ScrollTier(), PlayableMOB.config.Value.lifeMultiplier, false);
+	}
 
 	public static void log(string str)
 	{
@@ -80,6 +149,26 @@ public static class Utils
 		{
 			VKB[vk.third.Value] = false;
 		}
+	}
+
+	/// <summary>
+	/// Instantly re-anchors the hidden hero a few tiles in front of the mob.
+	/// Boss skills call lookAt(hero) / check hero.cx vs own cx at cast time;
+	/// the per-frame hero tracking lags one frame behind a recent turn, which
+	/// makes those skills flip and hit behind. Syncing right before prepare()
+	/// fixes the direction.
+	/// </summary>
+	public static void SyncHeroToFront(Entity monster)
+	{
+		try
+		{
+			Hero h = dc.pr.Game.Class.ME.hero;
+			if (h == null || ((Entity)h).destroyed || monster == null || monster.destroyed) return;
+			((Entity)h).cx = monster.cx + monster.dir * 1;
+			((Entity)h).cy = monster.cy;
+			((Entity)h).dir = monster.dir;
+		}
+		catch { }
 	}
 
 	public static bool pressed(KeyBind vk)

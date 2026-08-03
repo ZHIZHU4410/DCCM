@@ -18,7 +18,7 @@ public class HeroArbiter : Arbiter
 	{
 		if (inst == null)
 		{
-			var m = new HeroArbiter(dc.pr.Game.Class.ME.curLevel, ((Entity)h).cx, ((Entity)h).cy, 38, 38);
+			var m = new HeroArbiter(dc.pr.Game.Class.ME.curLevel, ((Entity)h).cx, ((Entity)h).cy, Utils.DamageTier(), Utils.LifeTier());
 			((Entity)m).dir = ((Entity)h).dir;
 			// Arbiter overrides init() to load tracks — go through Entity.init chain
 			((Entity)m).init();

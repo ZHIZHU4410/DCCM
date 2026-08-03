@@ -48,7 +48,7 @@ public class HeroEnforcer : Enforcer
 	{
 		if (inst == null)
 		{
-			HeroEnforcer heroEnforcer = new HeroEnforcer(Game.Class.ME.curLevel, ((Entity)hero).cx, ((Entity)hero).cy, 38, 38);
+			HeroEnforcer heroEnforcer = new HeroEnforcer(Game.Class.ME.curLevel, ((Entity)hero).cx, ((Entity)hero).cy, Utils.DamageTier(), Utils.LifeTier());
 			((Entity)heroEnforcer).dir = ((Entity)hero).dir;
 			((Entity)heroEnforcer).init();
 		}

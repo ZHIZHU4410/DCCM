@@ -21,7 +21,7 @@ public class HeroU28VacuumCleaner : U28_VacuumCleaner
 	{
 		if (inst == null)
 		{
-			var m = new HeroU28VacuumCleaner(dc.pr.Game.Class.ME.curLevel, ((Entity)h).cx, ((Entity)h).cy, 38, 38);
+			var m = new HeroU28VacuumCleaner(dc.pr.Game.Class.ME.curLevel, ((Entity)h).cx, ((Entity)h).cy, Utils.DamageTier(), Utils.LifeTier());
 			((Entity)m).dir = ((Entity)h).dir;
 			((Entity)m).init(); m.playerInit();
 		}
