@@ -230,7 +230,7 @@ public static class Utils
 		((Entity)e).removeAllAffects(5);
 	}
 
-	public static void bossInit(dc.en.mob.Boss e)
+	public static void bossInit(dc.en.mob.Boss e, bool skipMove = false)
 	{
 		((Entity)e).delayer = new Delayer(60.0);
 		((Entity)e).tw = new Tweenie(60.0);
@@ -256,7 +256,17 @@ public static class Utils
 			((Entity)e).setGlowColor(value, num, (double?)null, (HSprite)null);
 		}
 		((dc.en.Mob)e).initSkills();
-		((dc.en.Mob)e).initMove();
+		if (skipMove)
+		{
+			// Some bosses (DookuBeast) override initMove() with arena-only
+			// code that dereferences null fields outside their fight (e.g.
+			// rseed / combatRoom). Fall back to the standard ground mover.
+			try { ((dc.en.Mob)e).move = new dc.tool.mv.MobWalk((dc.en.Mob)e); } catch { }
+		}
+		else
+		{
+			((dc.en.Mob)e).initMove();
+		}
 		if (DLC.Class.mobIsPressHidden.Invoke(((dc.en.Mob)e).type))
 			((Entity)e).destroy();
 		if (((dc.en.Mob)e).canApplyColorSwap())

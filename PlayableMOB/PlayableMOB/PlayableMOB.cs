@@ -61,6 +61,8 @@ public class PlayableMOB : ModBase, IOnHeroUpdate, IModMenu, IOnBeforeSavingSave
 		HeroTimeKeeper.create,
 		HeroBehemoth.create,
 		HeroGiant.create,
+		HeroBeholder.create,
+		HeroDookuBeast.create,
 	};
 
 	// 怪物英文显示名（也是配置项 monsterEnabled 的键，顺序必须与 monsterFactories 一致）
@@ -94,6 +96,8 @@ public class PlayableMOB : ModBase, IOnHeroUpdate, IModMenu, IOnBeforeSavingSave
 		"Time Keeper",
 		"Behemoth",
 		"Giant",
+		"Beholder",
+		"DookuBeast",
 	};
 
 	// 怪物中文名（仅用于设置菜单显示，便于辨认）
@@ -110,7 +114,7 @@ public class PlayableMOB : ModBase, IOnHeroUpdate, IModMenu, IOnBeforeSavingSave
 	{
 		("普通怪", 0, 15),
 		("特殊怪", 15, 19),
-		("BOSS", 19, 28),
+		("BOSS", 19, 30),
 	};
 
 	// 每个 BOSS 的技能键位介绍（索引 0..8 对应 BOSS 分类内的第 0..8 个，即怪物索引 19..27）
