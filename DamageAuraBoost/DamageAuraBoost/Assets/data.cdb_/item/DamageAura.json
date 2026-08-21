@@ -1,0 +1,52 @@
+{
+  "commonProps": {},
+  "synergy": [],
+  "props": {
+    "speed": 0.06,
+    "dps": [
+      308.0
+    ],
+    "count": 16,
+    "distance": 10.0,
+    "tick": 0.025,
+    "duration": 14.8
+  },
+  "gameplayDesc": "Inflige des dégâts aux cibles proches.",
+  "moneyCost": 1500,
+  "group": 3,
+  "castCD": 4.0,
+  "id": "DamageAura",
+  "icon": {
+    "x": 12,
+    "y": 7,
+    "file": "cardIcons.png",
+    "size": 24
+  },
+  "legendAffixes": [
+    {
+      "affix": "BleedOnHit"
+    }
+  ],
+  "name": "Aura de lacération",
+  "droppable": true,
+  "tags": [
+    {
+      "tag": "InstantBlueprint"
+    },
+    {
+      "tag": "UnlockInPublicEvent"
+    },
+    {
+      "tag": "HasDuration"
+    },
+    {
+      "tag": "ManualCooldown"
+    }
+  ],
+  "tier1": "Brutality",
+  "tier2": "Tactic",
+  "cellCost": 30,
+  "__separator_group_Name": "Power",
+  "__separator_group_ID": 3,
+  "__original_Index": 11
+}
