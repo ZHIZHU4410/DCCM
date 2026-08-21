@@ -1,4 +1,4 @@
-﻿﻿using dc;
+using dc;
 using dc.cine;
 using dc.en;
 using dc.en.active;
@@ -29,7 +29,6 @@ using dc.shader;
 using dc.tool;
 using dc.tool.atk;
 using dc.tool.hero.activeSkills;
-using dc.tool.mod.script;
 using dc.tool.weap;
 using dc.ui;
 using HaxeProxy.Runtime;
@@ -50,7 +49,7 @@ namespace QueenRapier
     public class QueenRapierMain : ModBase, IOnHeroUpdate
     {
         public static List<Queencut> queenStrikeStates = new List<Queencut>();
-        public static QueenRapier? queen_rapier;
+        public static dc.tool.weap.QueenRapier? queen_rapier;
         private static readonly Random random = new Random();
 
         // 原切割配置
@@ -80,22 +79,22 @@ namespace QueenRapier
             Hook_QueenRapier.queenStrike += this.Hook_myqueenStrike;
         }
 
-        public void Hook_myqueenStrike(Hook_QueenRapier.orig_queenStrike orig, QueenRapier self, Entity angle, double y, double x, double target)
+        public void Hook_myqueenStrike(Hook_QueenRapier.orig_queenStrike orig, dc.tool.weap.QueenRapier self, Entity target, double x, double y, double angle)
         {
             // 保留原版第一次斩击
-            orig(self, angle, y, x, target);
+            orig(self, target, x, y, angle);
             QueenRapierMain.queen_rapier = self;
 
-            if (angle != null && !angle.destroyed && angle.life > 0)
+            if (target != null && !target.destroyed && target.life > 0)
             {
                 Queencut newCut = new Queencut
                 {
-                    targetEntity = angle,
+                    targetEntity = target,
                     remainingHits = TotalHits - 1,   // 第一次已经打完
                     time = 0.0
                 };
 
-                if (CanAddQueen(angle))
+                if (CanAddQueen(target))
                 {
                     queenStrikeStates.Add(newCut);
                 }
@@ -111,7 +110,7 @@ namespace QueenRapier
 
         void IOnHeroUpdate.OnHeroUpdate(double dt)
         {
-            Hero hero = Module<Game>.Instance.HeroInstance;
+            Hero? hero = Module<Game>.Instance.HeroInstance;
             if (hero == null) return;
             CheckAndUpdateStrikeStates(dt, hero);
         }
