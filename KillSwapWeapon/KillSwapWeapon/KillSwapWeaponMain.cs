@@ -23,7 +23,7 @@ namespace KillSwapWeapon
     /// - 换武器走游戏原生刷新流程（Hero.onEquipedItemsChange），HUD 与背包同步更新。
     /// - 屏幕左上角常驻 HUD：显示击杀数、当前 1号位武器（名称+等级）。
     /// </summary>
-    public class KillSwapWeaponMain : ModBase, IOnGameExit, IOnHeroUpdate
+    public class KillSwapWeaponMain : ModBase, IOnGameExit, IOnHeroUpdate, IOnGameInit
     {
         /// <summary>1号位置 = 槽位 0（主武器）。如需改为 2号位置，改成 1。</summary>
         private const int SLOT = 0;
@@ -32,6 +32,9 @@ namespace KillSwapWeapon
         private int _swapCount;
 
         private readonly Random _random = new Random();
+
+        /// <summary>实际使用的武器池（BuildPool 在游戏初始化后根据配置构建）。</summary>
+        private string[] _pool = System.Array.Empty<string>();
 
         // ================= 左上角 HUD =================
         private const int HUD_COLOR_TITLE = 0x00E5FF;    // 标题：青色
@@ -48,7 +51,8 @@ namespace KillSwapWeapon
         private readonly string[] _lastHudText = new string[HUD_LINES];
 
         /// <summary>
-        /// 随机武器池
+        /// 内置默认安全池（可被 config 中 WeaponIds 覆盖；若 config 中未配置则使用此池）。
+        /// 已剔除的易崩溃武器：
         /// - 双持武器（换一半会破坏配对状态）：DualDaggers / TickScytheLeft / TickScytheRight / CombinedTickScythe /
         ///   SnakeFang / ExplosiveCrossBow / ExplosiveCrossBowOffHand / HardLightSword / MachetePistol / DualBow / Lantern
         /// - 长摁/持续攻击武器（按住持续攻击时被销毁重建会崩溃，如 FlameThrower 空访问 .isCircle）：
@@ -57,7 +61,7 @@ namespace KillSwapWeapon
         ///   英雄一触碰实体就在回调内空访问崩溃）
         /// - MedusaHead（美杜莎头，石化机制在换武器后异常，已剔除）
         /// </summary>
-        private static readonly string[] WeaponIds = new string[]
+        public static readonly string[] DefaultWeaponIds = new string[]
         {
             // 近战
             "DashShield", "StartSword", "AdminWeapon", "QuickSword", "RevengeSword", "BackStabber",
@@ -65,7 +69,7 @@ namespace KillSwapWeapon
             "SpeedBlade", "GiantKiller", "BulletBlade", "SismicBlade", "Spear", "ImpaleSpear",
             "KingsSpear", "Rapier", "DashSword", "StunMace", "BumpBoots", "SpikedBoots",
             "MultiKickBoots", "QuickFists", "Whip", "HookWhip", "OilSword",
-            "LowHealth", "PerfectHalberd", "BehemothHammer", "TentacleWhip", "Pan", "ParryBlade",
+            "LowHealth", "PerfectHalberd", "TentacleWhip", "Pan", "ParryBlade",
             "RhythmicBlade", "Crowbar", "GiantStaff",
             "NotFlyingSword", "Katana", "Tombstone", "HeavyAxe",
             "Club", "ClubBroken", "PureNail", "SkulBone",
@@ -89,7 +93,70 @@ namespace KillSwapWeapon
         {
             base.Initialize();
             Hook_Hero.onMobDeath += OnHeroKillMob;
-            System.Console.WriteLine($"[KillSwapWeapon] 模组已加载：每击败一个怪物，{SLOT + 1}号位置武器将从 {WeaponIds.Length} 把武器中随机更换为【传奇武器】（等级匹配当前地图）");
+            System.Console.WriteLine($"[KillSwapWeapon] 模组已加载：每击败一个怪物，{SLOT + 1}号位置武器随机更换为【传奇武器】（等级匹配当前地图）");
+        }
+
+        /// <summary>游戏数据初始化完成后构建武器池（此时才能校验武器 id 是否存在）。</summary>
+        void IOnGameInit.OnGameInit()
+        {
+            try
+            {
+                BuildPool();
+            }
+            catch (Exception ex)
+            {
+                System.Console.WriteLine($"[KillSwapWeapon] 构建武器池失败: {ex.Message}");
+                _pool = (string[])DefaultWeaponIds.Clone();
+            }
+        }
+
+        /// <summary>
+        /// 根据配置构建实际武器池：
+        /// - config.WeaponIds 非空 → 使用其中有效的武器（无效 id 跳过并提示）。
+        /// - 空列表 / 全部无效 → 回退内置默认安全池。
+        /// </summary>
+        private void BuildPool()
+        {
+            List<string> configured = new List<string>();
+            foreach (string raw in KillSwapWeaponConfig.Instance.Value.WeaponIds)
+            {
+                string id = raw?.Trim() ?? "";
+                if (id.Length == 0 || configured.Contains(id)) continue;
+                configured.Add(id);
+            }
+
+            if (configured.Count == 0)
+            {
+                _pool = (string[])DefaultWeaponIds.Clone();
+                System.Console.WriteLine($"[KillSwapWeapon] 配置中未自定义武器池，使用内置默认池（{_pool.Length} 把）");
+                return;
+            }
+
+            List<string> valid = new List<string>();
+            foreach (string id in configured)
+            {
+                try
+                {
+                    var itemData = Data.Class.item.byId.get(ToHaxeString(id));
+                    if (itemData != null) valid.Add(id);
+                    else System.Console.WriteLine($"[KillSwapWeapon] 配置中的武器 id 不存在，已跳过: {id}");
+                }
+                catch
+                {
+                    System.Console.WriteLine($"[KillSwapWeapon] 配置中的武器 id 校验失败，已跳过: {id}");
+                }
+            }
+
+            if (valid.Count == 0)
+            {
+                _pool = (string[])DefaultWeaponIds.Clone();
+                System.Console.WriteLine($"[KillSwapWeapon] 自定义武器池全部无效，回退内置默认池（{_pool.Length} 把）");
+            }
+            else
+            {
+                _pool = valid.ToArray();
+                System.Console.WriteLine($"[KillSwapWeapon] 已启用自定义武器池（{_pool.Length} 把）：{string.Join(", ", _pool)}");
+            }
         }
 
         /// <summary>击杀事件：每击败一个怪物更换一次 1号位置武器。</summary>
@@ -351,12 +418,13 @@ namespace KillSwapWeapon
             return item;
         }
 
-        /// <summary>从武器池随机选一把（最多尝试 8 次，跳过物品数据不存在或与当前相同的）。</summary>
+        /// <summary>从当前武器池随机选一把（最多尝试 8 次，跳过物品数据不存在或与当前相同的）。</summary>
         private string? PickRandomWeaponId(string? currentId)
         {
+            if (_pool.Length == 0) return null;   // 武器池未构建（游戏未初始化完成）
             for (int i = 0; i < 8; i++)
             {
-                string id = WeaponIds[_random.Next(WeaponIds.Length)];
+                string id = _pool[_random.Next(_pool.Length)];
                 if (id == currentId) continue;
                 try
                 {
