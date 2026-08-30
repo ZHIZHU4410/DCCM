@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ModType>mod</ModType>
+    <ModName>FreezeDing</ModName>
+    <ModMain>FreezeDing.FreezeDingMain</ModMain>
+    <AutoInstallMod>true</AutoInstallMod>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <GenerateDiffCDB>false</GenerateDiffCDB>
+    <GameVersion>35</GameVersion>
+    <GenerateSinglePakFile>true</GenerateSinglePakFile>
+  </PropertyGroup>
+
+  <!-- ============ Assets 打包 ============
+       GenerateSinglePakFile=true 时 MDK 会把 PackAssets 列出的文件
+       用 DCCMTool 打包成 res.pak（参考 DamageAuraBoost / MCDcrit）：
+         Assets/sfx/dingding.wav  ->  pak 内路径 sfx/dingding.wav
+       运行时由 IOnAfterLoadingAssets 里 loadPak 挂载，_Res 按路径读取。 -->
+  <ItemGroup>
+    <PackAssets Include="Assets/**/*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DeadCellsCoreModding.MDK" Version="1.0.1" />
+  </ItemGroup>
+
+</Project>
