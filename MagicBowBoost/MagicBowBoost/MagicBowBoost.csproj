@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ModType>mod</ModType>
+    <ModName>MagicBowBoost</ModName>
+    <ModMain>MagicBowBoost.MagicBowBoostMain</ModMain>
+    <AutoInstallMod Condition="'$(Configuration)' == 'Debug'">true</AutoInstallMod>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <GenerateDiffCDB>false</GenerateDiffCDB>
+    <GameVersion>35</GameVersion>
+    <GenerateSinglePakFile>true</GenerateSinglePakFile>
+  </PropertyGroup>
+
+  <!-- ============ 数据补丁：Assets 打包 ============
+       1) python patch_magicbow_cdb.py 以 MDK v35 模板为基础修改 MagicBow 数据 -> data.cdb
+       2) BuildResPak：cdb diff（对比游戏模板）-> pak unpack -> Assets/data.cdb_/...
+       3) MDK 的 PackAssetsIntoPak（GenerateSinglePakFile=true）把 Assets/** 打包成 res.pak
+          并自动安装到 coremod/mods/MagicBowBoost/，mod 启动时手动 loadPak 应用 -->
+  <PropertyGroup>
+    <ModCdbFile>$(MSBuildProjectDirectory)/data.cdb</ModCdbFile>
+    <TemplateCdbFile>$(_DCCM_Root)core/mdk/databases/v$(GameVersion)/data.cdb</TemplateCdbFile>
+    <DiffPakPath>$(IntermediateOutputPath)_diffCDB.pak</DiffPakPath>
+    <AssetDiffDir>$(MSBuildProjectDirectory)/Assets/data.cdb_</AssetDiffDir>
+  </PropertyGroup>
+
+  <Target Name="BuildResPak"
+          BeforeTargets="PackAssetsIntoPak"
+          Inputs="$(ModCdbFile);$(TemplateCdbFile)"
+          Outputs="$(AssetDiffDir)/item/MagicBow.json"
+          Condition="Exists('$(ModCdbFile)')">
+    <Message Importance="high" Text="[MagicBowBoost] 生成数据补丁 -> Assets/data.cdb_ ..." />
+    <RemoveDir Directories="$(AssetDiffDir)" />
+    <Exec Command="dotnet &quot;$(_DCCM_Root)core/mdk/tools/DCCMTool.dll&quot; cdb diff -i &quot;$(ModCdbFile)&quot; -t &quot;$(TemplateCdbFile)&quot; -o &quot;$(DiffPakPath)&quot;" />
+    <Exec Command="dotnet &quot;$(_DCCM_Root)core/mdk/tools/DCCMTool.dll&quot; pak unpack -i &quot;$(DiffPakPath)&quot; -o &quot;$(MSBuildProjectDirectory)/Assets&quot;" />
+    <!-- 动态追加 PackAssets（Assets 在项目评估期还是空的，静态 ItemGroup 收集不到）-->
+    <ItemGroup>
+      <PackAssets Include="Assets/**/*" RootInPak="" />
+    </ItemGroup>
+  </Target>
+
+  <ItemGroup>
+    <PackageReference Include="DeadCellsCoreModding.MDK" Version="1.0.1" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,54 @@
+{
+  "commonProps": {
+    "ammo": 9999
+  },
+  "synergy": [],
+  "props": {
+    "speed": 3.0,
+    "range": 12,
+    "offsetY": 1.5,
+    "ang": 0.06,
+    "buff": 1.1,
+    "count": 24,
+    "distance": 1.0,
+    "limit": 0.4
+  },
+  "gameplayDesc": "Fires homing arrows. Arrows deal more damage if they hit the same enemy.",
+  "moneyCost": 1500,
+  "group": 5,
+  "castCD": 0,
+  "ambiantDesc": "Just close your eyes and shoot!",
+  "id": "MagicBow",
+  "icon": {
+    "x": 23,
+    "y": 10,
+    "file": "cardIcons.png",
+    "size": 24
+  },
+  "legendAffixes": [
+    {
+      "affix": "DoubleBullets"
+    }
+  ],
+  "name": "Magic Bow",
+  "droppable": true,
+  "tags": [
+    {
+      "tag": "Ranged"
+    },
+    {
+      "tag": "HasBullets"
+    },
+    {
+      "tag": "LimitedAmmo"
+    },
+    {
+      "tag": "NoCritical"
+    }
+  ],
+  "tier1": "Tactic",
+  "cellCost": 100,
+  "__separator_group_Name": "Ranged",
+  "__separator_group_ID": 5,
+  "__original_Index": 38
+}
