@@ -1,0 +1,65 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ModType>mod</ModType>
+    <ModName>ChronoBlade</ModName>
+    <ModMain>ChronoBlade.ChronoBladeMain</ModMain>
+    <AutoInstallMod Condition="'$(Configuration)' == 'Debug'">true</AutoInstallMod>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Authors>ChronoBlade</Authors>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <GenerateDiffCDB>false</GenerateDiffCDB>
+    <GameVersion>35</GameVersion>
+    <GenerateSinglePakFile>true</GenerateSinglePakFile>
+  </PropertyGroup>
+
+  <!-- data.cdb（patch_chronoblade_cdb.py 基于 MDK v35 模板生成：新增 ChronoBlade 物品+武器）
+       -> DCCMTool cdb diff -> diff.pak -> unpack 到 Assets/data.cdb_/
+       -> PackAssetsIntoPak（GenerateSinglePakFile=true）打成 res.pak 并自动安装 -->
+
+  <!-- 注意：本工程曾经尝试用 res.pak 覆盖 res/lang/main.*.mo 来汉化武器名，
+       但游戏的 MoReader/GetText.readMo 是"整表替换"语义，只有几个条目的精简 .mo
+       会让全游戏文本字典被替换掉（表现为字体/文本全乱）。
+       因此现在不再打包任何 lang 文件，武器名直接使用 CDB 里的 name 字段。 -->
+  <PropertyGroup>
+    <ModCdbFile>$(MSBuildProjectDirectory)/data.cdb</ModCdbFile>
+    <TemplateCdbFile>$(_DCCM_Root)core/mdk/databases/v$(GameVersion)/data.cdb</TemplateCdbFile>
+    <DiffPakPath>$(IntermediateOutputPath)_diffCDB.pak</DiffPakPath>
+    <AssetDiffDir>$(MSBuildProjectDirectory)/Assets/data.cdb_</AssetDiffDir>
+  </PropertyGroup>
+
+  <!-- ⚠️ 这里原来写的是 Condition="!Exists('$(ModCdbFile)')" —— 也就是只有 data.cdb
+       **不存在**时才跑脚本。结果改了 patch_chronoblade_cdb.py（比如改武器名 / 描述）
+       再 dotnet build，改动完全不会生效，因为旧的 data.cdb 还在。
+       现在改成 MSBuild 的 Inputs/Outputs 增量判定：脚本比 data.cdb 新（或 data.cdb 缺失）
+       就自动重新生成。 -->
+  <Target Name="RegenCdb" BeforeTargets="BuildResPak"
+          Inputs="$(MSBuildProjectDirectory)/patch_chronoblade_cdb.py"
+          Outputs="$(ModCdbFile)">
+    <Message Importance="high" Text="[ChronoBlade] patch_chronoblade_cdb.py 有更新，重新生成 data.cdb ..." />
+    <Exec Command="python &quot;$(MSBuildProjectDirectory)/patch_chronoblade_cdb.py&quot;" />
+  </Target>
+
+  <Target Name="BuildResPak"
+          BeforeTargets="PackAssetsIntoPak"
+          DependsOnTargets="RegenCdb"
+          Condition="Exists('$(ModCdbFile)')">
+    <Message Importance="high" Text="[ChronoBlade] 生成数据补丁 -> Assets/data.cdb_ ..." />
+    <RemoveDir Directories="$(AssetDiffDir)" />
+    <Exec Command="dotnet &quot;$(_DCCM_Root)core/mdk/tools/DCCMTool.dll&quot; cdb diff -i &quot;$(ModCdbFile)&quot; -t &quot;$(TemplateCdbFile)&quot; -o &quot;$(DiffPakPath)&quot;" />
+    <Exec Command="dotnet &quot;$(_DCCM_Root)core/mdk/tools/DCCMTool.dll&quot; pak unpack -i &quot;$(DiffPakPath)&quot; -o &quot;$(MSBuildProjectDirectory)/Assets&quot;" />
+    <ItemGroup>
+      <PackAssets Include="Assets/**/*" RootInPak="" />
+    </ItemGroup>
+  </Target>
+
+  <ItemGroup>
+    <PackageReference Include="DeadCellsCoreModding.MDK" Version="1.0.1" />
+  </ItemGroup>
+
+</Project>

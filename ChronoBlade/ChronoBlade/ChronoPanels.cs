@@ -1,0 +1,953 @@
+using System;
+using Hashlink;
+using Hashlink.Proxy.Objects;
+using Hashlink.Virtuals;
+using HaxeProxy.Runtime;
+using dc.en;
+using dc.en.inter;
+using dc.libs.heaps.slib;
+using dc.tool;
+
+namespace ChronoBlade
+{
+    /// <summary>
+    /// 两个选择面板共用的日志、hashlink 字符串工具与收尾兜底。
+    /// </summary>
+    internal static class ChronoPanelLog
+    {
+        private static Serilog.ILogger? _logger;
+        public static void Attach(Serilog.ILogger logger) => _logger = logger;
+
+        public static void Write(string msg)
+        {
+            string line = $"[ChronoBlade] {msg}";
+            System.Console.WriteLine(line);
+            try { _logger?.Information(line); } catch { }
+        }
+
+        /// <summary>
+        /// hashlink 字符串 → 纯文本。
+        /// CDB 里的 id 序列化后是 "id=ChronoBlade" 这种带键名前缀的形式，直接比较会永远不相等。
+        /// （ChronoWeaponFactory.NormalizeId 是同一个原因。）
+        /// </summary>
+        public static string Plain(dc.String? s)
+        {
+            string t;
+            try { t = s?.ToString() ?? ""; } catch { return ""; }
+            int eq = t.IndexOf('=');
+            if (eq >= 0) t = t.Substring(eq + 1);
+            return t.Trim().Trim('"', '\'', ' ');
+        }
+
+        public static dc.String Hx(string s) => new HashlinkString(s).AsHaxe<dc.String>();
+
+        /// <summary>
+        /// 把条目网格**钉在选择框的顶部**。
+        ///
+        /// 原版 `updateScrollingBox()` 在"内容比框矮"时会把 `wrapperItem` 往下推：
+        ///
+        /// ```
+        /// num6  = mask.height - 内容高 - 5*px        // 框比内容高的"富余量"
+        /// num10 = (cy2 &lt; num6) ? num6 : ...           // 富余量更大 → 直接推到 num6
+        /// ```
+        ///
+        /// 也就是**"框有富余高度就把内容压到底部"**。我们为了让框装得下说明文字把框撑高了，
+        /// 富余量很大 → 条目整块被推到框底、上面空一大片（"对齐到最下面"就是这个）。
+        ///
+        /// 为什么不重写 `updateSelection` 去拦：GameProxy 里
+        /// `updateSelection(ref bool)` 是**普通方法**，只有 `updateSelection(Ref&lt;bool&gt;)`
+        /// 才是 virtual —— 重写哪个都不能保证拦得住。
+        /// `postUpdate()` 是 virtual、每帧在 update 之后 / 渲染之前执行，在这里钉位置最稳。
+        ///
+        /// 注意这里用 `(int)(pixelScale*5)`：原版 `onResize` 就是这样截断的，
+        /// 不跟着截断会每帧差不到 1px、白白一直置 `posChanged`。
+        /// </summary>
+        public static void PinGridToTop(dc.ui.sel.GridSelector panel)
+        {
+            try
+            {
+                var wrapper = panel?.wrapperItem;
+                if (wrapper == null) return;
+
+                double top = 5.0;
+                try { top = (int)(panel!.get_pixelScale.Invoke() * 5.0); } catch { }
+
+                if (wrapper.y != top)
+                {
+                    wrapper.posChanged = true;
+                    wrapper.y = top;
+                }
+            }
+            catch { }
+        }
+
+        /// <summary>
+        /// 解暂停 + 显示 HUD + 关掉残留的半成品面板。
+        ///
+        /// 用在"基类构造函数已经调过 pauseGame()，之后又抛异常"这条路径上：
+        /// 那时游戏停在暂停里，而半成品进程已经挂到 Main 上了，两边都要收。
+        /// 只在构造失败时调用，所以不会误伤原版界面。
+        /// </summary>
+        public static void EmergencyCleanup()
+        {
+            try { dc.pr.Game.Class.ME?.resume(); } catch { }
+            try { dc.ui.HUD.Class.ME?.show(null); } catch { }
+
+            try
+            {
+                var kids = dc.Main.Class.ME?.children;
+                if (kids == null) return;
+
+                for (int i = kids.length - 1; i >= 0; i--)
+                {
+                    if (kids.getDyn(i) is not dc.ui.sel.GridSelector gs) continue;
+                    ChronoPanelLog.Write("清理残留的半成品选择面板进程");
+                    try { gs.close(); } catch { }
+                }
+            }
+            catch { }
+        }
+    }
+
+    // ============================================================================================
+    //  选择武器面板（热键 P）
+    // ============================================================================================
+
+    /// <summary>
+    /// 选择武器面板 —— 只列本模组新增的两把武器（时之刃 / Zaphkiel）。
+    ///
+    /// ## 为什么直接继承原版的 FreeWeaponSelector
+    ///
+    /// 原版训练场那三个按钮（<see cref="TrainingWeaponSpawner"/>）按下时做的就是：
+    ///
+    /// ```csharp
+    /// // Haxe 原型：new FreeWeaponSelector(spawnItem, tier, ref weaponLevel, ref quality,
+    /// //                                   ref colorless, ref legendary, this);
+    /// // 在 GameProxy 里那几个 ref 参数是 Ref<T>（不是 C# 的 ref）：
+    /// new FreeWeaponSelector(spawnItem, tier,
+    ///                        new Ref<int>(ref weaponLevel), new Ref<int>(ref quality),
+    ///                        new Ref<bool>(ref colorless), new Ref<bool>(ref legendary),
+    ///                        this);
+    /// ```
+    ///
+    /// `FreeWeaponSelector` 基类是 `TieredItemSelector → ItemSelector → GridSelector`，
+    /// 而 `GridSelector` 的构造函数里（`_GridSelector.__inst_construct__`）依次做了：
+    ///
+    /// ```
+    /// _Process.__inst_construct__(arg1, Main.Class.ME);   // ← 挂到 Main 进程栈（不是 Game 底下！）
+    /// arg1.pauseGame();                                    // ← HUD.hide() + Game.modalPause() = 真暂停
+    /// arg1.createRootInLayers(parent.root, ROOT_DP_MENU);
+    /// arg1.setControlLabel();
+    /// arg1.initRightFlow();
+    /// arg1.initGrid();                                     // ← 虚方法，会被下面重写
+    /// arg1.onResize();
+    /// ```
+    ///
+    /// 关键点：**面板是 Main 的子进程，而暂停的是 Game 这个兄弟进程。**
+    /// `Process.updateAll` 每帧从 ROOTS（Main）开始递归，遇到 `paused == true` 的节点就直接跳过 ——
+    /// 所以 Game（连同它底下的整个 Level：英雄、怪物、弹幕、粒子、动画）全停在那一帧，
+    /// 而我们的面板照常 update，输入/关闭全由游戏主循环负责。
+    ///
+    /// 关闭时 `GridSelector.close()` 自己会 `Game.Class.ME.resume()`，`onDispose()` 会把 HUD 显示回来。
+    /// **解除暂停的代码不在"它自己要关掉的那扇门后面"** —— 这正是上一版 `Game.paused` 手写切换
+    /// 永远恢复不了的原因（paused=true 之后 Game.update 钩子再也不被调用）。
+    ///
+    /// ## 只列两把武器怎么做到
+    ///
+    /// `ItemSelector.initGrid()` 会遍历 `Data.item.all`，用 `itemIsFiltered(item)` 过滤后
+    /// 把 id 塞进 `items`。这里只重写 `itemIsFiltered`，让它仅放行本模组的两个 id ——
+    /// 不碰数组、不碰布局，等级/品质/无色/传奇那一整套原版控件全部原样继承。
+    /// </summary>
+    public sealed class ChronoWeaponPanel : dc.ui.sel.FreeWeaponSelector
+    {
+        /// <summary>面板标题。</summary>
+        public const string Title = "选择武器";
+
+        /// <summary>面板里**只**列这两把（CDB item id）。</summary>
+        public static readonly string[] OnlyIds = { "ChronoBlade", TimeBullet.name };
+
+        /// <summary>掉落起点高度（格）：武器从英雄上方这个高度落下来。</summary>
+        private const int SpawnHeightCells = 7;
+
+        /// <summary>
+        /// 选择框的上下内边距。原版是 5，这里调大一点把框撑高。
+        ///
+        /// 为什么需要：`GridSelector.onResize()` 的高度公式是
+        ///
+        /// ```
+        /// 内容高   = max( (entry.cy - entry.sectionIdx) * (条目高 + pixelScale*10) )
+        /// 选择框高 = pixelScale * (内容高 + 行数 * padV*2 + 22)
+        /// ```
+        ///
+        /// 两把武器在 6 列网格里只占**一行**（cy 全是 0）→ 内容高算成 0
+        /// → 框高只剩 `pixelScale*32`，比一个武器卡片图标还矮一点，底边被裁
+        /// （现象就是"高度只能显示 80% 个武器"）。
+        ///
+        /// ⚠️ padV **只**进高度公式；宽度用的是 padH
+        ///    （`宽 = wid * (entryWid + padH*2)`），所以调它不会改变宽度 ——
+        ///    宽度仍然是严格的原版尺寸。12 大约让框从 32 单位高变成 46 单位。
+        /// </summary>
+        private const double BoxPadV = 12.0;
+
+        /// <summary>当前打开的面板（同一时刻只允许一个）。</summary>
+        public static ChronoWeaponPanel? Current { get; private set; }
+
+        public static bool IsOpen => Current != null && !Current.destroyed;
+
+        public ChronoWeaponPanel(HlAction<dc.String> validateCb, dc.String tier,
+                                 Ref<int> level, Ref<int> quality,
+                                 Ref<bool> colorless, Ref<bool> legendary)
+            : base(validateCb, tier, level, quality, colorless, legendary, null)
+        {
+            // ⚠ weaponSpawner 传 null 是**故意**的：
+            //   FreeWeaponSelector.onValidate() 里对 null 有专门的短路分支
+            //   （`if (weaponSpawner == null) { base.onValidate(); return; }`），
+            //   而 base（ItemSelector.onValidate）会照常 invoke 我们的 validateCb 再关闭面板。
+            //   于是我们拿到了"等级/品质控件 + 确认回调"，又不需要训练场那个实体。
+            Current = this;
+        }
+
+        /// <summary>只放行本模组的两把武器；原版的组别/tier 过滤整个绕开。</summary>
+        public override bool itemIsFiltered(
+            virtual_ambiantDesc_castCD_cellCost_commonProps_dlc_droppable_gameplayDesc_group_icon_id_legendAffixes_moneyCost_name_props_synergy_tags_tier1_tier2_ item)
+        {
+            if (item == null) return false;
+
+            string id = ChronoPanelLog.Plain(item.id);
+            if (id.Length == 0) return false;
+
+            foreach (string want in OnlyIds)
+            {
+                if (string.Equals(id, want, StringComparison.Ordinal)) return true;
+            }
+            return false;
+        }
+
+        public override dc.String getTitleText() => ChronoPanelLog.Hx(Title);
+
+        /// <summary>
+        /// 永远可选。
+        /// 这是"自选召唤"面板而不是图鉴解锁判定 —— 就算默认解锁那一步没跑成
+        /// （ChronoBladeMod.UnlockDefaultItems），也不该让玩家点不动。
+        /// </summary>
+        public override bool isEntryLocked(int i) => false;
+
+        /// <summary>
+        /// 严格使用原版尺寸 —— 这里**不重写任何尺寸相关的方法**。
+        ///
+        /// `ItemSelector` 给的就是原版训练场那套：`get_wid() = 6` 列、格子 24×24，
+        /// 于是 `GridSelector.onResize()` 算出来的选择框就是原版大小
+        /// （宽 = pixelScale*(6*(24+10)+22)，高 = pixelScale*32）。
+        ///
+        /// ⚠️ 别照着别处的"想把框变高"去改 `get_wid()`：把它收成 1 列确实会让两把武器
+        ///    分成两行、框高变成约 3 倍，但那已经不是原版尺寸了。
+        ///    另外**绝对不能**直接把 `hei` 调大 —— `moveSelection()` 拿 `hei` 当上下移动边界，
+        ///    调大之后能移动到不存在的行，`getEntryAt()` 返回 null → 当场崩。
+        /// </summary>
+        /// <summary>
+        /// 建网格（原版 `ItemSelector.initGrid` 按 `itemIsFiltered` 组装 items / entries），
+        /// 完了把 `fbItems.padV` 调大，补上"单行高度退化"缺的那截。
+        ///
+        /// 这里必须用 initGrid 当钩子：`_GridSelector.__inst_construct__` 的顺序是
+        /// 建 fbItems → initRightFlow → **initGrid** → **onResize**，
+        /// 而 onResize 是在运行时读 `fbItems.padV` 的 —— 只有在这之前改才有效。
+        /// </summary>
+        public override void initGrid()
+        {
+            base.initGrid();
+            try { fbItems.padV = BoxPadV; } catch { }
+        }
+
+        /// <summary>
+        /// 每帧把条目网格钉回框顶 —— 详细原因见 `ChronoPanelLog.PinGridToTop`。
+        /// 武器面板也把框撑高了（BoxPadV），一样会被原版压到底部。
+        /// </summary>
+        public override void postUpdate()
+        {
+            base.postUpdate();
+            ChronoPanelLog.PinGridToTop(this);
+        }
+
+        public override void onDispose()
+        {
+            base.onDispose();
+            if (ReferenceEquals(Current, this)) Current = null;
+        }
+
+        // ------------------------------------------------------------------ 打开 / 关闭
+
+        /// <summary>
+        /// 打开面板。成功返回 true（此时游戏已经真暂停，由游戏自己负责恢复）。
+        /// </summary>
+        public static bool Open()
+        {
+            if (IsOpen) return false;
+
+            var game = dc.pr.Game.Class.ME;
+            if (game == null || game.destroyed) return false;
+
+            // 别人（暂停菜单 / 其它选择界面）已经暂停了就别插队
+            bool alreadyPaused = false;
+            try { alreadyPaused = game.paused; } catch { }
+            if (alreadyPaused)
+            {
+                ChronoPanelLog.Write("选择武器面板：游戏已处于暂停状态，不重复打开");
+                return false;
+            }
+
+            Hero? hero = ModCore.Modules.Game.Instance.HeroInstance;
+            if (hero == null || hero.destroyed || hero._level == null)
+            {
+                ChronoPanelLog.Write("选择武器面板：英雄/关卡未就绪，不打开");
+                return false;
+            }
+
+            // ★ 开面板前先确认 CDB 里真的有这两把武器。
+            //   如果一行都查不到，网格会是空的 —— 而空网格会让基类构造函数在
+            //   pauseGame() **之后**抛异常（updateRightFlow 里对空 entries 解引用），
+            //   那是最难收拾的情况。所以宁可现在就不开。
+            var missing = new System.Collections.Generic.List<string>();
+            foreach (string id in OnlyIds)
+            {
+                if (!ItemExists(id)) missing.Add(id);
+            }
+            if (missing.Count > 0)
+            {
+                ChronoPanelLog.Write(
+                    $"选择武器面板：CDB 里找不到 {string.Join(" / ", missing)}，面板不打开" +
+                    "（检查 res.pak / data.cdb 补丁有没有生效）");
+                return false;
+            }
+
+            // 面板的初始等级 / 品质：跟原版训练场一样默认 Lv1、品质 0（普通）
+            int level = 1;
+            int quality = 0;
+            bool colorless = false;
+            bool legendary = false;
+
+            try
+            {
+                var cb = new HlAction<dc.String>(OnChosen);
+
+                // 原版签名要的是 Ref<T>（Haxe 的按引用传参），不是 C# 的 ref 参数。
+                // 面板会把值拷进自己的 level / quality / colorless / legendary 字段，
+                // 所以这几个局部变量出了作用域也没关系。
+                var panel = new ChronoWeaponPanel(cb, ChronoPanelLog.Hx(""),
+                                                  new Ref<int>(ref level), new Ref<int>(ref quality),
+                                                  new Ref<bool>(ref colorless), new Ref<bool>(ref legendary));
+
+                // 自检：真的装进网格几项？（过滤逻辑万一改错，看这一行就知道）
+                int loaded = 0;
+                try { loaded = panel.items?.length ?? 0; } catch { }
+
+                ChronoPanelLog.Write(
+                    $"选择武器面板已打开（真暂停 / Process 栈）：网格载入 {loaded} 项 " +
+                    $"[{string.Join(" / ", OnlyIds)}]；" +
+                    "面板内 ← → 选择、Enter 召唤、Esc 返回，等级与品质用原版控件调");
+
+                if (loaded == 0)
+                {
+                    ChronoPanelLog.Write("选择武器面板：网格是空的，立即关闭（否则空网格会拖垮后续 UI）");
+                    try { panel.close(); } catch { }
+                    return false;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                // ⚠ 兜底：pauseGame() 在基类构造函数里就执行了，如果之后（建 UI 时）抛异常，
+                //   游戏会停在暂停里再也出不来。这里必须手动把暂停解掉。
+                ChronoPanelLog.Write($"打开选择武器面板失败，已强制恢复: {ex}");
+                Current = null;
+                ChronoPanelLog.EmergencyCleanup();
+                return false;
+            }
+        }
+
+        /// <summary>物品 id 是否真的进了 CDB（和 ChronoCdbProbe 用的是同一个入口）。</summary>
+        private static bool ItemExists(string id)
+        {
+            try { return dc.Data.Class.item?.byId?.get(ChronoPanelLog.Hx(id)) != null; }
+            catch { return false; }
+        }
+
+        /// <summary>面板确认（Enter）时的回调。此刻游戏仍然暂停、面板还没销毁。</summary>
+        private static void OnChosen(dc.String chosen)
+        {
+            int level = 1;
+            int quality = 0;
+            bool colorless = false;
+            bool legendary = false;
+
+            var panel = Current;
+            try
+            {
+                if (panel != null && !panel.destroyed)
+                {
+                    level = panel.level;
+                    quality = panel.quality;
+                    colorless = panel.colorless;
+                    legendary = panel.isLegendary();
+                }
+            }
+            catch (Exception ex)
+            {
+                ChronoPanelLog.Write($"读取面板等级/品质失败（用默认值）: {ex.Message}");
+            }
+
+            string id = ChronoPanelLog.Plain(chosen);
+            if (id.Length == 0)
+            {
+                ChronoPanelLog.Write("面板确认回调拿到空 id，取消召唤");
+                return;
+            }
+
+            SpawnWeaponDrop(id, LabelOf(id), level, quality, colorless, legendary);
+        }
+
+        private static string LabelOf(string id)
+        {
+            if (string.Equals(id, "ChronoBlade", StringComparison.Ordinal)) return "时之刃";
+            if (string.Equals(id, TimeBullet.name, StringComparison.Ordinal)) return TimeBullet.DisplayName;
+            return id;
+        }
+
+        // ------------------------------------------------------------------ 召唤
+
+        /// <summary>
+        /// 在英雄**上方**放一个武器掉落物（和原版训练场一样：选完从上方掉下来）。
+        ///
+        /// 走原版掉落流程（`ItemDrop` + `onDropAsLoot()`），把拾取判定、HUD 刷新、
+        /// 技能初始化、武器替换 UI 全部交回给游戏本体 —— 这也是本模组一直以来的做法，
+        /// 能绕开 `Inventory.add()` 的"武器格已满"异常和手工赋 `_itemData` 的强转坑。
+        /// </summary>
+        private static void SpawnWeaponDrop(string weaponId, string label,
+                                            int level, int quality, bool colorless, bool legendary)
+        {
+            Hero? hero = ModCore.Modules.Game.Instance.HeroInstance;
+            if (hero == null || hero.destroyed || hero._level == null)
+            {
+                ChronoPanelLog.Write($"召唤{label}失败：英雄/关卡未就绪");
+                return;
+            }
+
+            try
+            {
+                var item = MakeItem(weaponId, level, quality, colorless, legendary);
+
+                // 和原版 TrainingWeaponSpawner.spawnItem 完全一致：
+                //   构造时就落在"英雄当前所在格的正上方 N 格" → init() → onDropAsLoot()
+                //   → setPosCase 把格内的小数偏移补上。
+                // 之后就交给重力，武器自己从上方掉到英雄脚边。
+                bool inArmory = false;
+                var drop = new ItemDrop(hero._level, hero.cx, hero.cy - SpawnHeightCells,
+                                        item, true, new Ref<bool>(ref inArmory));
+                drop.init();                 // 必须调用，否则崩
+                drop.onDropAsLoot();         // 交给原版掉落 / 拾取流程
+
+                try
+                {
+                    // 用 setPosCase 而不是 setPosPixel：保持落在合法格子上，
+                    // 掉落物的落地/碰撞判定才不会错位。
+                    drop.setPosCase(drop.cx, drop.cy, hero.xr, hero.yr);
+                }
+                catch (Exception ex)
+                {
+                    ChronoPanelLog.Write($"掉落位置调整失败（不影响掉落）: {ex.Message}");
+                }
+
+                ChronoPanelLog.Write(
+                    $"已召唤{label}（Lv{level} / 品质{quality}" +
+                    $"{(legendary ? " / 传奇" : "")}{(colorless ? " / 无色" : "")}）：" +
+                    $"从英雄当前位置上方 {SpawnHeightCells} 格掉落，走过去捡起即可");
+            }
+            catch (Exception ex)
+            {
+                ChronoPanelLog.Write($"召唤{label}失败: {ex.GetType().Name}: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 按面板里选的等级 / 品质造物品。
+        ///
+        /// ⚠️ 关键教训：**不能依赖 `TrainingWeaponSpawner.Class.lootGen`**。
+        ///   那个 LootGen 只在 `_TrainingWeaponSpawner.__inst_construct__`（也就是训练场里
+        ///   真的摆了一个武器生成器实体）时才被创建；普通关卡里它是 **null**。
+        ///   原版训练场选武器能出传奇，是因为它一定在训练场里；我们在任意关卡按 P，
+        ///   以前走到这里 gen 就是 null → 直接跳过 → **物品根本没有 "Legendary" 词条**，
+        ///   于是"选传奇出来的是普通货、也不显示传奇词条"。
+        ///
+        /// 所以现在：
+        ///   · LootGen 拿得到就照原版走（顺带处理等级/基础数值）；
+        ///   · 拿不到就自己补齐 —— **显式补上 "Legendary" 词条** + 本模组的传奇词条。
+        /// 任何一步失败都退回"裸物品"，绝不让等级/品质把召唤本身搞挂。
+        /// </summary>
+        private static InventItem MakeItem(string weaponId, int level, int quality,
+                                           bool colorless, bool legendary)
+        {
+            var item = new InventItem(new InventItemKind.Weapon(ChronoPanelLog.Hx(weaponId)));
+
+            bool finalized = false;
+            try
+            {
+                var gen = TrainingWeaponSpawner.Class.lootGen;
+                if (gen != null)
+                {
+                    bool overrideBaseLevel = true;
+                    item = legendary
+                        ? gen.finalizeLegendaryItem(item, level, ref overrideBaseLevel, null, null)
+                        : gen.finalizeItem(item, level, ref overrideBaseLevel, null, null);
+                    finalized = true;
+                }
+                else
+                {
+                    ChronoPanelLog.Write(
+                        "LootGen 不可用（不在训练场，属正常）→ 等级/传奇词条由面板自己补");
+                }
+            }
+            catch (Exception ex)
+            {
+                ChronoPanelLog.Write($"LootGen 处理等级失败（改用裸物品）: {ex.Message}");
+            }
+
+            if (legendary)
+            {
+                // ★ 先让物品**真的成为传奇**：原版是靠 finalizeLegendaryItem 里
+                //   `addAffix("Legendary")` 做到的。少了这一步，物品既没有传奇外观，
+                //   也不会把 legendAffixes 里的词条算进说明。
+                if (!finalized || !HasAffix(item, "Legendary"))
+                {
+                    EnsureAffix(item, "Legendary");
+                }
+
+                // 再把本模组的传奇词条挂上（池子里只有一条，正常一定 Roll 得到）
+                string affixId = LegendAffixFor(weaponId);
+                if (affixId.Length > 0) EnsureAffix(item, affixId);
+
+                // 传奇的"品质"由 Legendary 词条表达，**不叠 QualityUp** ——
+                // 原版 spawnItem 在传奇分支里 set_weaponQuality(0)，那条 while 循环加 0 次。
+            }
+            else
+            {
+                for (int i = 0; i < quality; i++) EnsureAffix(item, "QualityUp");
+            }
+
+            if (colorless) EnsureAffix(item, "Colorless");
+
+            return item;
+        }
+
+        /// <summary>已经带着这个词条就跳过，不会重复叠加。</summary>
+        private static void EnsureAffix(InventItem item, string affixId)
+        {
+            if (HasAffix(item, affixId)) return;
+            try
+            {
+                item.addAffix(ChronoPanelLog.Hx(affixId), Ref<bool>.Null);
+                ChronoPanelLog.Write($"已附加词条: {affixId}");
+            }
+            catch (Exception ex)
+            {
+                ChronoPanelLog.Write($"附加词条 {affixId} 失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>这把武器对应的传奇词条 id（和 patch_chronoblade_cdb.py 里的一致）。</summary>
+        private static string LegendAffixFor(string weaponId)
+        {
+            if (string.Equals(weaponId, "ChronoBlade", StringComparison.Ordinal)) return "IgnoreGlobalShield";
+            if (string.Equals(weaponId, TimeBullet.name, StringComparison.Ordinal)) return ChronoBullets.LegendAffixId;
+            return "";
+        }
+
+        private static bool HasAffix(InventItem item, string affixId)
+        {
+            try { return item.hasAffix(ChronoPanelLog.Hx(affixId)); }
+            catch { return false; }
+        }
+    }
+
+    // ============================================================================================
+    //  选择弹药面板（热键 X）
+    // ============================================================================================
+
+    /// <summary>
+    /// 选择弹药面板 —— Zaphkiel 的十二之弹（罗马数字 I…XII）。
+    ///
+    /// 和武器面板同一套机制：继承原版 `GridSelector`。它的构造函数同样把自己挂到
+    /// `Main.Class.ME` 上并调 `pauseGame()`，所以打开时是**真暂停**：
+    /// 英雄、怪物、弹幕、粒子、动画全部停在那一帧，而面板自己的 update 照常跑。
+    ///
+    /// 上一版这里是"冻结战场"（把怪物锁 AI + 移速归零），只停了怪物，
+    /// 英雄/弹幕/动画照旧；现在换成和原版选择界面完全一致的做法，那个 hack 已经删掉。
+    /// </summary>
+    public sealed class ChronoAmmoPanel : dc.ui.sel.GridSelector
+    {
+        /// <summary>面板标题。</summary>
+        public const string Title = "选择弹药";
+
+        /// <summary>格子尺寸：要放得下 "XII" 这种三字符罗马数字，比原版 24 宽一些。</summary>
+        private const int EntryWid = 36;
+        private const int EntryHei = 32;
+
+        /// <summary>说明文字距选择框内左边的距离（取不到条目左边距时的兜底值）。</summary>
+        private const double DescLeftPad = 12.0;
+
+        /// <summary>说明文字离选择框内底边的距离。</summary>
+        private const double DescBottomPad = 8.0;
+
+        /// <summary>
+        /// 选择框的上下内边距（原版 5）。调大是为了在**框内底部**腾出放弹药说明的高度。
+        /// padV 只进高度公式（宽度用 padH），所以不会把框撑宽。
+        /// </summary>
+        private const double BoxPadV = 14.0;
+
+        /// <summary>
+        /// TIMEKASAN 的帧约 480×430（世界空间素材），缩到**正好铺满格子**：
+        /// 32/430 → 约 35.7×32，塞进 36×32 的格子。
+        /// 铺满之后"图集右下角"自然就落在"选择框右下角"上（框比格子每边大 5 单位）。
+        /// 缩放加在 sprite 自己身上是**没用**的：GridSelector 会覆盖它 —— 见 getIconBmp。
+        /// </summary>
+        private const double NumeralScale = (double)EntryHei / 430.0;
+
+        /// <summary>
+        /// 初始光标。
+        /// ⚠ 必须在 `new` 之前写好：`initGrid()` 是在**基类构造函数里**被调用的，
+        ///   那时候本类的实例字段还没赋值，拿不到构造参数。
+        /// </summary>
+        private static int _pendingStart;
+
+        public static ChronoAmmoPanel? Current { get; private set; }
+
+        public static bool IsOpen => Current != null && !Current.destroyed;
+
+        private readonly TimeBullet? _gun;
+
+        /// <summary>子弹作用说明（挂在 GridSelector 的 rightFlow 里，跟在选择框下方）。</summary>
+        private dc.ui.Text? _descText;
+
+        public ChronoAmmoPanel(TimeBullet? gun)
+        {
+            // 注意：走到这里时基类已经挂好进程栈、暂停了游戏、并且调过 initGrid() 了。
+            _gun = gun;
+            Current = this;
+
+            // 基类里第一次 updateRightFlow()（selectEntryAt → updateSelection）跑的时候
+            // 本类的字段还没赋值，拿不到 _gun（也就不知道是不是传奇）；
+            // 这里补一次，让说明文案第一帧就是对的。
+            try { updateRightFlow(); } catch { }
+        }
+
+        // ------------------------------------------------------------------ 网格内容
+
+        public override void initGrid()
+        {
+            int n = ChronoBullets.All.Length;
+            if (n <= 0)
+            {
+                ChronoPanelLog.Write("选择弹药面板：子弹表为空，面板立即关闭");
+                close();
+                return;
+            }
+
+            initEntries(n);
+
+            // 给"框内底部的弹药说明"腾高度。onResize 还在后面，所以这里改还来得及。
+            try { fbItems.padV = BoxPadV; } catch { }
+
+            // 光标落在当前装填的那一发上
+            int start = _pendingStart;
+            _pendingStart = 0;
+            if (start < 0) start = 0;
+            if (start >= n) start = n - 1;
+
+            int wid = get_wid();
+            if (wid <= 0) wid = 1;
+
+            bool scroll = false;
+            selectEntryAt(start % wid, start / wid, ref scroll);
+        }
+
+        public override dc.String getTitleText() => ChronoPanelLog.Hx(Title);
+
+        /// <summary>自选换弹，永远可选。</summary>
+        public override bool isEntryLocked(int i) => false;
+
+        // ------------------------------------------------------------------ 当前弹药说明
+        //
+        // GridSelector 的 initRightFlow / updateRightFlow 默认都是空实现（框架留的钩子），
+        // ItemSelector 就是用它画右侧"物品说明"的。弹药不是 CDB 物品，没有 NewItemDesc 可用，
+        // 所以这里自己放一个 Text 到 rightFlow 里，光标一动就刷新。
+
+        public override void initRightFlow()
+        {
+            base.initRightFlow();      // GridSelector 里是空的，留个位置而已
+
+            try
+            {
+                // 说明文字要出现在**选择框内部**，所以挂在 `mask` 上 ——
+                // mask 就是框内的可视区（随框一起被裁），而且它是绝对定位的，
+                // 不影响任何 Flow 布局。
+                //
+                // ⚠️ 千万别挂到 mainFlow 上：那样文字高度一变，mainFlow 就会重新居中，
+                //    光标换到下一行时整块面板跟着上下跳 ——
+                //    这正是"到下一行集体往下移"的原因。
+                var text = new dc.ui.Text(mask, null, null, Ref<double>.Null, null, null);
+                text.canHaveBackground = false;
+                // 左对齐（多行说明也要每行都从左边开始）
+                try { text.set_textAlign(new dc.h2d.Align.Left()); } catch { }
+                _descText = text;
+            }
+            catch (Exception ex)
+            {
+                _descText = null;
+                ChronoPanelLog.Write($"弹药说明文字创建失败（面板仍可用）: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 每帧把条目网格钉回框顶 —— 详细原因见 `ChronoPanelLog.PinGridToTop`。
+        /// </summary>
+        public override void postUpdate()
+        {
+            base.postUpdate();
+            ChronoPanelLog.PinGridToTop(this);
+        }
+
+        /// <summary>原版 onResize 会把 mask.width / mask.height 算好，之后才能贴底部。</summary>
+        public override void onResize()
+        {
+            base.onResize();
+            LayoutDescText();
+        }
+
+        /// <summary>把说明文字贴到"选择框内部"的**左下角**（左对齐 + 贴底）。</summary>
+        private void LayoutDescText()
+        {
+            var text = _descText;
+            if (text == null) return;
+
+            try
+            {
+                double h = 0;
+                try { h = text.textHeight; } catch { }
+
+                double maskH = 0;
+                try { maskH = mask.height; } catch { }
+
+                // 左边对齐到条目网格的左边缘（取不到就用固定内边距）
+                double left = 0;
+                try { left = wrapperItem.x; } catch { }
+                if (left <= 0) left = DescLeftPad;
+
+                text.posChanged = true;
+                text.x = left;
+                text.posChanged = true;
+                text.y = maskH - h - DescBottomPad;
+            }
+            catch { }
+        }
+
+        public override void updateRightFlow()
+        {
+            UpdateDescText();
+        }
+
+        /// <summary>把光标所在那一发的作用写进说明文字。</summary>
+        private void UpdateDescText()
+        {
+            var text = _descText;
+            if (text == null) return;
+
+            try
+            {
+                int index = -1;
+                var entry = getEntryAt(curX, curY);
+                if (entry != null) index = entry.i;
+                if (index < 0 || index >= ChronoBullets.All.Length) return;
+
+                bool boost = false;
+                try { boost = _gun?.IsLegendaryDouble ?? false; } catch { }
+
+                var def = ChronoBullets.Get(index);
+                var sb = new System.Text.StringBuilder();
+                sb.Append("第 ").Append(index + 1).Append(" / ").Append(ChronoBullets.All.Length)
+                  .Append(" 发 · ").Append(def.Name).Append('\n');
+                sb.Append(ChronoBullets.DescriptionFor(index, boost));
+                if (boost && ChronoBullets.IsBoostedByLegendary(index))
+                    sb.Append("\n【传奇·效果翻倍】");
+
+                text.set_text(ChronoPanelLog.Hx(sb.ToString()));
+                try { text.set_textColor(def.Color); } catch { }
+
+                // 文案换了高度可能变 → 重新贴一次底部
+                LayoutDescText();
+            }
+            catch (Exception ex)
+            {
+                ChronoPanelLog.Write($"刷新弹药说明失败: {ex.Message}");
+            }
+        }
+
+        public override int get_entryWid() => EntryWid;
+
+        public override int get_entryHei() => EntryHei;
+
+        /// <summary>
+        /// 每个格子里画一个罗马数字 —— 直接用 `TIMEKASAN.atlas` 的 idle_0000…idle_0011
+        /// （idle_0000 = 罗马数字 I，往后递增），帧映射复用 `ChronoFx.FrameIndexForRoman`，
+        /// 和斩击刻印 / 开火蹦字走的是同一张表，改图集只需要改那一处。
+        ///
+        /// ⚠ 为什么要套一层 holder：
+        ///   `GridSelector.addEntryAt()` 会给这里返回的对象挂一个 onBeforeReflow，
+        ///   里面**强制**把 scaleX / scaleY 设成 pixelScale。所以缩放不能加在 sprite 身上
+        ///   （下一帧就被覆盖成原尺寸，数字会撑爆整个格子），
+        ///   只能把 sprite 放进外层容器，让容器的 pixelScale 缩放和 sprite 自己的比例相乘。
+        /// </summary>
+        public override dc.h2d.Object getIconBmp(int i, dc.h2d.Object p)
+        {
+            try
+            {
+                var lib = ChronoFx.GetNumeralLib();
+                if (lib == null) return base.getIconBmp(i, p);
+
+                var holder = new dc.h2d.Object(p);
+
+                int frame = ChronoFx.FrameIndexForBullet(i);
+                int startFrame = frame;
+                var spr = new HSprite(lib, ChronoPanelLog.Hx(ChronoFx.NumeralGroup),
+                                      Ref<int>.From(ref startFrame), holder);
+                if (spr == null) return base.getIconBmp(i, p);
+
+                // 图集帧数保护：帧不够时退回最后一帧（和 ChronoFx.ShowNumeralScaled 一致）
+                int frames = 1;
+                try { frames = spr.totalFrames(); } catch { }
+                int shown = frame;
+                if (frames > 0 && shown >= frames) shown = frames - 1;
+
+                // 只 setFrame 不够 —— sprite 的 AnimManager 仍会继续推进帧，把这一格盖掉
+                try { spr.setFrame(shown); } catch { }
+                try { spr.get_anim().pauseCurrentAnim(); } catch { }
+
+                // ⚠ 锚点必须是**左上角 (0,0)**，绝对不能用居中 (0.5,0.5)。
+                //
+                //   原版默认的格子图标是 dc.h2d.Bitmap（Icon : Bitmap），它的包围盒是
+                //   [0,w]×[0,h] —— 也就是**左上角对齐格子**。GridSelector 就是按这个约定
+                //   摆放格子的。
+                //   而 HSprite 一旦用居中锚点，包围盒变成 [-w/2,w/2]×[-h/2,h/2]，
+                //   整张图会往左上偏半个身位 —— 表现出来正好是
+                //   "选择框的中心对上了图集的右下角"，差半张图。
+                var pivot = spr.pivot;
+                pivot.centerFactorX = 0.0;
+                pivot.centerFactorY = 0.0;
+                pivot.usingFactor = true;
+                pivot.isUndefined = false;
+
+                spr.scaleX = NumeralScale;
+                spr.scaleY = NumeralScale;
+                spr.posChanged = true;
+
+                return holder;
+            }
+            catch (Exception ex)
+            {
+                ChronoPanelLog.Write($"弹药格子 {i + 1} 画罗马数字失败，退回占位方块: {ex.Message}");
+                return base.getIconBmp(i, p);
+            }
+        }
+
+        // ------------------------------------------------------------------ 确认 / 关闭
+
+        /// <summary>
+        /// Enter 确认：把光标那一发装填进武器，然后走原版的关闭流程
+        /// （`base.onValidate()` → `close()` → `Game.resume()` + 销毁本进程）。
+        /// </summary>
+        public override void onValidate()
+        {
+            int index = -1;
+            try
+            {
+                var entry = getEntryAt(curX, curY);
+                if (entry != null) index = entry.i;
+            }
+            catch (Exception ex)
+            {
+                ChronoPanelLog.Write($"读取弹药光标失败: {ex.Message}");
+            }
+
+            // 先让原版收尾：播确认音、关面板、恢复游戏
+            base.onValidate();
+
+            if (index < 0)
+            {
+                ChronoPanelLog.Write("弹药选择取消（没读到光标）");
+                return;
+            }
+
+            try
+            {
+                _gun?.SetBullet(index);
+                ChronoPanelLog.Write($"弹药面板确认：第 {index + 1} 发 {ChronoBullets.Get(index).Name}");
+            }
+            catch (Exception ex)
+            {
+                ChronoPanelLog.Write($"装填失败: {ex.Message}");
+            }
+        }
+
+        public override void onDispose()
+        {
+            base.onDispose();
+            if (ReferenceEquals(Current, this)) Current = null;
+        }
+
+        // ------------------------------------------------------------------ 打开
+
+        /// <summary>
+        /// 打开面板。成功返回 true（此时游戏已经真暂停，由游戏自己负责恢复）。
+        /// </summary>
+        public static bool Open(TimeBullet? gun, int current)
+        {
+            if (IsOpen) return false;
+
+            if (gun == null)
+            {
+                ChronoPanelLog.Write("手里没有 Zaphkiel，选择弹药面板不打开");
+                return false;
+            }
+
+            var game = dc.pr.Game.Class.ME;
+            if (game == null || game.destroyed) return false;
+
+            bool alreadyPaused = false;
+            try { alreadyPaused = game.paused; } catch { }
+            if (alreadyPaused)
+            {
+                ChronoPanelLog.Write("选择弹药面板：游戏已处于暂停状态，不重复打开");
+                return false;
+            }
+
+            int n = ChronoBullets.All.Length;
+            _pendingStart = n > 0 ? (((current % n) + n) % n) : 0;
+
+            try
+            {
+                _ = new ChronoAmmoPanel(gun);
+                ChronoPanelLog.Write(
+                    $"选择弹药面板已打开（真暂停 / Process 栈）：共 {n} 发，当前第 {_pendingStart + 1} 发 " +
+                    $"{ChronoBullets.Get(_pendingStart).Name}；← → 选择、Enter 确认、Esc 取消");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                // 同武器面板：基类构造里已经 pauseGame()，抛异常必须手动解暂停
+                ChronoPanelLog.Write($"打开选择弹药面板失败，已强制恢复: {ex}");
+                Current = null;
+                _pendingStart = 0;
+                ChronoPanelLog.EmergencyCleanup();
+                return false;
+            }
+        }
+    }
+}

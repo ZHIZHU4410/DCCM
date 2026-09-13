@@ -1,0 +1,90 @@
+
+TIMEKASAN.png
+size: 2048,2048
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+idle_0007
+  rotate: false
+  xy: 1, 1
+  size: 480, 440
+  orig: 480, 440
+  offset: 0, 0
+  index: 0
+idle_0000
+  rotate: false
+  xy: 484, 1
+  size: 480, 420
+  orig: 480, 420
+  offset: 0, 0
+  index: 0
+idle_0001
+  rotate: false
+  xy: 967, 1
+  size: 480, 420
+  orig: 480, 420
+  offset: 0, 0
+  index: 0
+idle_0004
+  rotate: false
+  xy: 1450, 1
+  size: 480, 420
+  orig: 480, 420
+  offset: 0, 0
+  index: 0
+idle_0003
+  rotate: false
+  xy: 484, 424
+  size: 479, 424
+  orig: 480, 424
+  offset: 1, 0
+  index: 0
+idle_0005
+  rotate: false
+  xy: 1, 444
+  size: 475, 426
+  orig: 475, 426
+  offset: 0, 0
+  index: 0
+idle_0002
+  rotate: false
+  xy: 966, 424
+  size: 473, 420
+  orig: 473, 420
+  offset: 0, 0
+  index: 0
+idle_0006
+  rotate: false
+  xy: 1442, 424
+  size: 472, 428
+  orig: 473, 428
+  offset: 1, 0
+  index: 0
+idle_0009
+  rotate: false
+  xy: 966, 847
+  size: 471, 428
+  orig: 471, 428
+  offset: 0, 0
+  index: 0
+idle_0010
+  rotate: false
+  xy: 479, 851
+  size: 469, 429
+  orig: 469, 429
+  offset: 0, 0
+  index: 0
+idle_0008
+  rotate: false
+  xy: 1, 873
+  size: 467, 432
+  orig: 467, 432
+  offset: 0, 0
+  index: 0
+idle_0011
+  rotate: false
+  xy: 1440, 855
+  size: 467, 428
+  orig: 467, 428
+  offset: 0, 0
+  index: 0

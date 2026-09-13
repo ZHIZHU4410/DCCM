@@ -1,0 +1,160 @@
+
+TIMEJIBAI.png
+size: 512,512
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+idle_0007
+  rotate: false
+  xy: 1, 1
+  size: 108, 89
+  orig: 148, 148
+  offset: 20, 39
+  index: 0
+idle_0021
+  rotate: false
+  xy: 112, 1
+  size: 107, 112
+  orig: 148, 148
+  offset: 21, 21
+  index: 0
+idle_0019
+  rotate: false
+  xy: 112, 1
+  size: 107, 112
+  orig: 148, 148
+  offset: 21, 21
+  index: 0
+idle_0018
+  rotate: false
+  xy: 112, 1
+  size: 107, 112
+  orig: 148, 148
+  offset: 21, 21
+  index: 0
+idle_0017
+  rotate: false
+  xy: 112, 1
+  size: 107, 112
+  orig: 148, 148
+  offset: 21, 21
+  index: 0
+idle_0016
+  rotate: false
+  xy: 112, 1
+  size: 107, 112
+  orig: 148, 148
+  offset: 21, 21
+  index: 0
+idle_0015
+  rotate: false
+  xy: 112, 1
+  size: 107, 112
+  orig: 148, 148
+  offset: 21, 21
+  index: 0
+idle_0014
+  rotate: false
+  xy: 1, 93
+  size: 107, 112
+  orig: 148, 148
+  offset: 21, 21
+  index: 0
+idle_0013
+  rotate: false
+  xy: 222, 1
+  size: 107, 112
+  orig: 148, 148
+  offset: 21, 21
+  index: 0
+idle_0020
+  rotate: false
+  xy: 112, 1
+  size: 107, 112
+  orig: 148, 148
+  offset: 21, 21
+  index: 0
+idle_0012
+  rotate: false
+  xy: 332, 1
+  size: 107, 111
+  orig: 148, 148
+  offset: 21, 21
+  index: 0
+idle_0011
+  rotate: false
+  xy: 332, 115
+  size: 107, 111
+  orig: 148, 148
+  offset: 21, 21
+  index: 0
+idle_0010
+  rotate: false
+  xy: 111, 116
+  size: 107, 109
+  orig: 148, 148
+  offset: 21, 21
+  index: 0
+idle_0009
+  rotate: false
+  xy: 1, 208
+  size: 107, 107
+  orig: 148, 148
+  offset: 21, 21
+  index: 0
+idle_0008
+  rotate: false
+  xy: 221, 116
+  size: 106, 107
+  orig: 148, 148
+  offset: 22, 21
+  index: 0
+idle_0006
+  rotate: false
+  xy: 221, 226
+  size: 106, 89
+  orig: 148, 148
+  offset: 13, 39
+  index: 0
+idle_0005
+  rotate: false
+  xy: 111, 228
+  size: 97, 89
+  orig: 148, 148
+  offset: 10, 39
+  index: 0
+idle_0002
+  rotate: false
+  xy: 1, 318
+  size: 81, 97
+  orig: 148, 148
+  offset: 48, 29
+  index: 0
+idle_0004
+  rotate: false
+  xy: 85, 320
+  size: 78, 107
+  orig: 148, 148
+  offset: 22, 21
+  index: 0
+idle_0001
+  rotate: false
+  xy: 1, 418
+  size: 53, 91
+  orig: 148, 148
+  offset: 49, 42
+  index: 0
+idle_0000
+  rotate: false
+  xy: 57, 430
+  size: 48, 78
+  orig: 148, 148
+  offset: 49, 55
+  index: 0
+idle_0003
+  rotate: false
+  xy: 442, 1
+  size: 46, 120
+  orig: 148, 148
+  offset: 49, 7
+  index: 0
