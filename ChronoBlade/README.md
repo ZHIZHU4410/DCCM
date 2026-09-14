@@ -206,16 +206,30 @@ MDK v35 的模板 `data.cdb` 是 JSON。`patch_chronoblade_cdb.py` 直接读它�
 继承原版 `Katana`，复用它的居合冲刺 / 斩击执行流程，只按**连击段**（`_cycle`）分派额外效果：
 
 ```csharp
-private void AddCycleEffect(int cycle)
+public void AddCycleEffect(int cycle)
 {
     switch (cycle)
     {
-        case CycleShuriken:  ChronoFx.CastShurikenCircle(hero, ...); break;  // 第 2a：一周飞镖
-        case CycleSwordRain: CastSwordRain(hero);                    break;  // 第 3a：时钟 + 剑雨
+        case CycleShuriken:  ChronoFx.CastShurikenCircle(...);   // 第 2a：一周飞镖特效
+                             SpawnShurikenEntities(...);         //        + 12 枚实体
+                             break;
+        case CycleSwordRain: CastSwordRain(hero);                // 第 3a：时钟 + 剑雨特效
+                             SpawnSwordRainEntities(...);        //        + 实体落剑
+                             break;
         default:             /* 第 1a 居合 / 第 4a 平砍：不额外做事 */ break;
     }
 }
 ```
+
+> ⚠️⚠️ **调用点只能放在 `ChronoBladeMod.OnAnyWeaponExecute`（`tool.Weapon.onExecute` 钩子）里。**
+>
+> 这是踩过的坑：`AddCycleEffect` 一度只在 `ChronoBlade.RunAttack` 里被引用，而 `RunAttack`
+> 挂的是 **`Hook_Katana.onExecute`** —— 那个挂点**实测整局都不触发**（见 `Initialize` 里的注释）。
+> 结果 `AddCycleEffect` 变成了**死代码**，第 2a / 3a 从来没生效过，表现出来就是
+> **"2a / 3a 不见了"**（早期看着像有，其实全是当时的 `U`/`I` 独立技能打出来的）。
+>
+> 真正会进的入口只有 `tool.Weapon.onExecute`。改这块时先确认"谁在调 `AddCycleEffect`"，
+> 别放进那条永远不触发的路径里。
 
 * **第 1a**：攻击前由 `ChronoBladeMod` 统一置 `nextIsChargeAtk = true` + 满蓄力，让原版走**居合冲刺斩**分支（瞬移前冲 + 路径群伤）；命中时由 `Hook_Katana.hitFromWeapon` 逐个刻罗马数字。
 * **第 2a / 3a**：在**原版那一刀之上**叠加飞镖圈 / 时钟剑雨的表现层，不改原版的连击、蓄力、判定任何一处。

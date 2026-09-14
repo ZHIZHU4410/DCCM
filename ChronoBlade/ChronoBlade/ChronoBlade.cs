@@ -241,8 +241,10 @@ namespace ChronoBlade
 
             bool result = callOriginal();
 
-            // 注意：第 2a / 第 3a 的"召唤"（一周飞镖 / 时钟剑雨）就在武器连击里，
-            // 由 AddCycleEffect(cycle) 按段触发（表现层特效 + 实体层投射物）。
+            // 注意：第 2a / 第 3a（一周飞镖 / 时钟剑雨）**不在这里触发** ——
+            // `RunAttack` 挂在 `Hook_Katana.onExecute` 上，而那个挂点实测整局都不触发，
+            // 分派放这儿会变成死代码。它们由 ChronoBladeMod.OnAnyWeaponExecute
+            // （真正的入口 `tool.Weapon.onExecute`）调用 AddCycleEffect(cycle)。
             // 这里只负责第 1a 的居合前冲斩，连击保持干净的平砍手感。
             return result;
         }
@@ -257,8 +259,12 @@ namespace ChronoBlade
         /// <summary>
         /// 第 2a / 3a 的"召唤"部分：**表现层（特效）+ 实体层（真投射物）**，
         /// 不改原版连击 / 蓄力状态机。
+        ///
+        /// ⚠️ 调用点在 `ChronoBladeMod.OnAnyWeaponExecute`（`tool.Weapon.onExecute` 钩子）里。
+        ///    **不要**改到 `RunAttack` 里去调 —— 那是挂在 `Hook_Katana.onExecute` 上的，
+        ///    而那个挂点实测整局都不触发，放那儿等于又变成死代码（2a/3a 会"消失"）。
         /// </summary>
-        private void AddCycleEffect(int cycle)
+        public void AddCycleEffect(int cycle)
         {
             Hero? hero = owner;
             if (hero == null || hero.destroyed || hero._level == null) return;
