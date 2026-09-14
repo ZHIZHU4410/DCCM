@@ -18,18 +18,42 @@ Dead Cells（v35 / DCCM）武器模组。新增 **两把武器** 与 **两个全
 | 段 | 招式 | 效果 | 参考对象 |
 |---|---|---|---|
 | 第 1a | **斩击刻印** | 前冲斩，斩击路径上的敌人依次被斩，各自刻上罗马数字 I / II / III … | 武器 `Katana` 的斩击 |
-| 第 2a | **一周飞镖** | 原地以自身为中心，向一整圈（12 枚）甩出飞镖，附带时之守护者的金色法阵 | Boss `TimeKeeper` 的 `levelUpRadius` |
-| 第 3a | **时钟剑雨** | 唤出时之守护者的背景时钟旋转展开，随后数把巨剑从天而降砸向附近怪物 | Boss `TimeKeeper` 的 `swordRain` |
+| 第 2a | **一周飞镖**（不斩击） | 原地以自身为中心，向一整圈（12 枚）甩出飞镖，附带时之守护者的金色法阵 | Boss `TimeKeeper` 的 `levelUpRadius` |
+| 第 3a | **时钟剑雨**（不斩击） | 唤出时之守护者的背景时钟旋转展开，随后数把巨剑从**每个敌人正上方**砸下来 | Boss `TimeKeeper` 的 `swordRain` |
+
+> **第 2a / 3a 不再有近战斩击** —— 只出飞镖与落剑。实现方式是 `ChronoBlade.SkipMelee`
+> 标记（由 `AdvanceCombo()` 每刀重设），`ChronoBladeMod.OnAnyWeaponExecute` 看到它
+> 就**不调用 `orig`**、直接 `return true`（"这一下我处理了"），武器状态机照常收招。
+> 标记是"当前这一刀"的属性，**不是读一次就清** —— 否则同一刀里 `onExecute` 进两次的话，
+> 第二次会又斩出去。
+>
+> 同时两段都在**英雄中心**播放 `atlas/TIMEZHANJI.atlas`（`ChronoFx.PlayCastEffect`），
+> 和原本的技能释放是同一个表现。
 
 第 2a / 3a 都是**表现层 + 实体层**双份 —— 除了特效，还有真正会飞 / 会砸、会打伤害的投射物：
 
 | 段 | 表现层（特效） | 实体层（真投射物） |
 |---|---|---|
-| 第 2a | 金色法阵 + 一圈飞镖贴图 | **12 枚 `dc.en.bu.Saw`（旋转刃）**，以英雄为中心向一整圈甩出，每枚 20 基础伤害 |
-| 第 3a | 背景时钟展开 + 砸下来的剑影 | **最多 6 柄 `dc.en.bu.Stalactite`（从天而降）**，每个目标点一柄，每柄 55 基础伤害 |
+| 第 2a | 金色法阵 + 一圈飞镖贴图 | **12 枚 `dc.en.bu.Saw`（旋转刃）**，以英雄为中心向一整圈甩出，每枚 **45** 基础伤害，速度 ×2.2 |
+| 第 3a | 背景时钟展开 + 砸下来的剑影 | **最多 6 柄 `dc.en.bu.Stalactite`（从天而降）**，每个敌人正上方一柄，每柄 **120** 基础伤害，下落速度 ×5 |
 
-伤害走原版统一入口 `AttackUtils.Class.createFromHero(hero, power, null)` —— 它会把
-`useHeroScaling` 打开，**伤害自动跟英雄的属性 / 等级 / 变异缩放**，不需要自己算。
+伤害走 `AttackUtils.Class.createFromHeroItem(hero, item, power)` —— 它内部就是
+`createFromHero`（打开 `useHeroScaling`，**吃卷轴 / 属性缩放**）**再加上**
+`useItemAffixes(item)` 与 `item.getDamageBonus()`，并把 `sourceItem` 设成本武器。
+所以飞镖与落剑**会随武器增强而增强，也能吃到卷轴增伤**。
+（只用 `createFromHero` 的话没有武器那一份加成。）
+
+> ⚠️ **`Stalactite` 的两个坑**（都不是想当然的默认值）：
+> * `groundY` 是**构造函数里**按 `from`（我们传的是英雄）的位置算出来的地面高度 ——
+>   目标是远处平台上的敌人时会对不上（原版是 Giant 自己放，两者本来就在同一片地面）。
+>   所以生成后要按"敌人脚下的地面"重设 `st.groundY`。
+> * 出厂 `spd = 0.8` → `dy = sin(PI/2) * 0.9 * 0.8 = 0.72` 像素/帧（约 43 像素/秒），
+>   掉 9 格要 **5 秒**。所以构造完直接乘 `dx/dy` 提速（和飞镖同一个道理：
+>   `_Bullet.__inst_construct__` 把 `spd` 换算成 `dx/dy` 之后就**不再重算**，也没有存 `spd` 字段）。
+>
+> 另外 `level.map.getCeilY()` 拿到的"天花板"经常在**屏幕外几十格**（房间上方还有岩层），
+> 直接拿来当出生点会把剑丢到看不见的地方 —— 所以距离必须**夹住**（`SwordFallMaxCells`），
+> 超出就退回"敌人上方 `SwordFallCells` 格"。
 
 > ⚠️ **为什么实体不用时之守护者本人那两套贴图**（引擎限制，不是偷懒）：
 > * `dc.en.bu.TimeKeeperShuriken` 的发光逻辑要 `be.onions`（boss 专属贴图池）、取色要 `be._infos`；
@@ -203,18 +227,20 @@ MDK v35 的模板 `data.cdb` 是 JSON。`patch_chronoblade_cdb.py` 直接读它�
 
 ### 2. 武器类（ChronoBlade.cs）
 
-继承原版 `Katana`，复用它的居合冲刺 / 斩击执行流程，只按**连击段**（`_cycle`）分派额外效果：
+继承原版 `Katana`，复用它的居合冲刺 / 斩击执行流程，只按**连击段**（自己数的 `_comboStep`，不是 `_cycle`）分派额外效果：
 
 ```csharp
-public void AddCycleEffect(int cycle)
+public void AddCycleEffect(int comboStep)
 {
-    switch (cycle)
+    switch (comboStep)
     {
-        case CycleShuriken:  ChronoFx.CastShurikenCircle(...);   // 第 2a：一周飞镖特效
+        case ComboShuriken:  ChronoFx.PlayCastEffect(hero);      // 第 2a：英雄中心 TIMEZHANJI
+                             ChronoFx.CastShurikenCircle(...);   //        + 金色法阵
                              SpawnShurikenEntities(...);         //        + 12 枚实体
                              break;
-        case CycleSwordRain: CastSwordRain(hero);                // 第 3a：时钟 + 剑雨特效
-                             SpawnSwordRainEntities(...);        //        + 实体落剑
+        case ComboSwordRain: ChronoFx.PlayCastEffect(hero);      // 第 3a：英雄中心 TIMEZHANJI
+                             CastSwordRain(hero);                //        + 时钟 + 剑雨特效
+                             SpawnSwordRainEntities(...);        //        + 敌人上方实体落剑
                              break;
         default:             /* 第 1a 居合 / 第 4a 平砍：不额外做事 */ break;
     }
@@ -240,10 +266,10 @@ public void AddCycleEffect(int cycle)
 > 拿 `_cycle` 去判断"第几下"，实际永远匹配不到 2/3。
 
 * **第 1a**：攻击前由 `ChronoBladeMod` 统一置 `nextIsChargeAtk = true` + 满蓄力，让原版走**居合冲刺斩**分支（瞬移前冲 + 路径群伤）；命中时由 `Hook_Katana.hitFromWeapon` 逐个刻罗马数字。
-* **第 2a / 3a**：在**原版那一刀之上**叠加飞镖圈 / 时钟剑雨的表现层，不改原版的连击、蓄力、判定任何一处。
+* **第 2a / 3a**：**不走原版那一刀**（`SkipMelee` 标记 → `OnAnyWeaponExecute` 直接 `return true`，不产生斩击判定 / 位移），改成只放"飞镖圈 / 时钟剑雨"的表现层与实体层。
 * **第 4a**：普通平砍。按住攻击键时基类会 `set_cycle(3)`，**必须有这一段**，否则 `get_curSkill()` 返回 `null` → `Null access .chargeF` 崩游戏。
 
-**原则：绝不去改写原版的连击 / 蓄力状态机**，只在外面按段套一层"额外效果"。
+**原则：绝不去改写原版的连击 / 蓄力状态机**，只在外面按段套一层"额外效果" / 按段整刀接管。
 
 ### 3. 罗马数字刻印
 
@@ -498,6 +524,8 @@ num10 = (cy2 < num6) ? num6 : ...           // 富余量更大 → 直接把内�
 ## 已知限制
 
 * 三段连击共用 `AtkKatanaA` 起手动画（没有为武器新增帧动画），区分靠特效与音效。
+* 第 2a / 3a **完全接管那一刀**（`return true` 跳过原版），所以那两下**没有任何近战判定** ——
+  伤害全部来自飞镖与落剑。副作用：原版那一刀的位移 / 击退 / 命中音也一并没有了（这是刻意的）。
 * 第 2a / 3a 的实体是**玩家可拥有的同类投射物**（旋转刃 `Saw` / 落石 `Stalactite`），
   不是时之守护者本人那两套贴图 —— 原因见第 1 节的框注（boss 专属实体在普通关卡里生成不出来）。
   表现层（金色法阵 / 背景时钟 / 剑影）仍然是原来的时之守护者特效。
@@ -527,6 +555,9 @@ num10 = (cy2 < num6) ? num6 : ...           // 富余量更大 → 直接把内�
 
 | 现象 | 原因 / 处理 |
 |---|---|
+| 第 2a / 3a 一直不出 | 看日志有没有 `连击第 2 段 → 一周飞镖` / `连击第 3 段 → 时钟剑雨`。**有这行**说明连击分派没问题，问题在实体/特效生成（看紧跟着的 `实体 N/12 枚` 与失败堆栈）；**没有这行**说明连击没推进到第 2 下（`_comboStep` 在 `AdvanceCombo` 里推进，需要连续出刀、间隔 < 1.5 秒）。特别注意 `拿到的时之刃是原版 Katana 实例` 那行 —— 出现它表示 `ChronoWeaponFactory` 的 `create` 钩子没命中，根本没有 `ChronoBlade` 对象可调。 |
+| 第 2a / 3a 出了但还带斩击 | `SkipMelee` 没生效（看有没有 `本段不斩击` 日志）；该标记必须由 `AdvanceCombo()` 在**同一刀内**保持为 true，不能改成"读一次就清"。 |
+| 落剑看不见 / 半天才落地 | `Stalactite` 出生行被夹在 `SwordFallMaxCells` 内（屏幕外的天花板会被丢弃），下落速度已按 `SwordFallSpeedMul` 提速；两者都在 `ChronoBlade.cs` 顶部常量里。 |
 | 传奇武器不显示传奇词条 | 看日志有没有 `已附加词条: Legendary` / `已附加词条: ChronoBulletDouble` |
 | `LootGen 不可用（不在训练场，属正常）` | 预期行为，等级不套用，其余正常 |
 | 十二之弹回不去 | 看日志 `Yud-Bet 回到上一关：<id>（来源=...）`；若提示"换过关之后就能用"，先正常换一关 |

@@ -277,10 +277,19 @@ namespace ChronoBlade
 
                     // ---- 第 2a / 第 3a：一周飞镖 / 时钟剑雨 ----
                     //
-                    // ⚠️ 这里**故意不触发**！连击段与 2a/3a 的分派放在
+                    // ⚠️ 这里**不触发技能**！连击段与 2a/3a 的分派放在
                     //    `ChronoBlade.fixedUpdate` 的 shouldDash 分支里（→ AdvanceCombo()）——
                     //    那是本模组自己判定的"新一刀开始"，每次按下保证只进一次。
-                    //    放在这个钩子里曾经失败过：onExecute 是否每刀都进并不确定。
+                    //
+                    // 这里只做一件事：第 2 / 3 段**不斩击** ——
+                    // 看到标记就跳过原版（不产生斩击判定 / 位移），
+                    // 直接返回 true 表示"这一下我处理了"，武器状态机照常收招。
+                    if (blade != null && blade.SkipMelee)
+                    {
+                        Write("[ChronoBlade] 本段不斩击（第 2a/3a 只放飞镖与落剑）");
+                        return true;
+                    }
+
                     if (blade == null && IsOurItem(kat))
                     {
                         // 只在这一条日志出现时才有意义：说明是"物品是时之刃，但拿到的是原版 Katana 实例"

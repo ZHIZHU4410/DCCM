@@ -60,11 +60,43 @@ namespace ChronoBlade
         private const int SwordCount = 6;       // 剑雨把数
         private const double SwordRadius = 22.0;
 
-        /// <summary>第 2a 每枚飞镖的基础伤害（走原版 createFromHero，会跟英雄属性缩放）。</summary>
-        private const int ShurikenPower = 20;
+        /// <summary>
+        /// 第 2a 每枚飞镖的基础伤害。
+        /// 走 `createFromHeroItem`，所以这只是**基数** —— 实际伤害还要乘上
+        /// 英雄缩放（卷轴 / 属性）与武器自身的伤害加成。
+        /// </summary>
+        private const int ShurikenPower = 45;
 
-        /// <summary>第 3a 每把落剑的基础伤害。</summary>
-        private const int SwordPower = 55;
+        /// <summary>第 3a 每把落剑的基础伤害（同样会被武器与卷轴放大）。</summary>
+        private const int SwordPower = 120;
+
+        /// <summary>
+        /// 飞镖速度倍率。
+        /// `Saw` 出厂速度写死在它的构造函数里（`spd = 0.5`），而 `_Bullet.__inst_construct__`
+        /// 只是把这个值换算成 `dx/dy` 后就**不再重算**（没有存 spd 字段）——
+        /// 所以构造完直接乘一下 `dx/dy` 就能提速。
+        /// </summary>
+        private const double ShurikenSpeedMul = 2.2;
+
+        /// <summary>落剑默认从敌人上方多少格释放（拿不到合适的天花板时用这个值）。</summary>
+        private const int SwordFallCells = 9;
+
+        /// <summary>
+        /// 天花板最多允许离敌人多少格。
+        /// 地图的"天花板"经常在屏幕外几十格（房间上方还有岩层），
+        /// 直接用会把剑生成到看不见的地方，所以超出这个距离就退回
+        /// <see cref="SwordFallCells"/> —— 保证落剑一定看得见。
+        /// </summary>
+        private const int SwordFallMaxCells = 16;
+
+        /// <summary>
+        /// 落剑下落速度倍率。
+        /// `Stalactite` 出厂 `spd = 0.8`，而 `_Bullet.__inst_construct__` 换算成
+        /// `dy = sin(PI/2) * 0.9 * 0.8 = 0.72` 像素/帧（约 43 像素/秒）——
+        /// 掉 9 格要 **5 秒**，敌人早走了。乘 5 倍 ≈ 216 像素/秒，
+        /// 9 格约 1 秒落地，肉眼看得清又能在一次连击内打到人。
+        /// </summary>
+        private const double SwordFallSpeedMul = 5.0;
 
         private bool _ready;
 
@@ -224,9 +256,20 @@ namespace ChronoBlade
         private int _comboStep;
         private long _comboLastMs;
         private int _comboLogCount;
+        /// <summary>当前这一刀是否不斩击（第 2 / 3 段为 true）。见 <see cref="SkipMelee"/>。</summary>
+        private bool _skipMeleeSwing;
 
         /// <summary>多久没出刀就从第 1 段重新起手（毫秒）。</summary>
         private const long ComboWindowMs = 1500;
+
+        /// <summary>
+        /// "这一下不斩击"（第 2 / 3 段用）。
+        ///
+        /// 语义是"**当前这一刀**不斩击"：由 `AdvanceCombo()` 每刀重设，
+        /// 而不是读一次就清 —— 否则同一刀里如果 `onExecute` 进了两次，
+        /// 第二次就会又斩出去（见 `ChronoBladeMod.OnAnyWeaponExecute`）。
+        /// </summary>
+        public bool SkipMelee => _skipMeleeSwing;
 
         /// <summary>
         /// 连击段推进：1 → 2 → 3 → 1；超过 <see cref="ComboWindowMs"/> 没出刀就从第 1 段重新起手。
@@ -248,6 +291,9 @@ namespace ChronoBlade
                           (_comboStep == ComboShuriken ? "一周飞镖" : "时钟剑雨") +
                           $"（原版 cycle={MaybeCycle()}）");
                 }
+
+                // 第 2 / 3 段不斩击：只放飞镖 / 落剑。标记交给 OnAnyWeaponExecute 消费。
+                _skipMeleeSwing = _comboStep >= ComboShuriken;
 
                 AddCycleEffect(_comboStep);
             }
@@ -344,6 +390,8 @@ namespace ChronoBlade
                 case ComboShuriken:
                     ResetSwing();
                     FaceTarget(hero, ShurikenRadius + 6.0);
+                    // 在英雄中心播放 TIMEZHANJI 图集（和技能释放同一个表现）
+                    ChronoFx.PlayCastEffect(hero);
                     // 表现层：金色法阵 + 一圈飞镖贴图
                     ChronoFx.CastShurikenCircle(hero, ShurikenCount, ShurikenRadius);
                     // 实体层：12 枚真正会飞、会打伤害的旋转刃
@@ -353,6 +401,8 @@ namespace ChronoBlade
 
                 case ComboSwordRain:
                     ResetSwing();
+                    // 在英雄中心播放 TIMEZHANJI 图集（和技能释放同一个表现）
+                    ChronoFx.PlayCastEffect(hero);
                     CastSwordRain(hero);
                     break;
 
@@ -393,25 +443,50 @@ namespace ChronoBlade
         //   · 落剑 → `dc.en.bu.Stalactite`（从天而降）
 
         /// <summary>
-        /// 造一个"以英雄为施法者"的 AttackData。
+        /// 这把武器绑定的物品。
+        /// ⚠️ 是 `Weapon.item`（`InventItem` 属性），**不是** `wInfos.item` ——
+        ///    后者是物品 id 字符串（`IsOurWeapon` 里就是拿它 `ToString()` 做 id 匹配的）。
+        /// </summary>
+        private dc.tool.InventItem? CurrentItem()
+        {
+            try { return item; } catch { return null; }
+        }
+
+        /// <summary>
+        /// 造一个"以英雄 + 这把武器为来源"的 AttackData。
         ///
-        /// 走原版统一入口 `AttackUtils.Class.createFromHero()` —— 它会把 `useHeroScaling` 打开，
-        /// 也就是**伤害自动跟英雄的属性 / 等级 / 变异走**，不需要自己算缩放，
-        /// 也不会漏掉暴击、减抗这些链路。
+        /// ★ 用 `createFromHeroItem` 而不是 `createFromHero`，因为它内部是：
+        ///
+        /// ```
+        /// createFromHero(source, baseDmg, source.getRelevantTierFor(item))  // 英雄缩放(卷轴/属性)
+        /// attackData.useItemAffixes(item)                                    // 武器词条
+        /// attackData.dmgMultiplier += item.getDamageBonus()                  // 武器等级/品质伤害加成
+        /// attackData.sourceItem = item
+        /// ```
+        ///
+        /// 也就是**飞镖与落剑会随武器增强而增强、也能吃到卷轴增伤**。
+        /// `createFromHero` 只有英雄缩放，不带武器那一份。
         ///
         /// 注意：Haxe 的静态成员在 GameProxy 里挂在"类对象"上，要写 `AttackUtils.Class.xxx`。
         /// </summary>
-        private static dc.tool.atk.AttackData? MakeHeroAttack(Hero hero, int power)
+        private dc.tool.atk.AttackData? MakeHeroAttack(Hero hero, int power)
         {
             try
             {
                 object baseDmg = power;             // 原签名是 dynamic
-                int? tier = null;                   // null = 用英雄自己的 tier
+                var item = CurrentItem();
+                if (item != null)
+                {
+                    return dc.tool.atk.AttackUtils.Class.createFromHeroItem(hero, item, baseDmg);
+                }
+
+                // 兜底：万一拿不到物品，至少还有英雄缩放
+                int? tier = null;
                 return dc.tool.atk.AttackUtils.Class.createFromHero(hero, baseDmg, tier);
             }
             catch (Exception ex)
             {
-                Write($"第 2a/3a 的 AttackData 构造失败（这一下只有特效）: {ex.Message}");
+                Write($"[ChronoBlade] 第 2a/3a 的 AttackData 构造失败（这一下只有特效）: {ex.Message}");
                 return null;
             }
         }
@@ -419,8 +494,9 @@ namespace ChronoBlade
         /// <summary>
         /// 第 2a 的真飞镖：以英雄为中心，向一整圈甩出 `count` 枚 `Saw`。
         /// 用法照原版陷阱 `dc.en.ltrap.Shooter`：`new Saw(this, atk, ang, 0.5).init();`
+        /// 速度：`Saw` 出厂把 `spd=0.5` 换算成 `dx/dy` 后就不再重算，所以直接乘倍率提速。
         /// </summary>
-        private static int SpawnShurikenEntities(Hero hero, int count, int power)
+        private int SpawnShurikenEntities(Hero hero, int count, int power)
         {
             var atk = MakeHeroAttack(hero, power);
             if (atk == null) return 0;
@@ -433,11 +509,13 @@ namespace ChronoBlade
                     double ang = i * (System.Math.PI * 2.0) / count;
                     var saw = new dc.en.bu.Saw(hero, atk, ang, 0.5);
                     saw.init();                       // 必须调用，否则不进场
+                    saw.dx *= ShurikenSpeedMul;       // 提速
+                    saw.dy *= ShurikenSpeedMul;
                     spawned++;
                 }
                 catch (Exception ex)
                 {
-                    Write($"第 {i + 1} 枚飞镖实体生成失败: {ex.Message}");
+                    Write($"[ChronoBlade] 第 {i + 1} 枚飞镖实体生成失败: {ex.Message}");
                     break;
                 }
             }
@@ -445,28 +523,72 @@ namespace ChronoBlade
         }
 
         /// <summary>
-        /// 第 3a 的真落剑：在每个目标点上方生成一柄 `Stalactite`。
-        /// 用法照原版 `dc.en.mob.boss.Giant`：
-        /// `var st = new Stalactite(this, atk); st.init(); st.initOrigin(x, y);`
+        /// 第 3a 的真落剑：在**每个敌人正上方**生成一柄 `Stalactite`，让它砸下来。
+        ///
+        /// `Bullet.initOrigin(x, y)` 就是 `setPosPixel(x, y)`（见 Bullet.cs:2884），
+        /// 也就是"在哪生成就从哪开始"，所以必须把 y 抬到敌人上方，
+        /// 不能直接把敌人坐标丢进去（那样剑会直接生成在敌人身上）。
+        ///
+        /// 优先用地图天花板 `map.getCeilY()` 当起点（从天花板砸下来最自然），
+        /// 取不到再退回"敌人上方 <see cref="SwordFallCells"/> 格"。
         /// </summary>
-        private static int SpawnSwordRainEntities(Hero hero, IList<(double px, double py)> targets, int power)
+        private int SpawnSwordRainEntities(Hero hero, IList<(double px, double py)> targets, int power)
         {
             var atk = MakeHeroAttack(hero, power);
             if (atk == null) return 0;
+
+            var level = hero._level;
 
             int spawned = 0;
             foreach (var (px, py) in targets)
             {
                 try
                 {
+                    int cx = (int)(px / 24.0);
+                    int cy = (int)(py / 24.0);
+
+                    // 出生行：优先用敌人正上方的天花板，但**必须夹住距离** ——
+                    // 地图的天花板常在屏幕外几十格，直接用就把剑丢到看不见的地方。
+                    int spawnCy = cy - SwordFallCells;
+                    int groundRow = cy;      // 落点行：敌人脚下那一格
+                    try
+                    {
+                        int ceilY = level.map.getCeilY(cx, cy, null, null);
+                        int drop = cy - ceilY;
+                        if (drop >= 3 && drop <= SwordFallMaxCells) spawnCy = ceilY;
+                    }
+                    catch { }
+
+                    try
+                    {
+                        groundRow = level.map.getGroundY(cx, cy);
+                        if (groundRow < cy) groundRow = cy;   // 悬空平台下方取不到就退回敌人那格
+                    }
+                    catch { }
+
                     var st = new dc.en.bu.Stalactite(hero, atk);
+
+                    // ⚠️ groundY 是**构造函数里**按 from（英雄）的位置算出来的地面高度，
+                    //    目标是远处平台上的敌人时会对不上（原版是 Giant 自己放，两者同一片地面）。
+                    //    这里按"敌人脚下的地面"重设，落点/预警光柱才会画在正确的位置。
+                    try { st.groundY = (groundRow + 1) * 24.0; } catch { }
+
                     st.init();
-                    st.initOrigin(px, py);
+                    st.initOrigin(px, spawnCy * 24.0);    // 从敌人上方释放
+
+                    // 提速（dx/dy 换算后就固定了，构造完直接乘）
+                    try
+                    {
+                        st.dx *= SwordFallSpeedMul;
+                        st.dy *= SwordFallSpeedMul;
+                    }
+                    catch { }
+
                     spawned++;
                 }
                 catch (Exception ex)
                 {
-                    Write("落剑实体生成失败: " + ex.Message);
+                    Write("[ChronoBlade] 落剑实体生成失败: " + ex.Message);
                     break;
                 }
             }
