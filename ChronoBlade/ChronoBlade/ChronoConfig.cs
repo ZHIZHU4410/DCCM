@@ -42,6 +42,33 @@ namespace ChronoBlade
 
         /// <summary>怪物死亡特效是否启用。</summary>
         public bool EnableDeathEffect = true;
+
+        // ---------------------------------------------------------------- 狂三语音
+        //
+        // Assets/sfx/kurumi01~08.WAV（打包后在 pak 里的路径是 sfx/kurumiNN.WAV）。
+        // 四个时刻各自独立掷骰，全部走 ChronoVoice 那条**独占的最高优先级声道**，
+        // 所以音量与游戏内的"音效音量"滑块无关（见 ChronoVoice.cs 的说明）。
+
+        /// <summary>语音总开关。</summary>
+        public bool EnableVoice = true;
+
+        /// <summary>
+        /// 语音音量。**不跟随游戏的音效音量滑块**（专用声道 volume 固定 1.0，
+        /// 游戏改的是它自己那几个 sfxChanGroup）—— 想调只能用这个值。
+        /// </summary>
+        public double VoiceVolume = 1.0;
+
+        /// <summary>休闲时刻（附近没敌人、安静一段时间）每段安静期掷一次骰的概率。</summary>
+        public double VoiceChanceIdle = 0.35;
+
+        /// <summary>连杀时刻（短时间内连续击杀）的触发概率。</summary>
+        public double VoiceChanceKillStreak = 0.70;
+
+        /// <summary>打败 Boss 的触发概率（默认必出）。</summary>
+        public double VoiceChanceBoss = 1.0;
+
+        /// <summary>进入下一关的触发概率。</summary>
+        public double VoiceChanceLevel = 0.85;
     }
 
     /// <summary>配置读取 + 按键名 → 虚拟键码的解析。</summary>

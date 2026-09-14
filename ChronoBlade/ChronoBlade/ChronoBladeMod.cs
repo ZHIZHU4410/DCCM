@@ -230,6 +230,9 @@ namespace ChronoBlade
         {
             try
             {
+                // 出刀 = 正在战斗 → 重置"休闲"计时（狂三语音）
+                ChronoVoice.NotifyCombat();
+
                 bool ours = IsOurWeapon(self);
 
                 if (_execLogCount < 20)
@@ -399,6 +402,9 @@ namespace ChronoBlade
         /// </summary>
         private void OnEntityDamage(ChronoEntityDamage.orig_Entity_onDamage orig, Entity self, AttackData a)
         {
+            // 有人在挨打 = 正在战斗 → 重置"休闲"计时（狂三语音）
+            ChronoVoice.NotifyCombat();
+
             // 先判断是不是我的时之刃（用调用前的 attackData，最可靠）
             bool mine = false;
             try { mine = a?.sourceWeapon is ChronoBlade || a?.sourceWeapon is TimeBullet; } catch { }
@@ -443,35 +449,66 @@ namespace ChronoBlade
         }
 
         /// <summary>
-        /// 怪物死亡时在它的位置播放 TIMEJIBAI 死亡特效。
-        /// 原版 Mob.onDie 在死亡瞬间调用，此时 cx/cy 与 spr 位置都还有效，适合取坐标。
+        /// 怪物死亡时：
+        ///   1) 在它的位置播放 TIMEJIBAI 死亡特效（可用 EnableDeathEffect 关掉）；
+        ///   2) 记一次击杀，喂给狂三语音的"连杀 / 打败 Boss"判定。
+        ///
+        /// ⚠️ 这两件事的开关是**分开的** —— 死亡特效关掉不影响语音。
+        ///    别图省事把语音塞进 `isMob` 那条分支：那个变量带着 EnableDeathEffect，
+        ///    关掉特效就会连语音一起静音。
         /// </summary>
         private void OnEntityDie(Hook_Entity.orig_onDie orig, Entity self)
         {
             // 配置里可以关掉死亡特效
-            bool enabled = true;
-            try { enabled = ChronoKeys.Config.Value.EnableDeathEffect; } catch { }
+            bool fxEnabled = true;
+            try { fxEnabled = ChronoKeys.Config.Value.EnableDeathEffect; } catch { }
+
+            bool isMob = self is dc.en.Mob;
 
             // 先记下坐标，再调原版（原版可能会清掉 sprite / 改变实体状态）
             double px = 0, py = 0;
-            bool isMob = enabled && self is dc.en.Mob;
-            try
+            if (fxEnabled && isMob)
             {
-                if (isMob)
+                try
                 {
                     px = (self.cx + self.xr) * 24.0;
                     py = (self.cy + self.yr) * 24.0 - self.hei * 0.5;
                 }
+                catch { }
             }
-            catch { }
 
             orig(self);
 
             if (!isMob) return;
 
+            if (fxEnabled)
+            {
+                try
+                {
+                    ChronoFx.PlayDeathEffectAt(self as dc.en.Mob, px, py);
+                }
+                catch { }
+            }
+
+            // 狂三语音：连杀 / 打败 Boss
             try
             {
-                ChronoFx.PlayDeathEffectAt(self as dc.en.Mob, px, py);
+                var mob = self as dc.en.Mob;
+
+                // Boss：原版有 `dc.en.mob.Boss : Mob` 基类，所有 boss 都继承它 ——
+                // 比按类型名逐个判断可靠得多。
+                bool isBoss = self is dc.en.mob.Boss;
+
+                // 只算"敌人"：我方召唤物（同队伍）不算击杀。
+                bool isEnemy = true;
+                try
+                {
+                    var h = ModCore.Modules.Game.Instance.HeroInstance;
+                    if (h != null && mob != null && mob._team != null && mob._team == h._team) isEnemy = false;
+                }
+                catch { }
+
+                if (isEnemy) ChronoVoice.NotifyKill(isBoss);
             }
             catch { }
         }
@@ -510,6 +547,9 @@ namespace ChronoBlade
 
                 // Zaphkiel 的拾取音效（Assets/sfx/CHUXIAN.WAV → pak 内 sfx/CHUXIAN.WAV）
                 LoadPickupSound();
+
+                // 狂三语音（Assets/sfx/kurumi01~08.WAV）—— 必须在 res.pak 载入之后
+                ChronoVoice.Load();
             }
             catch (Exception ex)
             {
@@ -560,6 +600,10 @@ namespace ChronoBlade
             ChronoBullets.AttachLogger(Logger);
             ChronoWeaponFactory.AttachLogger(Logger);
             ChronoPanelLog.Attach(Logger);
+            ChronoVoice.AttachLogger(Logger);
+
+            // 关卡变化 → 狂三语音的"去下一关时刻"
+            try { ChronoBullets.LevelChanged += ChronoVoice.OnLevelChanged; } catch { }
             // 图集在启动阶段可能还没就绪，这里只做一次尝试，真正的重试在每帧里
             ChronoFx.TryPreloadNumeralAtlas();
 
@@ -680,6 +724,9 @@ namespace ChronoBlade
             // 记录关卡变化 —— 十二之弹"回到上一关"用（不依赖 serverStats 的语义）
             ChronoBullets.TrackLevel(ph);
 
+            // 狂三语音：休闲时刻判定（每秒最多查一次"附近还有没有敌人"）
+            ChronoVoice.Tick(dt, ph);
+
             // 图集延迟重试：等英雄（也就是关卡资源）就绪后再试，成功后短路
             if (!_atlasReady)
             {
@@ -787,17 +834,9 @@ namespace ChronoBlade
                 return;
             }
 
-            try
-            {
-                dc.hxd.snd.ChannelGroup? group = null;
-                try { group = dc.Audio.Class.ME?.sfxChanGroup; } catch { }
-                _pickupSfx.play(false, 1.0, group, null);
-                Write("[ChronoBlade] 拾取 Zaphkiel：已播放 CHUXIAN 音效");
-            }
-            catch (Exception ex)
-            {
-                Write($"[ChronoBlade] 拾取音效播放失败: {ex.Message}");
-            }
+            // 走 ChronoVoice 的独占最高优先级声道：Assets/sfx 里所有音频统一从那里播，
+            // 这样拾取音也不会被别的音效压掉（见 ChronoVoice.cs 的类头注释）。
+            ChronoVoice.PlayRaw(_pickupSfx, "拾取 Zaphkiel（CHUXIAN）");
         }
 
         private dc.hxd.res.Sound? _pickupSfx;
@@ -843,6 +882,8 @@ namespace ChronoBlade
             {
                 _createHook?.Disable();
                 Hook_Katana.hitFromWeapon -= OnKatanaHitFromWeapon;
+                try { ChronoBullets.LevelChanged -= ChronoVoice.OnLevelChanged; } catch { }
+                ChronoVoice.Shutdown();
                 WeaponCreateMap.Clear();
                 ChronoFx.Clear();
             }

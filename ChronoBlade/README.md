@@ -1,9 +1,11 @@
 # 时崎狂三 · ChronoBlade（时之刃）
 
-Dead Cells（v35 / DCCM）武器模组。新增 **两把武器** 与 **两个全屏选择面板**（真暂停）。
+Dead Cells（v35 / DCCM）武器模组。新增 **两把武器**、**两个全屏选择面板**（真暂停）与 **狂三语音**。
 
 * **时之刃 ChronoBlade** —— 近战，三段连击，每段致敬一个原版机制
 * **Zaphkiel 刻刻帝** —— 远程手枪，十二发子弹各自带一套时间系效果，可换弹
+* **狂三语音** —— `kurumi01~08`，休闲 / 连杀 / 打败 Boss / 去下一关四个时刻随机触发，
+  走在一条**独占的最高优先级声道**上，不会被游戏里任何其它声音压制
 
 > `GamePseudocode/`（反编译伪代码）与 `res/`（游戏资源）只读引用，本模组不修改其中任何文件。
 
@@ -93,7 +95,7 @@ Dead Cells（v35 / DCCM）武器模组。新增 **两把武器** 与 **两个全
 
 * **传奇词条**：`ChronoBulletDouble`（说明文字「**每个弹药效果增强**」）—— 本模组**在 CDB 的 affix 表里新建**的一条，让上表右列全部生效。
 * **身后背景**：主手拿着它时，英雄身后循环播放 `TIMEBEIJING` 背景。
-* **拾取音效**：自带 `sfx/CHUXIAN.WAV`。
+* **拾取音效**：自带 `sfx/CHUXIAN.WAV`（和语音一样走那条独占声道）。
 
 ### 3. 两个全屏选择面板（**真暂停**）
 
@@ -107,7 +109,52 @@ Dead Cells（v35 / DCCM）武器模组。新增 **两把武器** 与 **两个全
 * 选完武器从英雄**当前位置上方 7 格**掉落，走过去捡起即可装备。
 * 弹药面板的说明会根据**当前这把枪是不是传奇**自动切换普通 / 翻倍两套文案。
 
-### 4. 其它
+### 4. 狂三语音（`kurumi01~08`，四个时刻随机触发）
+
+`Assets/sfx/kurumi01~08.WAV`（打包后 → pak 内 `sfx/kurumiNN.WAV`）在四个时刻掷骰出声：
+
+| 时刻 | 判定 |
+|---|---|
+| **休闲** | 附近 20 格内没有可打的目标、且已经安静 **12 秒** → 掷一次骰（默认 35%）。一段安静期只掷一次，没中就这一段不再追问 |
+| **连杀** | **10 秒**内累计击杀 **8** 只 → 掷骰（默认 70%） |
+| **打败 Boss** | `self is dc.en.mob.Boss`（原版有 `Boss : Mob` 基类，所有 boss 都继承它）→ 掷骰（默认 100%） |
+| **去下一关** | 关卡 id 真的变了（**第一次记录关卡不算**，那只是记录起点）→ 掷骰（默认 85%） |
+
+* 四个时刻**各自掷骰**，再叠一条 6 秒的全局最小间隔，所以不会连播。
+* 抽句子时会避开**上一句**，不会连着两次同一句。
+* 我方召唤物（同队伍）的死亡不算击杀。
+* 概率 / 音量 / 总开关都在配置里：`VoiceChanceIdle`、`VoiceChanceKillStreak`、
+  `VoiceChanceBoss`、`VoiceChanceLevel`、`VoiceVolume`、`EnableVoice`。
+* 想给四个时刻配不同的句子：改 `ChronoVoice.MomentPool`（现在四个时刻共用全部 8 条）。
+
+### 5. 音频统一走"独占最高优先级声道"
+
+需求是「`Assets/sfx` 里的音频都在最高层、不被别的音频压制、强制同一音量播完」。
+翻引擎源码（`GamePseudocode/dc.hxd.snd/Manager.cs`）确认，能压住一段声音的**只有三条路**，
+三条都堵掉了：
+
+| 压制来源 | 机制 | 对策 |
+|---|---|---|
+| 声道被顶掉 | `Manager.update()` 按 `sortChannel` 排序（**先比 `channelGroup.priority`，再比 `channel.priority`**），从前往后分配真实 OpenAL source；`sources` 用完就把后面的 Channel 标成 `isVirtual`（＝不出声） | 用一个 **`priority = 10000` 的独立 `ChannelGroup`**，永远排最前，不可能被挤掉 |
+| 并发上限 | `Manager.update()` 还会按 `soundGroup.maxAudible` 限制同一个 SoundGroup 的同时发声数 | 配一个**自己的 `SoundGroup`，`maxAudible = -1`（不限）** |
+| 音量链 | `Channel.updateCurrentVolume()` 算的是 `channel.volume * (channelGroup.currentVolume * soundGroup.volume)` | 自己的组 `volume` 恒为 1.0，**完全不用游戏的 `sfxChanGroup`**，所以游戏内"音效音量"滑块改不到它 |
+
+> 另外确认引擎里**没有** sidechain（"播一个音就把别的音压低"）那种机制。唯一会整体压低音效的是
+> `dc.Audio.update()` 里的 `keyFrameCineMute` —— **过场动画**时把游戏自己那 8 个 sfx 组全
+> `set_volume(0)`。它动的还是**游戏自己的组**，我们的组不在名单里，
+> 所以**过场动画期间语音也照常出声**（这是"不被压制"的直接结果；不想要的话把这一条加进
+> `ChronoVoice` 的开关里即可）。
+>
+> ⚠️ 也**不能借用**游戏那几个 sfx 组：`dc.Audio.updatePriorities()` **每帧**都会重写它们的
+> priority，写进去下一帧就被覆盖。所以必须是自己 new 一个组。
+>
+> `Assets/sfx` 里**每一个**音频都从 `ChronoVoice.PlayRaw()` 播（包括原来的拾取音 `CHUXIAN`），
+> 不然就不算"所有音频都在最高层"。
+>
+> 参考：`dc.Audio.update()` 里 `sfxChanGroup.set_volume(options.sfxVolume * num)` ——
+> 这就是游戏内"音效音量"滑块的作用点，我们**完全绕过**它。
+
+### 6. 其它
 
 * **怪物死亡特效**：怪物死亡时在尸体位置播放 `TIMEJIBAI`（可在配置里关）。
 * **刻印渲染自测**：默认 `]`，在最近的怪物身上直接画一个罗马数字，单独验证渲染链路。
@@ -125,6 +172,12 @@ Dead Cells（v35 / DCCM）武器模组。新增 **两把武器** 与 **两个全
 | `KeySelectBullet` | `X` | 选择弹药面板 |
 | `KeyTestNumeral` | `RightBracket` | 刻印渲染自测 |
 | `EnableDeathEffect` | `true` | 是否启用死亡特效 |
+| `EnableVoice` | `true` | 狂三语音总开关 |
+| `VoiceVolume` | `1.0` | 语音音量（**不跟随游戏音效音量**，见功能 5） |
+| `VoiceChanceIdle` | `0.35` | 休闲时刻触发概率 |
+| `VoiceChanceKillStreak` | `0.70` | 连杀时刻触发概率 |
+| `VoiceChanceBoss` | `1.0` | 打败 Boss 触发概率 |
+| `VoiceChanceLevel` | `0.85` | 去下一关触发概率 |
 
 > ⚠️ 早先那套「按 `\` 直接掉一把时之刃 / 按 `P` 直接掉一把 Zaphkiel」的**直召热键已经删除**，
 > 现在拿到武器的唯一途径就是 `P` 面板。（删直召和加面板是同一次改动，不存在"没有获取途径"的中间态。）
@@ -198,6 +251,7 @@ ChronoBlade/
     ├── ChronoWeaponExecute.cs      Weapon.onExecute Hook 的委托声明
     ├── ChronoEntityDamage.cs       Entity.onDamage Hook 的委托声明
     ├── ChronoMobFinder.cs          附近怪物搜索（剑雨 / 飞镖选目标）
+    ├── ChronoVoice.cs              狂三语音：四个时刻 + 独占最高优先级声道
     ├── ChronoConfig.cs             按键配置（Config<ChronoConfig> + 键名解析）
     ├── ChronoDiag.cs               诊断日志（定时打印手里拿的是什么）
     ├── ChronoCdbProbe.cs           开局自检 data.cdb 补丁是否生效
@@ -208,7 +262,14 @@ ChronoBlade/
         ├── atlas/TIMEZHANJI.*      技能施放 + 十之弹记忆动画
         ├── atlas/TIMEJIBAI.*       怪物死亡特效
         ├── atlas/TIMEBEIJING.*     拿着 Zaphkiel 时英雄身后的背景
-        └── sfx/CHUXIAN.WAV         Zaphkiel 拾取音效
+        └── sfx/
+            ├── CHUXIAN.WAV         Zaphkiel 拾取音效
+            └── kurumi01~08.WAV     狂三语音（四个时刻随机播）
+
+> ⚠️ `ChronoBlade.csproj` 里的打包规则是 `Assets/**/*` + `RootInPak=""`，
+> 所以 `Assets/sfx/xxx.WAV` 在 pak 里就是 `sfx/xxx.WAV` —— **新增音频直接丢进
+> `Assets/sfx/` 即可**，不用改工程。想确认打进没打进：在 `res.pak` 里搜文件名
+> （pak 是目录树存储，能看到 `sfx` 目录下挂着 `kurumi01.WAV` 这样的名字）。
 ```
 
 ---
@@ -555,6 +616,9 @@ num10 = (cy2 < num6) ? num6 : ...           // 富余量更大 → 直接把内�
 
 | 现象 | 原因 / 处理 |
 |---|---|
+| 语音一直不出声 | 先看启动日志有没有 `[ChronoVoice] 语音已加载 8/8 条`。若是 `✗ pak 里没找到语音` → WAV 没打进 pak（检查 `Assets/sfx/`，注意**要重启游戏**，`res.pak` 只在启动时加载）。加载成功却还是不出声，就看有没有 `[ChronoVoice] 独占声道已建立` 和 `播放 …` —— 有"播放"日志但听不见，就是 `VoiceVolume` 太小或者游戏的**主音量**被调低了（语音不受"音效音量"滑块影响，但受主音量影响）。 |
+| 语音太频繁 / 太少 | 调 `VoiceChance*` 四个概率。「休闲」是一条规则：一段安静期只掷一次骰，所以想更容易听到就提高 `VoiceChanceIdle`；嫌吵就把某个概率调 0。 |
+| 语音被别的音效盖住 | 不应该发生 —— 音频走 `priority = 10000` 的独立 `ChannelGroup` 且 `SoundGroup.maxAudible = -1`。如果确实发生，看日志里 `独占声道已建立` 那条的 priority 是不是 10000（见功能 5 的三条压制链路）。 |
 | 第 2a / 3a 一直不出 | 看日志有没有 `连击第 2 段 → 一周飞镖` / `连击第 3 段 → 时钟剑雨`。**有这行**说明连击分派没问题，问题在实体/特效生成（看紧跟着的 `实体 N/12 枚` 与失败堆栈）；**没有这行**说明连击没推进到第 2 下（`_comboStep` 在 `AdvanceCombo` 里推进，需要连续出刀、间隔 < 1.5 秒）。特别注意 `拿到的时之刃是原版 Katana 实例` 那行 —— 出现它表示 `ChronoWeaponFactory` 的 `create` 钩子没命中，根本没有 `ChronoBlade` 对象可调。 |
 | 第 2a / 3a 出了但还带斩击 | `SkipMelee` 没生效（看有没有 `本段不斩击` 日志）；该标记必须由 `AdvanceCombo()` 在**同一刀内**保持为 true，不能改成"读一次就清"。 |
 | 落剑看不见 / 半天才落地 | `Stalactite` 出生行被夹在 `SwordFallMaxCells` 内（屏幕外的天花板会被丢弃），下落速度已按 `SwordFallSpeedMul` 提速；两者都在 `ChronoBlade.cs` 顶部常量里。 |

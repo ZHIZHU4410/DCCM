@@ -500,6 +500,15 @@ namespace ChronoBlade
         private static string _lastSeenLevelId = "";
 
         /// <summary>
+        /// 关卡**真的变了**时触发：(旧 id, 新 id)。
+        ///
+        /// ⚠️ 只在"已经记录过至少一关"之后才触发 —— 第一次看到关卡只是记录起点，
+        ///    那不是"去下一关"，不该当成事件（狂三语音就是靠这个区分的第一关）。
+        ///    用 Yud-Bet 回到上一关也会触发（那确实也是一次关卡切换）。
+        /// </summary>
+        public static event Action<string, string>? LevelChanged;
+
+        /// <summary>
         /// 每帧调用：发现关卡变了就记一笔。
         ///
         /// 为什么不直接读 `game.serverStats.history`：它的语义不稳 ——
@@ -520,6 +529,7 @@ namespace ChronoBlade
                     _visitedLevels.Add(_lastSeenLevelId);
                     if (_visitedLevels.Count > 32) _visitedLevels.RemoveAt(0);
                     Log($"关卡变化：{_lastSeenLevelId} → {id}（已记录 {_visitedLevels.Count} 关）");
+                    try { LevelChanged?.Invoke(_lastSeenLevelId, id); } catch { }
                 }
                 else
                 {
