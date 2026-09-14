@@ -221,15 +221,23 @@ public void AddCycleEffect(int cycle)
 }
 ```
 
-> ⚠️⚠️ **调用点只能放在 `ChronoBladeMod.OnAnyWeaponExecute`（`tool.Weapon.onExecute` 钩子）里。**
+> ⚠️⚠️ **调用链只能有一条，而且必须挂在"每次按下保证进一次"的地方。**
 >
-> 这是踩过的坑：`AddCycleEffect` 一度只在 `ChronoBlade.RunAttack` 里被引用，而 `RunAttack`
-> 挂的是 **`Hook_Katana.onExecute`** —— 那个挂点**实测整局都不触发**（见 `Initialize` 里的注释）。
-> 结果 `AddCycleEffect` 变成了**死代码**，第 2a / 3a 从来没生效过，表现出来就是
-> **"2a / 3a 不见了"**（早期看着像有，其实全是当时的 `U`/`I` 独立技能打出来的）。
+> 这里栽过两次：
 >
-> 真正会进的入口只有 `tool.Weapon.onExecute`。改这块时先确认"谁在调 `AddCycleEffect`"，
-> 别放进那条永远不触发的路径里。
+> 1. `AddCycleEffect` 一开始只在 `ChronoBlade.RunAttack` 里被引用，而 `RunAttack` 挂的是
+>    **`Hook_Katana.onExecute`** —— 那个挂点**实测整局都不触发**（见 `Initialize` 里的注释）。
+>    结果 `AddCycleEffect` 成了**死代码**，2a/3a 从来没生效过。
+> 2. 改挂到 `tool.Weapon.onExecute` 钩子后**仍然不出**：那个钩子是否"每一刀都进"并不确定。
+> 3. 现在挂在 **`ChronoBlade.fixedUpdate` 的 `shouldDash` 分支**
+>    （`_consumed` 把关，每次按下保证只进一次，松手才复位）
+>    → `AdvanceCombo()` → `AddCycleEffect(comboStep)`。
+>    这条链是本模组自己的判定，不依赖任何原版钩子是否触发。
+>
+> 另外**"第几下"是自己数的**（`_comboStep`：1→2→3→1，超过 1.5 秒没出刀就重新起手），
+> **不能**用原版 `_cycle` —— 本模组对每一次攻击都强制注入满蓄力 + `nextIsChargeAtk`，
+> 原版一律走居合冲刺分支，`_cycle` 早就和玩家看到的连击脱钩了（而且 `set_cycle(3)` 还被折回 0）。
+> 拿 `_cycle` 去判断"第几下"，实际永远匹配不到 2/3。
 
 * **第 1a**：攻击前由 `ChronoBladeMod` 统一置 `nextIsChargeAtk = true` + 满蓄力，让原版走**居合冲刺斩**分支（瞬移前冲 + 路径群伤）；命中时由 `Hook_Katana.hitFromWeapon` 逐个刻罗马数字。
 * **第 2a / 3a**：在**原版那一刀之上**叠加飞镖圈 / 时钟剑雨的表现层，不改原版的连击、蓄力、判定任何一处。

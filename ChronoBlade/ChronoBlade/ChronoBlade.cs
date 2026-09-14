@@ -40,6 +40,18 @@ namespace ChronoBlade
         /// <summary>第 4a：普通平砍。</summary>
         public const int CycleSlash = 3;
 
+        /// <summary>
+        /// 连击段号（**自己数**，与下面的原版 `Cycle*` 无关）：
+        /// 1 = 第 1 下（居合前冲）、2 = 第 2 下（一周飞镖）、3 = 第 3 下（时钟剑雨）。
+        /// 见 <see cref="AddCycleEffect"/> 的注释：原版 `_cycle` 已经被本模组的
+        /// "每次都注入居合"搞乱了，不能拿来判断"第几下"。
+        /// </summary>
+        public const int ComboDash = 1;
+
+        public const int ComboShuriken = 2;
+
+        public const int ComboSwordRain = 3;
+
         /// <summary>满蓄力帧数（原版判定：katanaChargeF/30/threshold ≥ 1 即满）。</summary>
         public const int FullChargeF = 60;
 
@@ -176,6 +188,15 @@ namespace ChronoBlade
                 {
                     Write($"[ChronoBlade] 喂蓄力失败: {ex}");
                 }
+
+                // ---- 连击段推进 + 第 2a / 3a 触发 ----
+                //
+                // 放在这里，而不是 `tool.Weapon.onExecute` 钩子里，原因：
+                //   `shouldDash` 是本模组**自己**判定的"新一刀开始"，每次按下保证只进一次
+                //   （由 _consumed 把关，松手才复位）—— 前面几轮"以为 onExecute 每刀都会进、
+                //   结果 2a/3a 一直不触发"就是这么踩的。
+                // 顺序放在喂蓄力之后：效果和这一刀同一帧生效。
+                AdvanceCombo();
             }
 
             try
@@ -194,6 +215,47 @@ namespace ChronoBlade
         private bool _consumed;
         /// <summary>当前是否处于"按住压制"状态（松手时需要解锁）。</summary>
         private bool _suppressActive;
+
+        // ---------------------------------------------------------------- 连击段计数
+        //
+        // "这是第几下"**必须自己数**：原版 `_cycle` 已经和玩家看到的连击脱钩了 ——
+        // 本模组对每一次攻击都强制注入满蓄力 + nextIsChargeAtk，原版一律走居合冲刺分支，
+        // 而且 `set_cycle(3)` 还被我们折回 0。
+        private int _comboStep;
+        private long _comboLastMs;
+        private int _comboLogCount;
+
+        /// <summary>多久没出刀就从第 1 段重新起手（毫秒）。</summary>
+        private const long ComboWindowMs = 1500;
+
+        /// <summary>
+        /// 连击段推进：1 → 2 → 3 → 1；超过 <see cref="ComboWindowMs"/> 没出刀就从第 1 段重新起手。
+        /// 推完立刻按段触发对应的第 2a / 3a 效果。
+        /// </summary>
+        private void AdvanceCombo()
+        {
+            try
+            {
+                long now = Environment.TickCount64;
+                if (now - _comboLastMs > ComboWindowMs) _comboStep = 0;
+                _comboLastMs = now;
+                _comboStep = _comboStep % 3 + 1;
+
+                if (_comboLogCount < 24 && _comboStep >= ComboShuriken)
+                {
+                    _comboLogCount++;
+                    Write($"[ChronoBlade] 连击第 {_comboStep} 段 → " +
+                          (_comboStep == ComboShuriken ? "一周飞镖" : "时钟剑雨") +
+                          $"（原版 cycle={MaybeCycle()}）");
+                }
+
+                AddCycleEffect(_comboStep);
+            }
+            catch (Exception ex)
+            {
+                Write($"[ChronoBlade] 连击推进失败: {ex.Message}");
+            }
+        }
 
         private int MaybeCycle()
         {
@@ -241,10 +303,10 @@ namespace ChronoBlade
 
             bool result = callOriginal();
 
-            // 注意：第 2a / 第 3a（一周飞镖 / 时钟剑雨）**不在这里触发** ——
+            // 注意：第 2a / 第 3a（一周飞镖 / 时钟剑雨）**不在这里触发**。
             // `RunAttack` 挂在 `Hook_Katana.onExecute` 上，而那个挂点实测整局都不触发，
-            // 分派放这儿会变成死代码。它们由 ChronoBladeMod.OnAnyWeaponExecute
-            // （真正的入口 `tool.Weapon.onExecute`）调用 AddCycleEffect(cycle)。
+            // 分派放这儿会变成死代码。它们由 `fixedUpdate` 的 shouldDash 分支
+            // （每次按下保证进一次）→ AdvanceCombo() → AddCycleEffect() 触发。
             // 这里只负责第 1a 的居合前冲斩，连击保持干净的平砍手感。
             return result;
         }
@@ -260,34 +322,43 @@ namespace ChronoBlade
         /// 第 2a / 3a 的"召唤"部分：**表现层（特效）+ 实体层（真投射物）**，
         /// 不改原版连击 / 蓄力状态机。
         ///
-        /// ⚠️ 调用点在 `ChronoBladeMod.OnAnyWeaponExecute`（`tool.Weapon.onExecute` 钩子）里。
-        ///    **不要**改到 `RunAttack` 里去调 —— 那是挂在 `Hook_Katana.onExecute` 上的，
-        ///    而那个挂点实测整局都不触发，放那儿等于又变成死代码（2a/3a 会"消失"）。
+        /// ⚠️ 参数是**自己数的连击段号**（<see cref="ComboShuriken"/> = 2 / <see cref="ComboSwordRain"/> = 3），
+        ///    **不是原版 `_cycle`**！
+        ///
+        ///    原因：本模组在 `fixedUpdate` 里对**每一次**攻击都强制注入"满蓄力 + nextIsChargeAtk"，
+        ///    让原版一律走居合冲刺分支 —— 于是原版 `_cycle` 已经和玩家看到的"第几下"脱钩了
+        ///    （而且 `set_cycle(3)` 还被我们自己折回 0）。
+        ///    之前拿 `_cycle` 去分派，实际永远匹配不到 1/2，效果自然"不见了"。
+        ///
+        ///    调用点在 `ChronoBladeMod.OnAnyWeaponExecute`（`tool.Weapon.onExecute` 钩子），
+        ///    那里维护连击段计数器。**不要**改到 `RunAttack` 里 —— 那是挂在
+        ///    `Hook_Katana.onExecute` 上的，而那个挂点实测整局都不触发，放那儿又是死代码。
         /// </summary>
-        public void AddCycleEffect(int cycle)
+        public void AddCycleEffect(int comboStep)
         {
             Hero? hero = owner;
             if (hero == null || hero.destroyed || hero._level == null) return;
 
-            switch (cycle)
+            switch (comboStep)
             {
-                case CycleShuriken:
+                case ComboShuriken:
                     ResetSwing();
                     FaceTarget(hero, ShurikenRadius + 6.0);
                     // 表现层：金色法阵 + 一圈飞镖贴图
                     ChronoFx.CastShurikenCircle(hero, ShurikenCount, ShurikenRadius);
                     // 实体层：12 枚真正会飞、会打伤害的旋转刃
-                    SpawnShurikenEntities(hero, ShurikenCount, ShurikenPower);
+                    int shurikens = SpawnShurikenEntities(hero, ShurikenCount, ShurikenPower);
+                    Write($"[ChronoBlade] 第 2a 一周飞镖已触发：实体 {shurikens}/{ShurikenCount} 枚");
                     break;
 
-                case CycleSwordRain:
+                case ComboSwordRain:
                     ResetSwing();
                     CastSwordRain(hero);
                     break;
 
                 default:
-                    // 第 1a（居合前冲）与第 4a（平砍）：不额外做任何事。
-                    // 第 1a 命中时由 Hook_Katana.hitFromWeapon 逐个刻罗马数字。
+                    // 连击第 1 段（居合前冲）与其它：不额外做任何事。
+                    // 第 1 段命中时由 Hook_Katana.hitFromWeapon 逐个刻罗马数字。
                     ResetSwing();
                     break;
             }

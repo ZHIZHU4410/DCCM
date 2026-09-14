@@ -275,22 +275,13 @@ namespace ChronoBlade
                         Write($"[ChronoBlade] 注入居合失败: {ex.Message}");
                     }
 
-                    // ---- 第 2a / 第 3a：一周飞镖 / 时钟剑雨（表现层特效 + 实体层投射物）----
+                    // ---- 第 2a / 第 3a：一周飞镖 / 时钟剑雨 ----
                     //
-                    // ⚠️ 必须在这里触发，不能放在 ChronoBlade.RunAttack 里！
-                    //    原因：`RunAttack` 是挂在 `Hook_Katana.onExecute` 上的，而那个挂点
-                    //    **实测整局都不触发**（见 Initialize 里的注释），所以它里面的分派从来没跑过 ——
-                    //    这正是"2a / 3a 不见了"的根因：AddCycleEffect 是死代码。
-                    //    真正会进的入口只有这一个 `tool.Weapon.onExecute`。
-                    if (blade != null)
-                    {
-                        try { blade.AddCycleEffect(cycle); }
-                        catch (Exception ex)
-                        {
-                            Write($"[ChronoBlade] 第 2a/3a 触发异常: {ex.Message}");
-                        }
-                    }
-                    else if (IsOurItem(kat))
+                    // ⚠️ 这里**故意不触发**！连击段与 2a/3a 的分派放在
+                    //    `ChronoBlade.fixedUpdate` 的 shouldDash 分支里（→ AdvanceCombo()）——
+                    //    那是本模组自己判定的"新一刀开始"，每次按下保证只进一次。
+                    //    放在这个钩子里曾经失败过：onExecute 是否每刀都进并不确定。
+                    if (blade == null && IsOurItem(kat))
                     {
                         // 只在这一条日志出现时才有意义：说明是"物品是时之刃，但拿到的是原版 Katana 实例"
                         // （ChronoWeaponFactory 的 create 钩子没命中），此时没有 ChronoBlade 对象可调，
