@@ -78,8 +78,13 @@ namespace ChronoBlade
                 // 先在英雄位置播放释放特效（TIMEZHANJI）
                 ChronoFx.PlayCastEffect(hero);
 
-                ChronoFx.CastShurikenCircle(hero, 12, 9.0);
-                Log($"技能一 一周飞镖 已释放（{from}）");
+                // 表现层：金色法阵 + 一圈飞镖贴图
+                ChronoFx.CastShurikenCircle(hero, ShurikenCount, ShurikenRadius);
+
+                // ★ 实体层：真正的投射物（会飞、会打伤害）
+                int spawned = SpawnShurikenEntities(hero, ShurikenCount, ShurikenPower);
+
+                Log($"技能一 一周飞镖 已释放（{from}）：实体飞镖 {spawned}/{ShurikenCount} 枚");
             }
             catch (Exception ex)
             {
@@ -95,19 +100,139 @@ namespace ChronoBlade
                 // 先在英雄位置播放释放特效（TIMEZHANJI）
                 ChronoFx.PlayCastEffect(hero);
 
-                var targets = ChronoMobFinder.Pick(hero, 22.0, 6);
+                var targets = ChronoMobFinder.Pick(hero, 22.0, SwordCount);
                 if (targets.Count == 0)
                 {
                     targets.Add(((hero.cx + hero.xr) * 24.0 + hero.dir * 120.0,
                                  (hero.cy + hero.yr) * 24.0));
                 }
-                ChronoFx.CastSwordRain(hero, 6, 22.0, targets);
-                Log($"技能二 时钟剑雨 已释放（{from}，目标 {targets.Count} 个）");
+
+                // 表现层：背景时钟 + 砸下来的剑影
+                ChronoFx.CastSwordRain(hero, SwordCount, 22.0, targets);
+
+                // ★ 实体层：真正的落剑（从上方砸下来、会打伤害）
+                int spawned = SpawnSwordRainEntities(hero, targets, SwordPower);
+
+                Log($"技能二 时钟剑雨 已释放（{from}）：目标 {targets.Count} 个，实体落剑 {spawned} 把");
             }
             catch (Exception ex)
             {
                 Log($"技能二失败: {ex}");
             }
+        }
+
+        // ================================================================ 实体层
+        //
+        // ⚠️ 为什么不用原版时之守护者那两个实体：
+        //   · `dc.en.bu.TimeKeeperShuriken` 的发光逻辑要 `be.onions`（boss 专属贴图池）、
+        //     取色要 `be._infos`；
+        //   · `dc.en.mob.boss.TimeKeeperSword` 的构造函数里就 `be.getOldSkillInfos("swordRain").props.duration`，
+        //     update 里还要 `be.brutalityTier` / `be.cy` / `be.get_tmod()`。
+        //   两者的构造参数类型都是 `TimeKeeper`，普通关卡里没有 boss 实例 → 传 Hero 必 NPE。
+        //
+        // 所以改用**玩家可拥有**的同类投射物：构造函数只收泛型 `Entity from`。
+        //   · 飞镖 → `dc.en.bu.Saw`（旋转刃，视觉最接近飞镖）
+        //   · 落剑 → `dc.en.bu.Stalactite`（从天而降）
+
+        /// <summary>技能一每枚飞镖的基础伤害。</summary>
+        private const int ShurikenPower = 20;
+
+        /// <summary>技能二每把落剑的基础伤害。</summary>
+        private const int SwordPower = 55;
+
+        /// <summary>技能一一次甩出几枚。</summary>
+        public const int ShurikenCount = 12;
+
+        /// <summary>技能一的法阵半径（格）。</summary>
+        public const double ShurikenRadius = 9.0;
+
+        /// <summary>技能二一次落几把剑。</summary>
+        public const int SwordCount = 6;
+
+        /// <summary>
+        /// 造一个"以英雄为施法者"的 AttackData。
+        ///
+        /// 走原版的统一入口 `_AttackUtils.createFromHero()` —— 它会把 `useHeroScaling` 打开，
+        /// 也就是**伤害自动跟英雄的属性 / 等级 / 变异走**，我们只需要给一个基础值，
+        /// 不用自己算缩放，也不会漏掉暴击、减抗这些链路。
+        /// </summary>
+        private static dc.tool.atk.AttackData? MakeHeroAttack(Hero hero, int power)
+        {
+            try
+            {
+                object baseDmg = power;             // 原签名是 dynamic
+                int? tier = null;                   // null = 用英雄自己的 tier
+                // 注意：Haxe 的静态成员在 GameProxy 里挂在"类对象"上，
+                // 要写成 `AttackUtils.Class.<方法>`（`_AttackUtils` 那个实例）。
+                return dc.tool.atk.AttackUtils.Class.createFromHero(hero, baseDmg, tier);
+            }
+            catch (Exception ex)
+            {
+                Log($"构造 AttackData 失败（技能这一下不会造成伤害）: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 技能一的真飞镖：以英雄为中心，向一整圈甩出 `count` 枚 `Saw`。
+        ///
+        /// 用法照原版陷阱 `dc.en.ltrap.Shooter`：
+        ///     `new Saw(this, attackData, ang, 0.5).init();`
+        /// 投射物会从施法者（这里是英雄）的位置朝 `ang` 方向飞出去。
+        /// </summary>
+        private static int SpawnShurikenEntities(Hero hero, int count, int power)
+        {
+            var atk = MakeHeroAttack(hero, power);
+            if (atk == null) return 0;
+
+            int spawned = 0;
+            for (int i = 0; i < count; i++)
+            {
+                try
+                {
+                    double ang = i * (Math.PI * 2.0) / count;
+                    var saw = new dc.en.bu.Saw(hero, atk, ang, 0.5);
+                    saw.init();                       // 必须调用，否则不进场
+                    spawned++;
+                }
+                catch (Exception ex)
+                {
+                    Log($"第 {i + 1} 枚飞镖实体生成失败: {ex.Message}");
+                    break;
+                }
+            }
+            return spawned;
+        }
+
+        /// <summary>
+        /// 技能二的真落剑：在每个目标点上方生成一柄 `Stalactite`。
+        ///
+        /// 用法照原版 `dc.en.mob.boss.Giant`：
+        ///     `var st = new Stalactite(this, attackData); st.init(); st.initOrigin(x, y);`
+        /// `initOrigin(x, y)` 指定它从哪个坐标砸下来。
+        /// </summary>
+        private static int SpawnSwordRainEntities(Hero hero, IList<(double px, double py)> targets, int power)
+        {
+            var atk = MakeHeroAttack(hero, power);
+            if (atk == null) return 0;
+
+            int spawned = 0;
+            foreach (var (px, py) in targets)
+            {
+                try
+                {
+                    var st = new dc.en.bu.Stalactite(hero, atk);
+                    st.init();
+                    st.initOrigin(px, py);
+                    spawned++;
+                }
+                catch (Exception ex)
+                {
+                    Log("落剑实体生成失败: " + ex.Message);
+                    break;
+                }
+            }
+            return spawned;
         }
 
         private static void LogHintOnce(string? k1, string? k2)

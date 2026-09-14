@@ -45,17 +45,24 @@ namespace ChronoBlade
         /// <summary>刻刻帝的传奇词条 id（TimeBullet.LegendAffixId，两边必须一致）。</summary>
         public const string LegendAffixId = "ChronoBulletDouble";
 
+        /// <summary>
+        /// 十二发子弹的定义。
+        ///
+        /// ⚠️ **说明文字里绝对不能用 `×`（U+00D7）** —— 游戏字体没有这个字形，
+        ///    在面板里会显示成一个方块。所有"几倍"都用中文写（"变成五倍"），
+        ///    也不要用 `·`（中点）之类的全角/符号字符，用汉字或 ASCII。
+        /// </summary>
         public static readonly BulletDef[] All =
         {
             new() { Id = "Aleph",    Name = "一之弹 Aleph",       Color = 0x8FE3FF, SelfCast = true,
-                    Desc = "开火即生效：自身移速 ×5.0（affect 116 +4.0），持续 10 秒",
-                    DescLegendary = "开火即生效：自身移速 ×10.0（affect 116 +9.0），持续 10 秒" },
+                    Desc = "开火即生效：自身移速变成五倍，持续 10 秒",
+                    DescLegendary = "开火即生效：自身移速变成十倍，持续 10 秒" },
             new() { Id = "Bet",      Name = "二之弹 Bet",         Color = 0x6FA8FF, SelfCast = false,
-                    Desc = "命中后：目标移速 ×0.45（减速），持续 10 秒",
-                    DescLegendary = "命中后：目标移速 ×0.225（减速翻倍），持续 10 秒" },
+                    Desc = "命中后：目标移速变成 0.45 倍（减速），持续 10 秒",
+                    DescLegendary = "命中后：目标移速变成 0.225 倍（减速更强），持续 10 秒" },
             new() { Id = "Gimel",    Name = "三之弹 Gimel",       Color = 0x9BE86B, SelfCast = true,
-                    Desc = "开火即生效：回复 30% 生命 + 移速 ×2.0（affect 116 +1.0），持续 10 秒",
-                    DescLegendary = "开火即生效：回复 60% 生命 + 移速 ×4.0（affect 116 +3.0），持续 10 秒" },
+                    Desc = "开火即生效：回复 30% 生命，移速变成两倍，持续 10 秒",
+                    DescLegendary = "开火即生效：回复 60% 生命，移速变成四倍，持续 10 秒" },
             new() { Id = "Dalet",    Name = "四之弹 Dalet",       Color = 0xFFD86B, SelfCast = false,
                     Desc = "命中后：把目标拽回 5 秒前的位置与生命",
                     DescLegendary = "命中后：把目标拽回 10 秒前的位置与生命" },
@@ -64,19 +71,19 @@ namespace ChronoBlade
             new() { Id = "Vav",      Name = "六之弹 Vav",         Color = 0xB0FFE0, SelfCast = false,
                     Desc = "命中后：把目标拽回 15 秒前的位置与生命" },
             new() { Id = "Zayin",    Name = "七之弹 Zayin",       Color = 0xFFB0F0, SelfCast = false,
-                    Desc = "命中后：时停 3 秒（移速归零 + 禁止攻击）",
-                    DescLegendary = "命中后：时停 6 秒（移速归零 + 禁止攻击）" },
+                    Desc = "命中后：时停 3 秒，目标移速归零并且无法攻击",
+                    DescLegendary = "命中后：时停 6 秒，目标移速归零并且无法攻击" },
             new() { Id = "Het",      Name = "八之弹 Het",         Color = 0xFF9E6B, SelfCast = false,
-                    Desc = "命中后：在命中点召唤我方怪物，最多 3 只、存活 10 秒",
-                    DescLegendary = "命中后：在命中点召唤我方怪物，最多 6 只、存活 20 秒" },
+                    Desc = "命中后：在命中点召唤我方怪物，最多 3 只，存活 10 秒",
+                    DescLegendary = "命中后：在命中点召唤我方怪物，最多 6 只，存活 20 秒" },
             new() { Id = "Tet",      Name = "九之弹 Tet",         Color = 0xFFF0A0, SelfCast = true,
                     Desc = "开火即生效：随机传送到本关任意位置（以随机怪物为坐标）" },
             new() { Id = "Yud",      Name = "十之弹 Yud",         Color = 0xA0E0FF, SelfCast = false,
                     Desc = "命中后：目标头顶播放记忆动画 3 秒，动画结束立即处决",
                     DescLegendary = "命中后：目标头顶播放记忆动画 1.5 秒，动画结束立即处决" },
             new() { Id = "YudAleph", Name = "十一之弹 Yud-Aleph", Color = 0xFF7BD0, SelfCast = true,
-                    Desc = "开火即生效：向前突进 6 格 + 无敌 2 秒，2 秒后拉回原位",
-                    DescLegendary = "开火即生效：向前突进 12 格 + 无敌 4 秒，4 秒后拉回原位" },
+                    Desc = "开火即生效：向前突进 6 格并无敌 2 秒，2 秒后拉回原位",
+                    DescLegendary = "开火即生效：向前突进 12 格并无敌 4 秒，4 秒后拉回原位" },
             new() { Id = "YudBet",   Name = "十二之弹 Yud-Bet",   Color = 0xFF4D6D, SelfCast = true,
                     Desc = "开火即生效：回到上一关" },
         };

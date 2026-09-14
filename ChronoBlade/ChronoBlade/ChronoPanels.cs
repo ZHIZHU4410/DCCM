@@ -260,12 +260,18 @@ namespace ChronoBlade
 
         /// <summary>
         /// 每帧把条目网格钉回框顶 —— 详细原因见 `ChronoPanelLog.PinGridToTop`。
-        /// 武器面板也把框撑高了（BoxPadV），一样会被原版压到底部。
+        ///
+        /// ⚠️ **顺序不能反**：原版 `GridSelector.postUpdate()` 就是在这里算选中框的
+        ///    （`localToGlobal(entry)` → `selectionSG.x/y`），而它算的时候要用到 `wrapperItem.y`。
+        ///    如果先 `base.postUpdate()` 再钉，选中框会按"还没钉住"的位置算一遍 ——
+        ///    光标一动会触发滚动补间，选中框就先往下跑、下一帧才回到正确位置
+        ///    （现象就是"先往下、再往左、然后往上对齐"）。
+        ///    先把网格钉住，再让原版去算，选中框一次就算对。
         /// </summary>
         public override void postUpdate()
         {
-            base.postUpdate();
             ChronoPanelLog.PinGridToTop(this);
+            base.postUpdate();
         }
 
         public override void onDispose()
@@ -708,11 +714,12 @@ namespace ChronoBlade
 
         /// <summary>
         /// 每帧把条目网格钉回框顶 —— 详细原因见 `ChronoPanelLog.PinGridToTop`。
+        /// 注意必须**先钉再调 base**（原版在 postUpdate 里算选中框，见武器面板的同名注释）。
         /// </summary>
         public override void postUpdate()
         {
-            base.postUpdate();
             ChronoPanelLog.PinGridToTop(this);
+            base.postUpdate();
         }
 
         /// <summary>原版 onResize 会把 mask.width / mask.height 算好，之后才能贴底部。</summary>
@@ -772,11 +779,12 @@ namespace ChronoBlade
 
                 var def = ChronoBullets.Get(index);
                 var sb = new System.Text.StringBuilder();
+                // ⚠️ 分隔符只用 ASCII 和汉字：`·`(U+00B7) 这类符号游戏字体可能没有字形，会变成方块
                 sb.Append("第 ").Append(index + 1).Append(" / ").Append(ChronoBullets.All.Length)
-                  .Append(" 发 · ").Append(def.Name).Append('\n');
+                  .Append(" 发  ").Append(def.Name).Append('\n');
                 sb.Append(ChronoBullets.DescriptionFor(index, boost));
                 if (boost && ChronoBullets.IsBoostedByLegendary(index))
-                    sb.Append("\n【传奇·效果翻倍】");
+                    sb.Append("\n【传奇：效果翻倍】");
 
                 text.set_text(ChronoPanelLog.Hx(sb.ToString()));
                 try { text.set_textColor(def.Color); } catch { }
