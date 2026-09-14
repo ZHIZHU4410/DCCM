@@ -1,6 +1,6 @@
 # 时崎狂三 · ChronoBlade（时之刃）
 
-Dead Cells（v35 / DCCM）武器模组。新增 **两把武器**、**两个独立技能**、**两个全屏选择面板**（真暂停）。
+Dead Cells（v35 / DCCM）武器模组。新增 **两把武器** 与 **两个全屏选择面板**（真暂停）。
 
 * **时之刃 ChronoBlade** —— 近战，三段连击，每段致敬一个原版机制
 * **Zaphkiel 刻刻帝** —— 远程手枪，十二发子弹各自带一套时间系效果，可换弹
@@ -21,8 +21,30 @@ Dead Cells（v35 / DCCM）武器模组。新增 **两把武器**、**两个独�
 | 第 2a | **一周飞镖** | 原地以自身为中心，向一整圈（12 枚）甩出飞镖，附带时之守护者的金色法阵 | Boss `TimeKeeper` 的 `levelUpRadius` |
 | 第 3a | **时钟剑雨** | 唤出时之守护者的背景时钟旋转展开，随后数把巨剑从天而降砸向附近怪物 | Boss `TimeKeeper` 的 `swordRain` |
 
+第 2a / 3a 都是**表现层 + 实体层**双份 —— 除了特效，还有真正会飞 / 会砸、会打伤害的投射物：
+
+| 段 | 表现层（特效） | 实体层（真投射物） |
+|---|---|---|
+| 第 2a | 金色法阵 + 一圈飞镖贴图 | **12 枚 `dc.en.bu.Saw`（旋转刃）**，以英雄为中心向一整圈甩出，每枚 20 基础伤害 |
+| 第 3a | 背景时钟展开 + 砸下来的剑影 | **最多 6 柄 `dc.en.bu.Stalactite`（从天而降）**，每个目标点一柄，每柄 55 基础伤害 |
+
+伤害走原版统一入口 `AttackUtils.Class.createFromHero(hero, power, null)` —— 它会把
+`useHeroScaling` 打开，**伤害自动跟英雄的属性 / 等级 / 变异缩放**，不需要自己算。
+
+> ⚠️ **为什么实体不用时之守护者本人那两套贴图**（引擎限制，不是偷懒）：
+> * `dc.en.bu.TimeKeeperShuriken` 的发光逻辑要 `be.onions`（boss 专属贴图池）、取色要 `be._infos`；
+> * `dc.en.mob.boss.TimeKeeperSword` 的**构造函数里**就 `be.getOldSkillInfos("swordRain").props.duration`，
+>   update 里还要 `be.brutalityTier` / `be.cy` / `be.get_tmod()`。
+>
+> 两者的构造参数类型都是 `TimeKeeper`，**普通关卡里没有 boss 实例**，传 Hero 进去必 NPE。
+> 所以改用上面那两个"玩家可拥有"（构造函数只收泛型 `Entity from`）的同类投射物，
+> 表现层仍然是时之守护者的原版特效。
+
 * **罗马数字刻印**：命中怪物时用 `atlas/TIMEKASAN.atlas` 的帧（`idle_0000…idle_0011` ↔ I…XII）在敌人头顶生成金色数字，向上飘散。与「开火蹦字」「弹药面板图标」**共用同一张帧映射表**（`ChronoFx.FrameIndexForRoman`）。
 * **传奇词条**：`IgnoreGlobalShield`（**无视防御盾**）—— 原版已有词条，挂 id 即生效。
+
+> 第 2a / 3a **只按连击段触发**（连续按主手攻击键打出第 2、第 3 下）。
+> 早先那套 `U` / `I` 独立热键技能**已经删除** —— 它们被并回武器本体，不再需要额外按键。
 
 ### 2. Zaphkiel 刻刻帝（远程 / 十二之弹）
 
@@ -49,27 +71,7 @@ Dead Cells（v35 / DCCM）武器模组。新增 **两把武器**、**两个独�
 * **身后背景**：主手拿着它时，英雄身后循环播放 `TIMEBEIJING` 背景。
 * **拾取音效**：自带 `sfx/CHUXIAN.WAV`。
 
-### 3. 两个独立技能（与手上拿什么武器无关）
-
-按配置键直接施放，带独立冷却。两个技能都是**表现层 + 实体层**双份：
-
-| 技能 | 默认键 | 表现层 | 实体层（真正会飞的、会打伤害的） |
-|---|---|---|---|
-| 技能一 | `U` | 金色法阵 + 一圈飞镖贴图 | 12 枚 `dc.en.bu.Saw`（旋转刃），以英雄为中心向一整圈甩出，每枚 20 基础伤害 |
-| 技能二 | `I` | 背景时钟展开 + 砸下来的剑影 | 最多 6 柄 `dc.en.bu.Stalactite`（从天而降），每柄 55 基础伤害 |
-
-伤害走原版统一入口 `AttackUtils.Class.createFromHero(hero, power, null)` —— 它会把
-`useHeroScaling` 打开，**伤害自动跟英雄的属性 / 等级 / 变异缩放**，不需要自己算。
-
-> ⚠️ **为什么不用时之守护者本人那两个实体**（这是引擎限制，不是偷懒）：
-> * `dc.en.bu.TimeKeeperShuriken` 的发光逻辑要 `be.onions`（boss 专属贴图池）、取色要 `be._infos`；
-> * `dc.en.mob.boss.TimeKeeperSword` 的**构造函数里**就 `be.getOldSkillInfos("swordRain").props.duration`，
->   update 里还要 `be.brutalityTier` / `be.cy` / `be.get_tmod()`。
->
-> 两者的构造参数类型都是 `TimeKeeper`，**普通关卡里没有 boss 实例**，传 Hero 进去必 NPE。
-> 所以改用上面那两个"玩家可拥有"（构造函数只收泛型 `Entity from`）的同类投射物。
-
-### 4. 两个全屏选择面板（**真暂停**）
+### 3. 两个全屏选择面板（**真暂停**）
 
 | 面板 | 默认键 | 内容 |
 |---|---|---|
@@ -81,7 +83,7 @@ Dead Cells（v35 / DCCM）武器模组。新增 **两把武器**、**两个独�
 * 选完武器从英雄**当前位置上方 7 格**掉落，走过去捡起即可装备。
 * 弹药面板的说明会根据**当前这把枪是不是传奇**自动切换普通 / 翻倍两套文案。
 
-### 5. 其它
+### 4. 其它
 
 * **怪物死亡特效**：怪物死亡时在尸体位置播放 `TIMEJIBAI`（可在配置里关）。
 * **刻印渲染自测**：默认 `]`，在最近的怪物身上直接画一个罗马数字，单独验证渲染链路。
@@ -97,11 +99,7 @@ Dead Cells（v35 / DCCM）武器模组。新增 **两把武器**、**两个独�
 |---|---|---|
 | `KeyWeaponPanel` | `P` | 选择武器面板 |
 | `KeySelectBullet` | `X` | 选择弹药面板 |
-| `KeySkill1` | `U` | 技能一（一周飞镖） |
-| `KeySkill2` | `I` | 技能二（时钟剑雨） |
 | `KeyTestNumeral` | `RightBracket` | 刻印渲染自测 |
-| `SkillCooldownS` | `0.35` | 技能冷却（秒） |
-| `EnableSkills` | `true` | 是否启用两个技能 |
 | `EnableDeathEffect` | `true` | 是否启用死亡特效 |
 
 > ⚠️ 早先那套「按 `\` 直接掉一把时之刃 / 按 `P` 直接掉一把 Zaphkiel」的**直召热键已经删除**，
@@ -116,7 +114,6 @@ Dead Cells（v35 / DCCM）武器模组。新增 **两把武器**、**两个独�
 1. 进任意关卡，按 `P` → 选武器（可选等级 / 品质 / 传奇 / 无色）→ `Enter` → 武器从上方掉下来 → 捡起装备。
 2. 连续按主手攻击键打出三段：前冲斩（冒罗马数字）→ 一圈飞镖 → 背景时钟 + 剑雨。
 3. 想换 Zaphkiel 的弹种：拿起它，按 `X` → 看说明选一发 → `Enter`。
-4. 想试独立技能：按 `U` / `I`。
 
 控制台日志关键字 `[ChronoBlade]`：
 
@@ -173,7 +170,6 @@ ChronoBlade/
     ├── ChronoBulletFx.cs           十二之弹的效果层（ChronoBullets）
     ├── ChronoPanels.cs             两个全屏选择面板 + 真暂停
     ├── ChronoFx.cs                 特效层（罗马数字 / 飞镖圈 / 背景时钟 / 剑雨 / 死亡特效 / 身后背景）
-    ├── ChronoSkills.cs             两个独立技能（U / I）
     ├── ChronoWeaponFactory.cs      Hook tool.$Weapon.create，把 item id 映射到上面的类
     ├── ChronoWeaponExecute.cs      Weapon.onExecute Hook 的委托声明
     ├── ChronoEntityDamage.cs       Entity.onDamage Hook 的委托声明
@@ -480,9 +476,8 @@ num10 = (cy2 < num6) ? num6 : ...           // 富余量更大 → 直接把内�
 ## 已知限制
 
 * 三段连击共用 `AtkKatanaA` 起手动画（没有为武器新增帧动画），区分靠特效与音效。
-* **时钟剑雨里砸向远处怪物的剑是纯视觉**；实际伤害来自这一刀本身（原版居合冲刺斩的路径群伤）。
-* 技能 `U` / `I` 的实体是**玩家可拥有的同类投射物**（旋转刃 `Saw` / 落石 `Stalactite`），
-  不是时之守护者本人那两套贴图 —— 原因见第 3 节的框注（boss 专属实体在普通关卡里生成不出来）。
+* 第 2a / 3a 的实体是**玩家可拥有的同类投射物**（旋转刃 `Saw` / 落石 `Stalactite`），
+  不是时之守护者本人那两套贴图 —— 原因见第 1 节的框注（boss 专属实体在普通关卡里生成不出来）。
   表现层（金色法阵 / 背景时钟 / 剑影）仍然是原来的时之守护者特效。
 * 罗马数字只有 12 帧（I…XII），超过 XII 会退回最后一帧。
 * 目前只有 `P` 面板召唤（地面掉落），没有做"收藏家蓝图解锁"（要进商店/正常掉落需要额外的 blueprint 流程）。

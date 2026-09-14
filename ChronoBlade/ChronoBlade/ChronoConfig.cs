@@ -18,12 +18,6 @@ namespace ChronoBlade
     /// </summary>
     public class ChronoConfig
     {
-        /// <summary>技能一（一周飞镖）的按键。</summary>
-        public string KeySkill1 = "U";
-
-        /// <summary>技能二（时钟剑雨）的按键。</summary>
-        public string KeySkill2 = "I";
-
         /// <summary>
         /// 打开"选择武器"面板的按键。**只列本模组新增的两把武器**（时之刃 / Zaphkiel）。
         ///
@@ -45,12 +39,6 @@ namespace ChronoBlade
 
         /// <summary>刻印渲染自测的按键。</summary>
         public string KeyTestNumeral = "RightBracket";
-
-        /// <summary>技能冷却（秒），防止连点。</summary>
-        public double SkillCooldownS = 0.35;
-
-        /// <summary>技能是否启用。</summary>
-        public bool EnableSkills = true;
 
         /// <summary>怪物死亡特效是否启用。</summary>
         public bool EnableDeathEffect = true;

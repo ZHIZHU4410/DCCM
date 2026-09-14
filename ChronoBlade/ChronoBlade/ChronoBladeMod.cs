@@ -531,7 +531,6 @@ namespace ChronoBlade
         void IOnGameInit.OnGameInit()
         {
             ChronoCdbProbe.Dump(this, WeapId);
-            ChronoSkills.AttachLogger(Logger);
             ChronoBlade.AttachLogger(Logger);
             ChronoFx.AttachLogger(Logger);
             TimeBullet.AttachLogger(Logger);
@@ -619,10 +618,8 @@ namespace ChronoBlade
                 var cfg = ChronoKeys.Config.Value;
                 Logger.Information(
                     "[ChronoBlade] 按键配置 —— " +
-                    $"技能一={cfg.KeySkill1} 技能二={cfg.KeySkill2} " +
                     $"选择武器面板={cfg.KeyWeaponPanel} 选择弹药={cfg.KeySelectBullet} " +
-                    $"刻印自测={cfg.KeyTestNumeral} " +
-                    $"冷却={cfg.SkillCooldownS}s 技能开关={cfg.EnableSkills}");
+                    $"刻印自测={cfg.KeyTestNumeral} 死亡特效={cfg.EnableDeathEffect}");
                 Logger.Information(
                     $"[ChronoBlade] 配置文件: {ChronoKeys.Config.ConfigPath}（也可在游戏的 选项 → 模组 菜单里直接改键）");
 
@@ -670,8 +667,8 @@ namespace ChronoBlade
                 }
             }
 
-            // 两个技能（第 2a / 第 3a）独立触发 —— 键位读配置
-            ChronoSkills.Update(dt);
+            // 第 2a / 第 3a 现在是**武器连击**的一部分（由 ChronoBlade.onExecute 按 cycle 触发），
+            // 不再是独立热键技能 —— 所以这里没有"技能按键"要处理。
 
             var cfg = ChronoKeys.Config.Value;
 
