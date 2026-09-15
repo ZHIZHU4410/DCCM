@@ -610,6 +610,30 @@ namespace ChronoBlade
         /// <summary>兼容旧调用：现在不再缓存，直接现取一次探测即可。</summary>
         public static bool TryPreloadNumeralAtlas() => GetNumeralLib() != null;
 
+        /// <summary>
+        /// 技能图集（TIMEZHANJI）的 SpriteLib —— 给"选择武器面板里刻刻帝的动态图标"用。
+        ///
+        /// 和 <see cref="GetNumeralLib"/> 一样：**每次现取**，不长期缓存
+        /// （换关后旧的 SpriteLib 实例可能已被销毁，缓存的贴图就画不出来了）。
+        /// </summary>
+        public static SpriteLib? GetCastLib()
+        {
+            try
+            {
+                var lib = Assets.Class.lib.get(ToHaxe(CastAtlasPath));
+                if (lib != null) return lib;
+                LogThrottled($"技能图集取不到: {CastAtlasPath}");
+            }
+            catch (Exception ex)
+            {
+                LogThrottled($"技能图集加载异常: {ex.GetType().Name}: {ex.Message}");
+            }
+            return null;
+        }
+
+        /// <summary>技能图集里 idle 帧的分组名（和释放特效用的是同一组）。</summary>
+        public static string CastGroupName => CastGroup;
+
         private static int _atlasLogCount;
         private static void LogThrottled(string msg)
         {

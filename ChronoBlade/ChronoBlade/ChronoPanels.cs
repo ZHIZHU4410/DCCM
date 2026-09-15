@@ -166,9 +166,6 @@ namespace ChronoBlade
         /// <summary>面板里**只**列这两把（CDB item id）。</summary>
         public static readonly string[] OnlyIds = { "ChronoBlade", TimeBullet.name };
 
-        /// <summary>掉落起点高度（格）：武器从英雄上方这个高度落下来。</summary>
-        private const int SpawnHeightCells = 7;
-
         /// <summary>
         /// 选择框的上下内边距。原版是 5，这里调大一点把框撑高。
         ///
@@ -272,6 +269,135 @@ namespace ChronoBlade
         {
             ChronoPanelLog.PinGridToTop(this);
             base.postUpdate();
+
+            // 刻刻帝那一格的动态图标：手动逐帧推进（见 getIconBmp 的注释）
+            AdvanceIconAnim();
+        }
+
+        // ------------------------------------------------------------------ 刻刻帝的动态图标
+        //
+        // 需求：Zaphkiel（刻刻帝）的图标用 `atlas/TIMEZHANJI.atlas` 做**动态**图标。
+        //
+        // 为什么只能在面板里做：物品图标本身是 CDB 里一条
+        // `icon = { x, y, file, size }` 的**静态**子矩形（`_Icon.createItemIcon`
+        // 就是 `_Assets.getItem()` 取一块 Tile 画成 Bitmap），没有"帧"的概念。
+        // 面板这一格是模组自己画的，才有机会逐帧播。
+        // HUD / 背包里那一份仍然是 CDB 的静态图标（要改得换 CDB 的图标资源）。
+        //
+        // 画法和弹药面板画罗马数字完全一致，那几个坑这里同样成立：
+        //   · SpriteLib **每次现取**（换关后旧实例会失效）；
+        //   · HSprite 的锚点必须是**左上角 (0,0)** —— GridSelector 是按 Bitmap 的
+        //     [0,w]×[0,h] 包围盒摆格子的，用居中锚点整张图会偏半个身位；
+        //   · 缩放加在 sprite 自己身上、外面**必须套一层 holder** ——
+        //     `addEntryAt()` 的 onBeforeReflow 会把返回对象的 scaleX/Y 强制写成 pixelScale，
+        //     直接返回 sprite 的话缩放下一帧就被覆盖；
+        //   · 要 `pauseCurrentAnim()` + 自己 `setFrame()`，否则 HSprite 自带的
+        //     AnimManager 也在推帧，两边打架（表现为画面乱跳或停在第 0 帧）。
+
+        /// <summary>
+        /// TIMEZHANJI 帧的原始格子尺寸（atlas 里 `orig: 298, 298`）。
+        /// 用它来缩放，保证整个 cell 正好落在 24×24 的格子里、绝不溢出到隔壁格
+        /// （帧的可见内容是 206×204，比 cell 小，所以会留一点边距）。
+        /// 觉得图标偏小就把这个值调小一点。
+        /// </summary>
+        private const double IconArtCell = 298.0;
+
+        /// <summary>格子逻辑尺寸（`GridSelector.get_entryWid()/get_entryHei()` 都是 24）。</summary>
+        private const double IconBox = 24.0;
+
+        /// <summary>动态图标的循环帧率（TIMEZHANJI 有 46 帧，15fps 约 3 秒一轮）。</summary>
+        private const double IconFps = 15.0;
+
+        /// <summary>本面板里正在逐帧播的图标 sprite。</summary>
+        private readonly List<HSprite> _iconAnims = new();
+
+        /// <summary>
+        /// 只把**刻刻帝**那一格换成 TIMEZHANJI 的动态图标；时之刃仍然用 CDB 的静态图标。
+        /// </summary>
+        public override dc.h2d.Object getIconBmp(int i, dc.h2d.Object p)
+        {
+            try
+            {
+                if (!IsZaphkielEntry(i)) return base.getIconBmp(i, p);
+
+                var lib = ChronoFx.GetCastLib();
+                if (lib == null) return base.getIconBmp(i, p);
+
+                var holder = new dc.h2d.Object(p);
+
+                int startFrame = 0;
+                var spr = new HSprite(lib, ChronoPanelLog.Hx(ChronoFx.CastGroupName),
+                                      Ref<int>.From(ref startFrame), holder);
+                if (spr == null) return base.getIconBmp(i, p);
+
+                // 左上角锚点（理由见上面注释）
+                var pivot = spr.pivot;
+                pivot.centerFactorX = 0.0;
+                pivot.centerFactorY = 0.0;
+                pivot.usingFactor = true;
+                pivot.isUndefined = false;
+
+                double sc = IconBox / IconArtCell;
+                spr.scaleX = sc;
+                spr.scaleY = sc;
+                spr.posChanged = true;
+
+                // 交给我们自己推帧，别让 HSprite 自带的 AnimManager 也推
+                try { spr.get_anim().pauseCurrentAnim(); } catch { }
+                try { spr.setFrame(0); } catch { }
+
+                int frames = 1;
+                try { frames = spr.totalFrames(); } catch { }
+
+                _iconAnims.Add(spr);
+                ChronoPanelLog.Write(
+                    $"刻刻帝动态图标已创建（TIMEZHANJI，{frames} 帧，{IconFps:0} fps，缩放 {sc:0.###}）");
+
+                return holder;
+            }
+            catch (Exception ex)
+            {
+                ChronoPanelLog.Write($"刻刻帝动态图标创建失败，退回原图标: {ex.Message}");
+                return base.getIconBmp(i, p);
+            }
+        }
+
+        /// <summary>下标 i 是不是刻刻帝那一格（拿 ItemSelector.items 里的 item id 判断）。</summary>
+        private bool IsZaphkielEntry(int i)
+        {
+            try
+            {
+                var arr = items;
+                if (arr == null || i < 0 || i >= arr.length) return false;
+                string id = arr.getDyn(i)?.ToString() ?? "";
+                return string.Equals(id, TimeBullet.name, StringComparison.Ordinal);
+            }
+            catch { return false; }
+        }
+
+        /// <summary>按时间推进图标帧（用墙钟，postUpdate 不给 dt）。</summary>
+        private void AdvanceIconAnim()
+        {
+            if (_iconAnims.Count == 0) return;
+
+            try
+            {
+                double t = Environment.TickCount64 / 1000.0;
+                for (int k = 0; k < _iconAnims.Count; k++)
+                {
+                    var spr = _iconAnims[k];
+                    if (spr == null) continue;
+
+                    int frames = 1;
+                    try { frames = spr.totalFrames(); } catch { }
+                    if (frames <= 1) continue;
+
+                    int f = (int)(t * IconFps) % frames;
+                    if (f < 0) f = 0;
+                    try { spr.setFrame(f); } catch { }
+                }
+            }
+            catch { }
         }
 
         public override void onDispose()
@@ -442,12 +568,10 @@ namespace ChronoBlade
             {
                 var item = MakeItem(weaponId, level, quality, colorless, legendary);
 
-                // 和原版 TrainingWeaponSpawner.spawnItem 完全一致：
-                //   构造时就落在"英雄当前所在格的正上方 N 格" → init() → onDropAsLoot()
-                //   → setPosCase 把格内的小数偏移补上。
-                // 之后就交给重力，武器自己从上方掉到英雄脚边。
+                // 和原版 TrainingWeaponSpawner.spawnItem 一致：构造 → init() → onDropAsLoot()。
+                // ⚠️ 落点是**英雄当前所在格**（不是上方 N 格）—— 需求要"在 hero 坐标生成"。
                 bool inArmory = false;
-                var drop = new ItemDrop(hero._level, hero.cx, hero.cy - SpawnHeightCells,
+                var drop = new ItemDrop(hero._level, hero.cx, hero.cy,
                                         item, true, new Ref<bool>(ref inArmory));
                 drop.init();                 // 必须调用，否则崩
                 drop.onDropAsLoot();         // 交给原版掉落 / 拾取流程
@@ -455,7 +579,8 @@ namespace ChronoBlade
                 try
                 {
                     // 用 setPosCase 而不是 setPosPixel：保持落在合法格子上，
-                    // 掉落物的落地/碰撞判定才不会错位。
+                    // 掉落物的落地/碰撞判定才不会错位。xr/yr 直接用英雄的，
+                    // 这样它就落在英雄脚下同一格、同一位置。
                     drop.setPosCase(drop.cx, drop.cy, hero.xr, hero.yr);
                 }
                 catch (Exception ex)
@@ -466,7 +591,7 @@ namespace ChronoBlade
                 ChronoPanelLog.Write(
                     $"已召唤{label}（Lv{level} / 品质{quality}" +
                     $"{(legendary ? " / 传奇" : "")}{(colorless ? " / 无色" : "")}）：" +
-                    $"从英雄当前位置上方 {SpawnHeightCells} 格掉落，走过去捡起即可");
+                    $"在英雄当前位置生成");
             }
             catch (Exception ex)
             {
@@ -540,6 +665,30 @@ namespace ChronoBlade
             }
 
             if (colorless) EnsureAffix(item, "Colorless");
+
+            // ---- 等级：无论上面走哪条路，最后都**强制**写成面板选的那个值 ----
+            //
+            // ⚠️ 这就是"按 P 只能召唤一级武器"的原因：
+            //   普通关卡里 `lootGen` 是 null（它只在训练场的武器生成器实体构造时才创建），
+            //   而等级**只有** `finalizeItem(...)` 那条路会写 —— 于是 fallback 分支里
+            //   等级从头到尾没人设过，物品就一直是默认的 1 级。
+            //
+            //   等级存在 `InventItem._itemLevel`（`getRawItemLevel()` / `setItemLevel()`），
+            //   `getAdjustedItemLevel()` 会在此基础上加"升级次数 ×2"、传奇再 +6，
+            //   武器的伤害/需求属性都走那个值。所以写在这里就同时修好了显示与数值。
+            //
+            //   放在最后而不是只在 fallback 里写：面板的"等级"是玩家的明确选择，
+            //   而训练场原版也是把面板值当**基准等级**用的（`overrideBaseLevel = true`），
+            //   两条路都对齐到它，行为才可预期。
+            try
+            {
+                item.setItemLevel(level);
+                ChronoPanelLog.Write($"物品等级已写入: Lv{level}（getRawItemLevel={item.getRawItemLevel()}）");
+            }
+            catch (Exception ex)
+            {
+                ChronoPanelLog.Write($"写入物品等级失败（物品仍可召唤）: {ex.Message}");
+            }
 
             return item;
         }
