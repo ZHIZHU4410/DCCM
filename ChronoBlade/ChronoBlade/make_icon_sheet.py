@@ -25,12 +25,12 @@
 ────────────────────────────────────────────────────────────────────────
 批次（--batch）
 
-  clock     TIMEZHANJI 的 46 帧（金色时钟）—— 刻刻帝的默认图标素材
-  numerals  TIMEKASAN 的 12 帧（罗马数字 I…XII）—— **每一发子弹的图标**。
-            第 i 发子弹（0 基）对应帧 `idle_{i:04d}`，和 ChronoFx.FrameIndexForBullet 一致。
+  clock     TIMEZHANJI 的 46 帧（金色时钟）。**目前没有被引用**（见下面的说明）。
 
-  运行时会按"当前装填的是第几发"用 `HUD.updateIcon(item, tile)` 把 HUD 图标换成对应的
-  数字格 —— 那些坐标就是这个脚本算出来的（见 `_icon_cells.txt`）。
+  12 个罗马数字（每发子弹的图标）**不在这个脚本里** —— 那是用户手画在
+  cardIcons.png 里的：像素 (0,576)→(143,623)，第一行一…六、第二行七…十二。
+  代码里的坐标表是 `ChronoAmmoPanel.BulletIconCells`（子弹 i → (i%6, 24+i//6)），
+  运行时由 `SyncHudIcon()` 调 `HUD.updateIcon()` 把 HUD 图标换成当前装填那一发。
 
 ────────────────────────────────────────────────────────────────────────
 ★ 幂等：坐标表 `_icon_cells.txt` 是"批次 → 帧 → 格子"的记录。
@@ -39,7 +39,6 @@
 
 用法：
     python make_icon_sheet.py --probe                 # 只看可用空格 + 导出朝向预览
-    python make_icon_sheet.py --batch numerals        # 写入"罗马数字"批次
     python make_icon_sheet.py --batch clock --force   # 硬重做 clock 批次
 """
 
@@ -61,9 +60,19 @@ CELL = 24                       # 卡片图标每格 24px（CDB 里 icon.size）
 FIT = 24                        # 帧缩进 24×24 的格子里
 
 # 批次 → (图集路径, 分组名, 要写多少帧)
+#
+# ⚠️ 这里**只剩 clock 一个批次**，而且它目前也没被任何地方引用（HUD 图标现在用的是
+#    用户自己画的罗马数字，面板是运行时直接读 TIMEZHANJI.atlas 逐帧播的）。
+#    留着它只是为了将来还想用时钟素材时有个能跑的工具。
+#
+# ⚠️ **12 个罗马数字不要用这个脚本嫁接** —— 那批现在是**用户手画在 cardIcons.png 里的**，
+#    位置：像素 (0, 576) → (143, 623)，第一行一…六、第二行七…十二，每格 24×24。
+#    代码里的坐标表是 `ChronoAmmoPanel.BulletIconCells`（子弹 i → (i%6, 24+i//6)），
+#    CDB 的 `PISTOL_ICON` 指向数字 I 那一格 (0, 24)。
+#    早期版本嫁接的是 TIMEKASAN 的 12 帧（颜色淡），**已弃用**；如果哪天手滑再嫁接一次，
+#    会占用**另一批**空白格、并且和代码里的坐标表对不上。
 BATCHES = {
-    "clock":    (os.path.join(HERE, "Assets", "atlas", "TIMEZHANJI.atlas"), "idle", 46),
-    "numerals": (os.path.join(HERE, "Assets", "atlas", "TIMEKASAN.atlas"), "idle", 12),
+    "clock": (os.path.join(HERE, "Assets", "atlas", "TIMEZHANJI.atlas"), "idle", 46),
 }
 
 

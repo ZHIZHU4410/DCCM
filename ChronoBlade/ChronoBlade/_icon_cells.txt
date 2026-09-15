@@ -1,5 +1,35 @@
-# 帧 → cardIcons.png 格子坐标（CDB 的 icon 用 x/y）
+# 帧 → cardIcons.png 格子坐标（CDB 的 icon 用 x/y，格子 = 像素/24）
 # 格式：<批次> <帧名> <cx> <cy>
+#
+# ============================================================================
+# ★ 12 个罗马数字（每发子弹的 HUD 图标）—— **用户手画在这张图里的，不由脚本嫁接**
+#
+#   像素区 (0, 576) → (143, 623)，每格 24×24：
+#     第一行 y=576（第 24 行格子）：一 … 六
+#     第二行 y=600（第 25 行格子）：七 … 十二
+#
+#   像素 → 格子：cx = px/24, cy = py/24
+#
+#   代码里的坐标表 = ChronoAmmoPanel.BulletIconCells（子弹 i → (i%6, 24+i//6)）：
+#     第 1 发 I    -> x=0 y=24      第 7 发 VII  -> x=0 y=25
+#     第 2 发 II   -> x=1 y=24      第 8 发 VIII -> x=1 y=25
+#     第 3 发 III  -> x=2 y=24      第 9 发 IX   -> x=2 y=25
+#     第 4 发 IV   -> x=3 y=24      第 10 发 X   -> x=3 y=25
+#     第 5 发 V    -> x=4 y=24      第 11 发 XI   -> x=4 y=25
+#     第 6 发 VI   -> x=5 y=24      第 12 发 XII  -> x=5 y=25
+#
+#   CDB 的 PISTOL_ICON 指向数字 I 那一格 (0, 24)。
+#   运行时 SyncHudIcon() 按"当前装填第几发"切对应格子交给 HUD.updateIcon()。
+#
+#   ⚠️ 这一批**不要**用 make_icon_sheet.py 嫁接（脚本里已经没有 numerals 批次了）。
+#      早期版本嫁接的是 TIMEKASAN 的 12 帧（颜色很淡），已弃用 —— 那些格子还在图里，
+#      但没有任何引用。
+# ============================================================================
+#
+# 下面 clock 批次的 46 行是早期用 make_icon_sheet.py 从 TIMEZHANJI 嫁接进去的金色时钟。
+# ⚠️ **目前没有任何地方引用它**：HUD 图标用的是上面那批罗马数字，弹药面板是运行时
+#    直接读 TIMEZHANJI.atlas 逐帧播的，不经过这张图。保留记录只是为了"别再嫁接一遍"
+#    （脚本靠这个文件判断批次是否已做过）。
 clock idle_0000 36 0
 clock idle_0026 69 0
 clock idle_0027 70 0
@@ -46,15 +76,3 @@ clock idle_0014 72 2
 clock idle_0017 73 2
 clock idle_0016 74 2
 clock idle_0015 75 2
-numerals idle_0007 76 2
-numerals idle_0000 77 2
-numerals idle_0001 78 2
-numerals idle_0004 79 2
-numerals idle_0003 80 2
-numerals idle_0005 81 2
-numerals idle_0002 82 2
-numerals idle_0006 83 2
-numerals idle_0009 84 2
-numerals idle_0010 69 3
-numerals idle_0008 70 3
-numerals idle_0011 71 3

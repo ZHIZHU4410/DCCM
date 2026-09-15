@@ -759,24 +759,21 @@ namespace ChronoBlade
 
         /// <summary>
         /// 第 i 发子弹（0 基）对应的 cardIcons.png 格子。
-        /// 由 `make_icon_sheet.py --batch numerals` 生成：帧 `idle_{i:04d}` ↔ 第 i+1 发
-        /// （和 `ChronoFx.FrameIndexForBullet` 同一套映射）。
-        /// ⚠️ 重新跑那个脚本会换格子 —— 跑完要**同步这张表**（`_icon_cells.txt` 里有）。
+        ///
+        /// 这批数字是**用户自己画好放进 `Assets/cardIcons.png` 的**，
+        /// 位置是像素区 (0, 576) → (143, 623)：
+        ///   · 第一行 y=576（= 第 24 行格子）→ 一…六；
+        ///   · 第二行 y=600（= 第 25 行格子）→ 七…十二；
+        ///   每格 24×24，x 从 0 开始每列 +24（= 格 0…5）。
+        /// 所以子弹 i → (x = i % 6, y = 24 + i / 6)。
+        ///
+        /// ⚠️ 这批**不是** `make_icon_sheet.py` 嫁接的（早期版本嫁接的是 TIMEKASAN 的
+        ///    12 帧，颜色很淡，已弃用）。改这里的坐标前先确认图上的实际位置。
         /// </summary>
         private static readonly (int X, int Y)[] BulletIconCells =
         {
-            (77, 2),   // I    idle_0000
-            (78, 2),   // II   idle_0001
-            (82, 2),   // III  idle_0002
-            (80, 2),   // IV   idle_0003
-            (79, 2),   // V    idle_0004
-            (81, 2),   // VI   idle_0005
-            (83, 2),   // VII  idle_0006
-            (76, 2),   // VIII idle_0007
-            (70, 3),   // IX   idle_0008
-            (84, 2),   // X    idle_0009
-            (69, 3),   // XI   idle_0010
-            (71, 3),   // XII  idle_0011
+            (0, 24), (1, 24), (2, 24), (3, 24), (4, 24), (5, 24),   // I   … VI
+            (0, 25), (1, 25), (2, 25), (3, 25), (4, 25), (5, 25),   // VII … XII
         };
 
         /// <summary>图标格子边长（CDB 里 icon.size，也是 GridSelector 的条目尺寸）。</summary>

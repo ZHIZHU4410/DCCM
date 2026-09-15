@@ -177,14 +177,39 @@ return tile2.sub(x, y, size, size);            // 切 size×size 一格
 
 1. `make_icon_sheet.py` 解析 `data.cdb` 收集**已被引用**的格子，
    再找"没被引用 + 整格全透明"的空白格（实测上千个）；
-2. 把图集的帧裁掉透明边、等比缩进 24×24，贴进这些格子。两个批次：
-   * `--batch clock` —— TIMEZHANJI 的 46 帧（金色时钟）；
-   * `--batch numerals` —— TIMEKASAN 的 12 帧（**罗马数字 I…XII**，每发子弹的图标）；
+2. 把图集的帧裁掉透明边、等比缩进 24×24，贴进这些格子（`--batch clock` = TIMEZHANJI 的 46 帧）；
 3. 脚本把"批次 → 帧 → 格子坐标"写进 `_icon_cells.txt`；
 4. `patch_chronoblade_cdb.py` 里 `PISTOL_ICON` 指向默认那一发（数字 I）的格子。
 
 图片尺寸**不变**（还是 2048×2048），只是把原本空着的格子用起来：不多占显存、
 也不会动到任何别的物品图标。
+
+#### 12 个罗马数字（每发子弹的图标）是**手画在这张图里的**
+
+像素区 **(0, 576) → (143, 623)**，每格 24×24：第一行（y=576，第 24 行格）是一…六，
+第二行（y=600，第 25 行格）是七…十二。像素 → 格子就是 `px/24`。
+
+代码里的坐标表 = `ChronoAmmoPanel.BulletIconCells`，公式就是
+**子弹 i（0 基）→ `(x = i % 6, y = 24 + i / 6)`**：
+
+| 子弹 | 格 | 子弹 | 格 |
+|---|---|---|---|
+| 1 I | (0,24) | 7 VII | (0,25) |
+| 2 II | (1,24) | 8 VIII | (1,25) |
+| 3 III | (2,24) | 9 IX | (2,25) |
+| 4 IV | (3,24) | 10 X | (3,25) |
+| 5 V | (4,24) | 11 XI | (4,25) |
+| 6 VI | (5,24) | 12 XII | (5,25) |
+
+CDB 的 `PISTOL_ICON` = `{"x": 0, "y": 24}`（数字 I）。
+
+> ⚠️ 这一批**不要**用 `make_icon_sheet.py` 嫁接 —— 脚本里已经没有 `numerals` 批次了。
+> 早期版本嫁接的是 TIMEKASAN 的 12 帧（颜色很淡），**已弃用**；
+> 连同后来嫁接的 46 帧时钟，现在都没有任何引用（HUD 用这批手画数字，
+> 面板是运行时直接读 `TIMEZHANJI.atlas` 逐帧播的，都不经过这张图）。
+>
+> ⚠️ 同步改坐标时**两边都要改**：图上的实际位置、`BulletIconCells`、`PISTOL_ICON`、
+> `_icon_cells.txt` 里的记录。
 
 #### HUD 图标会跟着"装填的是第几发"变
 
@@ -200,18 +225,6 @@ dc.ui.HUD.Class.ME.updateIcon(InventItem i, Tile t);
 
 > 为什么不用钩子也不用改 CDB：CDB 的 `icon` 是**静态一格**，表达不了"随装填变化"；
 > `updateIcon` 是原版给状态变化用的入口，比 hook 图标创建稳得多。
->
-> ⚠️ 12 个格子坐标在 `ChronoAmmoPanel.BulletIconCells` 里是**硬编码**的，
-> 和 `_icon_cells.txt` 一一对应。**重跑 `make_icon_sheet.py` 换了格子就要同步改那张表**
-> （脚本会打印新坐标）。
-
-> ⚠️ **这个脚本不能重复跑**：第二次跑时上一次贴进去的格子已经不透明了，它会去找
-> **另一批**空白格再贴一批 —— 不覆盖，但"哪一帧在哪一格"就对不上了。
-> 所以它写盘前会落一个 `_icon_cells.txt`，见到它就拒绝再跑（要重做先从
-> `res/cardIcons.png` 还原那张图并删掉坐标表）。
->
-> ⚠️ 想换观感（觉得时钟太淡/想换一帧）：改 `PISTOL_ICON` 的 x/y 即可，
-> 全部帧的坐标都在 `_icon_cells.txt` 里。
 
 > ⚠️ **`make_icon_sheet.py` 按批次幂等**：坐标表里已经有这个批次就拒绝重跑
 > （重复跑会去找**另一批**空格再贴一遍 —— 不覆盖，但"哪一帧在哪一格"就乱了）。
@@ -369,7 +382,7 @@ ChronoBlade/
     ├── _icon_cells.txt             上面那个脚本产出的"帧 → 格子坐标"表
     ├── data.cdb                    由脚本生成（构建时 diff 成 data.cdb_ 打进 res.pak）
     └── Assets/
-        ├── cardIcons.png           物品卡图标表（原版同名文件 + 嫁接进去的 46 帧时钟）
+        ├── cardIcons.png           物品卡图标表（原版同名文件 + 手画的 12 个罗马数字 + 早期嫁接的 46 帧时钟）
         ├── atlas/TIMEKASAN.*       罗马数字 I…XII（刻印 / 蹦字 / 面板图标共用）
         ├── atlas/TIMEZHANJI.*      技能施放 + 十之弹记忆动画
         ├── atlas/TIMEJIBAI.*       怪物死亡特效

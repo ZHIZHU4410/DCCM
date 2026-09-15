@@ -63,14 +63,14 @@ PISTOL_LEGEND_AFFIX_DESC = "每个弹药效果增强"
 # 图标沿用原版卡片图集（不新增美术），取 DoubleSpeed 那一格
 PISTOL_LEGEND_AFFIX_ICON = {"x": 57, "y": 0, "file": "cardIcons.png", "size": 24}
 
-# 刻刻帝本体的图标：TIMEKASAN 的第 0 帧（罗马数字 I = 默认装填的那一发），
-#   由 `make_icon_sheet.py --batch numerals` 嫁接进 cardIcons.png。
+# 刻刻帝本体的图标：用户画在 cardIcons.png 上的罗马数字"I"（= 默认装填的那一发）。
+#   位置像素 (0, 576) → 格子 (0, 24)，详见 ChronoAmmoPanel.BulletIconCells。
 #   CDB 的 icon 只会用 (x, y, size) 从 cardIcons.png 里切一格 —— `file` 是死数据，
 #   详见 make_icon_sheet.py 的头部注释和下面 pist_item_row["icon"] 处的说明。
 #
 #   ⚠️ 这只是"静态兜底"：真正的图标由 ChronoAmmoPanel.SyncHudIcon() 按当前装填的
 #      那一发调 `HUD.updateIcon()` 覆盖掉（切弹药会跟着变）。
-PISTOL_ICON = {"x": 77, "y": 2, "file": "cardIcons.png", "size": 24}
+PISTOL_ICON = {"x": 0, "y": 24, "file": "cardIcons.png", "size": 24}
 
 # 第 1a 居合前冲斩的数值，直接沿用 Katana 项目的调参结果
 DASH_RANGE = 20        # 居合距离（格），原版 6；满蓄力再 ×1.5 ≈ 30 格
