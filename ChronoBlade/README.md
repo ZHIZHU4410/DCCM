@@ -169,7 +169,8 @@ Dead Cells（v35 / DCCM）武器模组。新增 **两把武器**、**两个全�
   （「它不是钟，是悬于万古之上的时间王座……」）。⚠️ 物品说明框是**固定高度**的，
   这么长大概率会被裁掉一部分；要短就直接改脚本里那个常量。
 * **身后背景**：主手拿着它时，英雄身后循环播放 `TIMEBEIJING` 背景
-  （可用 `EnableZaphkielAura` 关掉、`ZaphkielAuraAlpha` 调不透明度，两个都在配置里）。
+  （可用 `EnableZaphkielAura` 关掉、`ZaphkielAuraAlphaPercent` 调不透明度，两个都在配置里，
+  也都出现在游戏的「选项 → 模组」菜单里）。
   时钟的**中心对准英雄的头部**：`y = (cy + yr) * 24 - hei`。
   ⚠️ 坐标约定：本模组里 `(cy + yr) * 24` 是实体的**底边（脚）**，
   所以"身体中心"要 `- hei * 0.5`，"头顶"要 `- hei` —— 别把底边当中心用。
@@ -333,8 +334,21 @@ dc.ui.HUD.Class.ME.updateIcon(InventItem i, Tile t);
 | `VoiceChanceKillStreak` | `0.70` | 连杀时刻触发概率 |
 | `VoiceChanceBoss` | `1.0` | 打败 Boss 触发概率 |
 | `VoiceChanceLevel` | `0.85` | 去下一关触发概率 |
-| `EnableZaphkielAura` | `true` | 是否显示手持刻刻帝时**身后的时钟背景** |
-| `ZaphkielAuraAlpha` | `0.9` | 那个背景的不透明度（0 = 看不见，1 = 完全不透明） |
+| `EnableZaphkielAura` | `true` | 是否显示手持刻刻帝时**身后的时钟背景**（bool → 菜单里的复选框） |
+| `ZaphkielAuraAlphaPercent` | `90` | 那个背景的不透明度，**百分比 0～100**（int → 菜单里的数字项） |
+
+> ⚠️⚠️ **只有 `bool` / `int` / `string` 三种字段会出现在游戏的「选项 → 模组」菜单里。**
+> 那个菜单是 ModCore 按配置字段**逐个反射**生成的
+> （`Hook_Options_buildCurSection` / `AddOptions` / `OptionWidget`），
+> 而 **ModCore.dll 里 `Boolean`、`Int32` 都在，`Double` 一次都没出现**
+> —— 它根本不引用 `System.Double`，所以遇到 `double` 字段会**静默跳过**
+> （不报错、不显示，只在 JSON 里能改）。
+>
+> 这就是为什么"不透明度"写成 `int` 百分比（0～100）而不是 `double` 0～1：
+> 用 double 的话这一项**不会出现在游戏菜单里**。
+> 同理，下面几个 `double` 的语音参数（`VoiceVolume` / `VoiceChance*`）
+> **只能在 JSON 里改**，菜单里看不到。要让它们也进菜单就得改成 int 百分比，
+> 说一声即可。
 
 > ⚠️ 早先那套「按 `\` 直接掉一把时之刃 / 按 `P` 直接掉一把 Zaphkiel」的**直召热键已经删除**，
 > 现在拿到武器的唯一途径就是 `P` 面板。（删直召和加面板是同一次改动，不存在"没有获取途径"的中间态。）

@@ -78,8 +78,16 @@ namespace ChronoBlade
         /// <summary>是否显示这个背景。关掉就完全不创建、不更新。</summary>
         public bool EnableZaphkielAura = true;
 
-        /// <summary>背景的不透明度：0 = 完全透明（等于看不见），1 = 完全不透明。</summary>
-        public double ZaphkielAuraAlpha = 0.9;
+        /// <summary>
+        /// 背景的不透明度，单位是**百分比**（0 = 看不见，100 = 完全不透明）。
+        ///
+        /// ⚠️ 这里故意用 `int` 而不是 `double` —— 游戏的"选项 → 模组"菜单是 ModCore
+        ///    按配置字段**逐个反射**生成的，而它只认 `bool` / `int` / `string`
+        ///    （ModCore.dll 里 `Boolean`、`Int32` 都出现了，`Double` **一次都没出现**，
+        ///    也就是它根本不引用 System.Double → 遇到 double 字段会**静默跳过**）。
+        ///    用 int 才能出现在游戏菜单里；`bool` 同理（复选框）。
+        /// </summary>
+        public int ZaphkielAuraAlphaPercent = 90;
     }
 
     /// <summary>配置读取 + 按键名 → 虚拟键码的解析。</summary>
