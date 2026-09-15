@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-把 TIMEZHANJI 的帧"嫁接"进 cardIcons.png 的空格里 —— 让 **HUD / 背包上的刻刻帝图标**
-也能用上图集（面板里那一格已经是运行时逐帧播的，见 ChronoPanels.getIconBmp）。
+把外部图集的帧"嫁接"进 cardIcons.png 的空格里 —— 让 HUD / 背包上的图标也能用上它们。
 
 ────────────────────────────────────────────────────────────────────────
 为什么必须走这条路（而不是"改 CDB 的 icon.file"）
@@ -19,29 +18,29 @@
 
     Assets.Class.itemIcons = ((Image)loader.loadCache("cardIcons.png", ...)).toTile();
 
-也就是按文件名从资源加载器取 —— 本模组的 pak 里**已经带着一份 `cardIcons.png`**
-（`Assets/cardIcons.png`，2048×2048，大小和原版一致，会覆盖原版），
-所以**直接改这张图**就能改 HUD 图标，不需要任何运行时钩子。
+按**文件名**加载 —— 本模组的 pak 里已经带着一份 `Assets/cardIcons.png`
+（2048×2048，85×85 格，会覆盖原版），所以**直接改这张图**就能改 HUD 图标，
+不需要任何运行时钩子。
 
 ────────────────────────────────────────────────────────────────────────
-这套脚本做什么
+批次（--batch）
 
-  1. 解析 data.cdb，收集**已经被引用**的所有 (x, y) 格子（保守做法：全 JSON 里
-     任何带 x/y 的 icon/tile 字典都算占用）；
-  2. 在 cardIcons.png 里找"**没被引用 + 整格全透明**"的 24×24 格子；
-  3. 把 TIMEZHANJI 的帧裁掉透明边、等比缩进 24×24，贴到这些格子里；
-  4. 打印每个帧落在哪一格 —— 把想要的那一帧的坐标抄进
-     `patch_chronoblade_cdb.py` 里 `pist_item_row["icon"]` 即可。
+  clock     TIMEZHANJI 的 46 帧（金色时钟）—— 刻刻帝的默认图标素材
+  numerals  TIMEKASAN 的 12 帧（罗马数字 I…XII）—— **每一发子弹的图标**。
+            第 i 发子弹（0 基）对应帧 `idle_{i:04d}`，和 ChronoFx.FrameIndexForBullet 一致。
 
-图片尺寸**保持不变**（2048×2048），只是把原本空着的格子用起来：
-不多占显存、也不会动到任何别的物品图标。
+  运行时会按"当前装填的是第几发"用 `HUD.updateIcon(item, tile)` 把 HUD 图标换成对应的
+  数字格 —— 那些坐标就是这个脚本算出来的（见 `_icon_cells.txt`）。
 
-★ 想换成动画：把多个帧都写进**同一行相邻的格子**、然后按帧序记下坐标，
-  运行时只要按时间换 `Icon.tile` 就是动画（帧都一样是 24×24，不会挤动布局）。
+────────────────────────────────────────────────────────────────────────
+★ 幂等：坐标表 `_icon_cells.txt` 是"批次 → 帧 → 格子"的记录。
+  已经做过的批次会被拒绝重跑（除非 --force）—— 因为重复跑时上次贴的格子已经
+  不透明了，脚本会去找**另一批**空格再贴一遍，不会互相覆盖，但"哪一帧在哪一格"就乱了。
 
 用法：
-    python make_icon_sheet.py --probe     # 只探测：打印可用空格 + 导出朝向预览
-    python make_icon_sheet.py             # 真正写入（会改 Assets/cardIcons.png）
+    python make_icon_sheet.py --probe                 # 只看可用空格 + 导出朝向预览
+    python make_icon_sheet.py --batch numerals        # 写入"罗马数字"批次
+    python make_icon_sheet.py --batch clock --force   # 硬重做 clock 批次
 """
 
 import argparse
@@ -56,17 +55,20 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SHEET = os.path.join(HERE, "Assets", "cardIcons.png")
 CDB = os.path.join(HERE, "data.cdb")
 MAP_OUT = os.path.join(HERE, "_icon_cells.txt")
-ZL_ATLAS = os.path.join(HERE, "Assets", "atlas", "TIMEZHANJI.atlas")
-ZL_PNG = os.path.join(HERE, "Assets", "atlas", "TIMEZHANJI.png")
 PREVIEW = os.path.join(HERE, "_icon_preview")
 
 CELL = 24                       # 卡片图标每格 24px（CDB 里 icon.size）
-GROUP = "idle"                  # TIMEZHANJI 的帧都挂在 idle 组
-FIT = 24                        # 帧缩进 24×24 的格子里（留 0 边距，最大利用）
+FIT = 24                        # 帧缩进 24×24 的格子里
+
+# 批次 → (图集路径, 分组名, 要写多少帧)
+BATCHES = {
+    "clock":    (os.path.join(HERE, "Assets", "atlas", "TIMEZHANJI.atlas"), "idle", 46),
+    "numerals": (os.path.join(HERE, "Assets", "atlas", "TIMEKASAN.atlas"), "idle", 12),
+}
 
 
-def parse_atlas(path):
-    """解析 libGDX 简单格式的 atlas，返回 {帧名: {xy,size,orig,offset}}（保持文件顺序）。"""
+def parse_atlas(path, group):
+    """解析 libGDX 简单格式的 atlas，返回 (文件顺序的帧名列表, {帧名: {xy,size,...}})。"""
     frames = {}
     order = []
     cur = None
@@ -77,7 +79,7 @@ def parse_atlas(path):
                 continue
             if not line.startswith(" ") and not line.startswith("\t"):
                 cur = line.strip()
-                if re.match(r"^%s_\d+$" % GROUP, cur):
+                if re.match(r"^%s_\d+$" % group, cur):
                     frames[cur] = {}
                     order.append(cur)
                 else:
@@ -94,8 +96,38 @@ def parse_atlas(path):
     return order, frames
 
 
+def load_map():
+    """读坐标表 → {batch: [(frame, cx, cy), ...]}（保持顺序）。旧格式按 clock 处理。"""
+    out = {}
+    if not os.path.exists(MAP_OUT):
+        return out
+    with open(MAP_OUT, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = line.split()
+            if len(parts) == 3:                 # 旧格式：frame cx cy（当年只有 clock 批次）
+                batch, frame, cx, cy = "clock", parts[0], int(parts[1]), int(parts[2])
+            elif len(parts) == 4:
+                batch, frame, cx, cy = parts[0], parts[1], int(parts[2]), int(parts[3])
+            else:
+                continue
+            out.setdefault(batch, []).append((frame, cx, cy))
+    return out
+
+
+def save_map(m):
+    with open(MAP_OUT, "w", encoding="utf-8") as f:
+        f.write("# 帧 → cardIcons.png 格子坐标（CDB 的 icon 用 x/y）\n")
+        f.write("# 格式：<批次> <帧名> <cx> <cy>\n")
+        for batch, rows in m.items():
+            for frame, cx, cy in rows:
+                f.write(f"{batch} {frame} {cx} {cy}\n")
+
+
 def used_cells():
-    """data.cdb 里所有被引用过的 (x, y) 图标格。保守：全 JSON 扫 icon/tile 字典。"""
+    """data.cdb 里所有被引用过的 (x, y) 图标格。保守：全 JSON 扫带 x/y 的字典。"""
     with open(CDB, encoding="utf-8") as f:
         data = json.load(f)
 
@@ -103,9 +135,7 @@ def used_cells():
 
     def walk(node):
         if isinstance(node, dict):
-            # 形如 {"x":..,"y":..,"file":..,"size":..} 或 {"x":..,"y":..,"tile":..}
-            if "x" in node and "y" in node and isinstance(node.get("x"), int) \
-                    and isinstance(node.get("y"), int):
+            if isinstance(node.get("x"), int) and isinstance(node.get("y"), int):
                 used.add((node["x"], node["y"]))
             for v in node.values():
                 walk(v)
@@ -118,7 +148,7 @@ def used_cells():
 
 
 def free_cells(img, used, need):
-    """从上到下、从左到右找 need 个"没被引用 + 全透明"的格子。"""
+    """从上到下、从左到右找 need 个"没被引用 + 整格全透明"的格子。"""
     w, h = img.size
     cols, rows = w // CELL, h // CELL
     alpha = img.getchannel("A")
@@ -131,13 +161,13 @@ def free_cells(img, used, need):
                 continue
             box = (cx * CELL, cy * CELL, (cx + 1) * CELL, (cy + 1) * CELL)
             if alpha.crop(box).getextrema()[1] != 0:
-                continue        # 有像素就不算空（哪怕是半透明）
+                continue
             out.append((cx, cy))
     return out
 
 
 def frame_image(atlas_img, meta, flip_y):
-    """按 atlas 的 xy/size 裁出这一帧。flip_y=True 表示 xy 的原点在左下（libGDX 习惯）。"""
+    """按 atlas 的 xy/size 裁出这一帧。flip_y=True 表示 xy 原点在左下（libGDX 习惯）。"""
     x, y = meta["xy"]
     sw, sh = meta["size"]
     if flip_y:
@@ -163,77 +193,93 @@ def fit_into(img, box):
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--batch", choices=sorted(BATCHES), help="要写入哪个批次")
     ap.add_argument("--probe", action="store_true", help="只探测，不写图")
     ap.add_argument("--flip-y", action="store_true",
                     help="按 libGDX 习惯把 xy 当左下原点")
-    ap.add_argument("--count", type=int, default=46, help="要写入多少帧")
-    ap.add_argument("--force", action="store_true", help="无视已有的坐标表，强行再贴一遍")
+    ap.add_argument("--force", action="store_true", help="无视已有记录，强行重做这个批次")
     args = ap.parse_args()
 
-    order, frames = parse_atlas(ZL_ATLAS)
-    print(f"TIMEZHANJI: 解析到 {len(order)} 帧（{order[0]} … {order[-1]}）")
-    if not order:
-        raise SystemExit("ERROR: atlas 里没解析到 idle_ 帧")
+    m = load_map()
 
-    atlas_img = Image.open(ZL_PNG).convert("RGBA")
-    print(f"TIMEZHANJI.png: {atlas_img.size}")
+    # ---------------- 探测模式：报可用空格 + 导出朝向预览 ----------------
+    if args.probe or not args.batch:
+        img = Image.open(SHEET).convert("RGBA")
+        print(f"cardIcons.png: {img.size}（{img.size[0] // CELL}×{img.size[1] // CELL} 格）")
+        used = used_cells()
+        print(f"data.cdb 里被引用的图标格: {len(used)} 个")
+        free = free_cells(img, used, 100000)
+        print(f"可用空白格: {len(free)} 个")
+        for b in sorted(BATCHES):
+            done = len(m.get(b, []))
+            atlas, group, want = BATCHES[b]
+            print(f"  批次 {b:<9} 需要 {want:>2} 格，已写入 {done:>2} 格")
 
-    if args.probe:
         os.makedirs(PREVIEW, exist_ok=True)
-        for flip in (False, True):
-            f0 = frame_image(atlas_img, frames[order[0]], flip)
-            f0.resize((f0.width * 2, f0.height * 2), Image.NEAREST).save(
-                os.path.join(PREVIEW, f"frame0_flipY={flip}.png"))
-        print(f"预览已导出到 {PREVIEW}  —— 看一眼哪张是真画面，就知道该不该加 --flip-y")
-
-    img = Image.open(SHEET).convert("RGBA")
-    print(f"cardIcons.png: {img.size}（{img.size[0] // CELL}×{img.size[1] // CELL} 格）")
-
-    used = used_cells()
-    print(f"data.cdb 里被引用的图标格: {len(used)} 个")
-
-    need = min(args.count, len(order))
-    cells = free_cells(img, used, need)
-    print(f"可用的空白格: 找到 {len(cells)} 个（需要 {need} 个）")
-    if len(cells) < need:
-        print("⚠️ 空白格不够，只写找到的这些（也可以先看 --probe 输出再决定）")
-        need = len(cells)
-    if need == 0:
-        raise SystemExit("ERROR: 没有可用空白格，需要换策略（扩大图片）")
-
-    for i in range(need):
-        cx, cy = cells[i]
-        fr = fit_into(frame_image(atlas_img, frames[order[i]], args.flip_y), CELL)
-        img.paste(fr, (cx * CELL, cy * CELL), fr)
-
-    print("\n帧 → 格 坐标表（CDB 的 icon 用 {x, y}，就是这里的 cx, cy）：")
-    for i in range(need):
-        cx, cy = cells[i]
-        print(f"  {order[i]:<12} -> x={cx:<3} y={cy}")
-
-    if args.probe:
-        print("\n（--probe：没有写盘）")
+        for b in sorted(BATCHES):
+            atlas, group, _ = BATCHES[b]
+            order, frames = parse_atlas(atlas, group)
+            if not order:
+                continue
+            src = Image.open(os.path.join(os.path.dirname(atlas),
+                                          os.path.basename(atlas).replace(".atlas", ".png"))).convert("RGBA")
+            for flip in (False, True):
+                f0 = frame_image(src, frames[order[0]], flip)
+                f0.resize((f0.width * 2, f0.height * 2), Image.NEAREST).save(
+                    os.path.join(PREVIEW, f"{b}_first_flipY={flip}.png"))
+        print(f"预览已导出到 {PREVIEW}（每批次两张：flipY=False / True）")
+        if not args.batch:
+            print("\n没有指定 --batch，只做了探测。")
         return
 
-    # ⚠️ 这个脚本**不能重复跑**：第二次跑时上一次贴进去的格子已经不透明了，
-    #    它会去找**另一批**空白格再贴一批 —— 不会互相覆盖，但会在图里留下一堆
-    #    没人引用的帧，而且"哪一帧在哪一格"就对不上了。
-    #    所以写盘前先落一个坐标表，看到它就拒绝再跑（除非 --force）。
-    if os.path.exists(MAP_OUT) and not args.force:
-        print(f"\n✗ 已经跑过了（{MAP_OUT} 存在）—— 重复跑会把帧贴到另一批格子上。")
-        print("  要重做：先从 res/cardIcons.png 还原这张图，再删掉那个坐标表。")
-        print("  真要硬跑：加 --force。")
+    # ---------------- 写入模式 ----------------
+    batch = args.batch
+    atlas, group, want = BATCHES[batch]
+
+    if m.get(batch) and not args.force:
+        print(f"✗ 批次 {batch} 已经写入过 {len(m[batch])} 格（见 {os.path.basename(MAP_OUT)}）。")
+        print("  重复跑会把帧贴到**另一批**空格上（不覆盖，但坐标记录会乱）。")
+        print("  要重做：先从 res/cardIcons.png 还原这张图、删掉坐标表，再加 --force。")
         raise SystemExit(2)
 
-    with open(MAP_OUT, "w", encoding="utf-8") as f:
-        f.write("# TIMEZHANJI 帧 → cardIcons.png 格子坐标（CDB 的 icon 用 x/y）\n")
-        for i in range(need):
-            cx, cy = cells[i]
-            f.write(f"{order[i]} {cx} {cy}\n")
+    order, frames = parse_atlas(atlas, group)
+    print(f"{atlas}: 解析到 {len(order)} 帧")
+    if not order:
+        raise SystemExit("ERROR: atlas 里没解析到帧")
 
+    src = Image.open(os.path.join(os.path.dirname(atlas),
+                                 os.path.basename(atlas).replace(".atlas", ".png"))).convert("RGBA")
+    print(f"图集贴图: {src.size}")
+
+    img = Image.open(SHEET).convert("RGBA")
+    print(f"cardIcons.png: {img.size}")
+
+    used = used_cells()
+    need = min(want, len(order))
+    cells = free_cells(img, used, need)
+    print(f"可用空白格: 找到 {len(cells)} 个（需要 {need} 个）")
+    if len(cells) < need:
+        print("⚠️ 空白格不够，只写找到的这些")
+        need = len(cells)
+    if need == 0:
+        raise SystemExit("ERROR: 没有可用空白格")
+
+    rows = []
+    for i in range(need):
+        cx, cy = cells[i]
+        fr = fit_into(frame_image(src, frames[order[i]], args.flip_y), CELL)
+        img.paste(fr, (cx * CELL, cy * CELL), fr)
+        rows.append((order[i], cx, cy))
+
+    print(f"\n批次 {batch} 的坐标：")
+    for frame, cx, cy in rows:
+        print(f"  {frame:<12} -> x={cx:<3} y={cy}")
+
+    m[batch] = rows
+    save_map(m)
     img.save(SHEET)
-    print(f"\n✅ 已写入 {SHEET}（{need} 帧，尺寸不变 {img.size}）")
-    print(f"✅ 坐标表已写到 {MAP_OUT}（下次再跑会被它拦住）")
+    print(f"\n✅ 已写入 {SHEET}（批次 {batch}，{need} 帧，尺寸不变 {img.size}）")
+    print(f"✅ 坐标表已更新 {MAP_OUT}")
 
 
 if __name__ == "__main__":

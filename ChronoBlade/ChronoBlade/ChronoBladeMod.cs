@@ -791,6 +791,9 @@ namespace ChronoBlade
             if (holds && !_hadZaphkiel) PlayPickupSound();
             _hadZaphkiel = holds;
 
+            // HUD 图标跟着装填的弹药走（切弹药后第一帧就会更新；见 ChronoAmmoPanel.SyncHudIcon）
+            try { ChronoAmmoPanel.SyncHudIcon(FindTimeBullet()); } catch { }
+
             // 刻印渲染自测 —— 键位读配置
             bool testDown = IsKeyDown(ChronoKeys.Resolve(cfg.KeyTestNumeral, 0xDD));
             if (testDown && !_testKeyWasDown)

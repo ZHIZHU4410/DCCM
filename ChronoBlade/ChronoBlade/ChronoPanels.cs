@@ -742,6 +742,89 @@ namespace ChronoBlade
         /// <summary>面板标题。</summary>
         public const string Title = "选择弹药";
 
+        // ------------------------------------------------------------------ HUD 图标跟着弹药走
+        //
+        // 需求：切换装填哪一发，主手上刻刻帝的图标就变成那一发的图标。
+        //
+        // 做法（**不需要任何钩子**）：
+        //   · 12 个罗马数字已经由 `make_icon_sheet.py` 的 numerals 批次嫁接进
+        //     `cardIcons.png` 的空格里（坐标表见 `_icon_cells.txt`）；
+        //   · 原版 `dc.ui.HUD.updateIcon(InventItem i, Tile t)` 正好就是干这个的 ——
+        //     它会遍历 HUD 的 skillWeapons / skillPowers，把 `ii == i` 那一格的图标
+        //     换成传进去的 Tile。所以只要自己从图标表里切出对应那一格交给它即可。
+        //
+        // 为什么不用钩子/不用改 CDB：CDB 的 `icon` 是**静态一格**（而且 `file` 是死数据，
+        // 见 make_icon_sheet.py 的注释），改不动"随装填变化"；`updateIcon` 是原版给
+        // 状态变化用的正规入口，比 hook 图标创建稳得多。
+
+        /// <summary>
+        /// 第 i 发子弹（0 基）对应的 cardIcons.png 格子。
+        /// 由 `make_icon_sheet.py --batch numerals` 生成：帧 `idle_{i:04d}` ↔ 第 i+1 发
+        /// （和 `ChronoFx.FrameIndexForBullet` 同一套映射）。
+        /// ⚠️ 重新跑那个脚本会换格子 —— 跑完要**同步这张表**（`_icon_cells.txt` 里有）。
+        /// </summary>
+        private static readonly (int X, int Y)[] BulletIconCells =
+        {
+            (77, 2),   // I    idle_0000
+            (78, 2),   // II   idle_0001
+            (82, 2),   // III  idle_0002
+            (80, 2),   // IV   idle_0003
+            (79, 2),   // V    idle_0004
+            (81, 2),   // VI   idle_0005
+            (83, 2),   // VII  idle_0006
+            (76, 2),   // VIII idle_0007
+            (70, 3),   // IX   idle_0008
+            (84, 2),   // X    idle_0009
+            (69, 3),   // XI   idle_0010
+            (71, 3),   // XII  idle_0011
+        };
+
+        /// <summary>图标格子边长（CDB 里 icon.size，也是 GridSelector 的条目尺寸）。</summary>
+        private const int IconCellSize = 24;
+
+        /// <summary>上一次真正写进 HUD 的是第几发（-1 = 还没写过 / 手里没有刻刻帝）。</summary>
+        private static int _lastHudIconBullet = -1;
+
+        /// <summary>
+        /// 把主手刻刻帝的 HUD 图标同步成"当前装填的那一发"的数字。每帧调一次，
+        /// 只有"装填的那一发真的变了"才会去动 HUD（切弹药、刚捡起来、传奇与否都不额外开销）。
+        /// </summary>
+        public static void SyncHudIcon(TimeBullet? gun)
+        {
+            try
+            {
+                if (gun == null)
+                {
+                    _lastHudIconBullet = -1;      // 手放下了，下次拿起来要重写一遍
+                    return;
+                }
+
+                int idx = gun.BulletIndex;
+                if (idx < 0) idx = 0;
+                if (idx >= BulletIconCells.Length) idx = BulletIconCells.Length - 1;
+                if (idx == _lastHudIconBullet) return;
+
+                var item = gun.item;              // ⚠️ Weapon.item（InventItem），不是 wInfos.item
+                if (item == null) return;
+
+                var sheet = dc.Assets.Class.itemIcons;
+                if (sheet == null) return;
+
+                var (cx, cy) = BulletIconCells[idx];
+                var tile = sheet.sub(cx * IconCellSize, cy * IconCellSize,
+                                     IconCellSize, IconCellSize, Ref<int>.Null, Ref<int>.Null);
+                if (tile == null) return;
+
+                dc.ui.HUD.Class.ME?.updateIcon(item, tile);
+                _lastHudIconBullet = idx;
+                ChronoPanelLog.Write($"HUD 图标已同步：第 {idx + 1} 发（第 {cx},{cy} 格）");
+            }
+            catch (Exception ex)
+            {
+                ChronoPanelLog.Write($"同步 HUD 弹药图标失败: {ex.Message}");
+            }
+        }
+
         /// <summary>格子尺寸：要放得下 "XII" 这种三字符罗马数字，比原版 24 宽一些。</summary>
         private const int EntryWid = 36;
         private const int EntryHei = 32;
