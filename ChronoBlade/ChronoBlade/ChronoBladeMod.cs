@@ -13,6 +13,7 @@ using Hashlink.Proxy.Objects;
 using ModCore.Events.Interfaces;
 using ModCore.Events.Interfaces.Game;
 using ModCore.Events.Interfaces.Game.Hero;
+using ModCore.Menu;
 using ModCore.Mods;
 using ModCore.Modules;
 using ModCore.Utilities;
@@ -33,7 +34,7 @@ namespace ChronoBlade
     ///   4) 每帧推进特效；热键 P 打开"选择武器"面板、X 打开"选择弹药"面板；
     ///   5) 游戏退出时清理。
     /// </summary>
-    public class ChronoBladeMain : ModBase, IOnGameExit, IOnAfterLoadingAssets, IOnHeroUpdate, IOnGameInit
+    public class ChronoBladeMain : ModBase, IOnGameExit, IOnAfterLoadingAssets, IOnHeroUpdate, IOnGameInit, IModMenu
     {
         public ChronoBladeMain(ModInfo info) : base(info) { }
 
@@ -882,6 +883,72 @@ namespace ChronoBlade
         // 武器/弹药的"掉落 + 拾取"流程在 ChronoPanels.cs 里（面板确认时调用），
         // 这里原来的 SummonWeaponDrop / DescribeItem / StripKey 直召路径已随热键一起删除。
 
+
+        // ---------------------------------------------------------------- 选项菜单（IModMenu）
+        //
+        // 参考同仓库的 ZoomVision（那是个已跑通的样板）：
+        // 游戏的「选项 → 模组 → ChronoBlade」这一页**不是自动反射配置字段生成的**，
+        // 而是实现 `ModCore.Menu.IModMenu`、在 `BuildMenu()` 里自己 addXxxWidget 建出来的。
+        //
+        // ⚠️ 我一开始按"反射"去推断，还得出过"double 字段不会显示"的结论 —— **那是错的**，
+        //    `addSliderWidget` 收的就是 double（ZoomVision 的 zoomScale 就是 double）。
+        //    所以透明度直接用 0…1 的滑条，不需要退化成 int 百分比。
+        //
+        // 控件只负责"改值 + Config.Save()"；真正生效由 ChronoFx 每帧读配置决定
+        // （背景开关当帧就移除已有 sprite，透明度每帧同步到 sprite 上）。
+
+        /// <summary>这一页在「选项 → 模组」里的名字。</summary>
+        public string GetName() => "ChronoBlade";
+
+        public void BuildMenu(dc.ui.Options options)
+        {
+            try
+            {
+                var b = (dc.ui.OptionsBase)options;
+
+                ((dc.ui.Text)b.title).set_text(StringUtils.AsHaxeString("CHRONOBLADE 设置"));
+                b.createScroller(0.0);
+
+                // ---- 1) 刻刻帝的身后时钟背景：开 / 关 ----
+                bool auraOn = ChronoKeys.Config.Value.EnableZaphkielAura;
+                b.addToggleWidget(
+                    StringUtils.AsHaxeString("刻刻帝背景"),
+                    StringUtils.AsHaxeString("手持刻刻帝时，英雄身后的时钟"),
+                    (HlFunc<bool>)delegate
+                    {
+                        ChronoKeys.Config.Value.EnableZaphkielAura = !ChronoKeys.Config.Value.EnableZaphkielAura;
+                        ChronoKeys.Config.Save();
+                        return ChronoKeys.Config.Value.EnableZaphkielAura;
+                    },
+                    new Ref<bool>(ref auraOn),
+                    b.scrollerFlow);
+
+                // ---- 2) 那个背景的透明度（0 = 看不见，1 = 完全不透明）----
+                b.addSliderWidget(
+                    StringUtils.AsHaxeString("背景透明度"),
+                    (HlAction<double>)delegate (double v)
+                    {
+                        ChronoKeys.Config.Value.ZaphkielAuraAlpha = v;
+                        ChronoKeys.Config.Save();
+                    },
+                    ChronoKeys.Config.Value.ZaphkielAuraAlpha,
+                    Ref<double>.In(0.05),          // 步进
+                    b.scrollerFlow,
+                    Ref<bool>.In(false),           // showPercent
+                    Ref<bool>.In(true),            // showRawValue（照抄 ZoomVision，可预期）
+                    Ref<double>.In(0.0),           // 最小
+                    Ref<double>.In(1.0),           // 最大
+                    null,
+                    Ref<int>.In(0));
+
+                b.updateScroller();
+                Write("[ChronoBlade] 选项菜单已建立：刻刻帝背景开关 + 背景透明度");
+            }
+            catch (Exception ex)
+            {
+                Write($"[ChronoBlade] 建立选项菜单失败: {ex.Message}");
+            }
+        }
 
         void IOnGameExit.OnGameExit()
         {

@@ -801,7 +801,7 @@ namespace ChronoBlade
 
         /// <summary>
         /// 不透明度的**默认值**（配置读不到时用，0.9 = 90%）。
-        /// 实际值走 `ChronoConfig.ZaphkielAuraAlphaPercent` —— 每帧都会同步到 sprite 上，
+        /// 实际值走 `ChronoConfig.ZaphkielAuraAlpha` —— 每帧都会同步到 sprite 上，
         /// 所以改配置后不用重开关卡。
         /// </summary>
         private const double AuraAlphaDefault = 0.9;
@@ -813,21 +813,18 @@ namespace ChronoBlade
         }
 
         /// <summary>
-        /// 不透明度（配置 `ZaphkielAuraAlphaPercent`，0…100 的百分比，夹住后 /100）。
-        ///
-        /// ⚠️ 配置里是 **int 百分比**而不是 double —— 游戏的"选项 → 模组"菜单只认
-        ///    bool / int / string（ModCore 不引用 System.Double，double 字段会被静默跳过），
-        ///    用 int 才能让这个值出现在菜单里。见 ChronoConfig 里的说明。
+        /// 不透明度（配置 `ZaphkielAuraAlpha`，0…1，夹住）。
+        /// 那一项在游戏的「选项 → 模组 → ChronoBlade」里是个滑条（见 BuildMenu）。
         /// </summary>
         private static double AuraAlphaValue
         {
             get
             {
-                int pct;
-                try { pct = ChronoKeys.Config.Value.ZaphkielAuraAlphaPercent; } catch { pct = 90; }
-                if (pct < 0) pct = 0;
-                if (pct > 100) pct = 100;
-                return pct / 100.0;
+                double v;
+                try { v = ChronoKeys.Config.Value.ZaphkielAuraAlpha; } catch { v = AuraAlphaDefault; }
+                if (v < 0) v = 0;
+                if (v > 1) v = 1;
+                return v;
             }
         }
 
