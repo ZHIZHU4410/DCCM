@@ -61,8 +61,8 @@ namespace ChronoBlade
                     Desc = "命中后：目标减速 3.5 秒，并且移速变成 0.45 倍，持续 10 秒后还原",
                     DescLegendary = "命中后：目标减速 3.5 秒，并且移速变成 0.225 倍，持续 10 秒后还原" },
             new() { Id = "Gimel",    Name = "三之弹 Gimel",       Color = 0x9BE86B, SelfCast = true,
-                    Desc = "开火即生效：回复 30% 生命，移速变成两倍，持续 10 秒",
-                    DescLegendary = "开火即生效：回复 60% 生命，移速变成四倍，持续 10 秒" },
+                    Desc = "开火即生效：回复 30% 生命",
+                    DescLegendary = "开火即生效：回复 60% 生命" },
             new() { Id = "Dalet",    Name = "四之弹 Dalet",       Color = 0xFFD86B, SelfCast = true,
                     Desc = "开火即生效：把自己拽回 5 秒前的位置与生命",
                     DescLegendary = "开火即生效：把自己拽回 10 秒前的位置与生命" },
@@ -120,11 +120,13 @@ namespace ChronoBlade
         ///
         /// ⚠️ 一之弹按需求是 **×2.0**（affect 116 值 +1.0）。
         ///    早先这里是 +4.0（×5.0），需求改成 ×2.0 了 —— 别看到"+4.0"就以为是它。
+        ///
+        /// 现在**只有一之弹**用 affect 116：三之弹的移速加成已按要求删除
+        /// （常量 `GimelSpeedAdd` 也一起删了）。
         /// </summary>
         private const double AlephSpeedAdd = 1.0;
-        private const double GimelSpeedAdd = 1.0;
 
-        /// <summary>三之弹回复的生命比例。</summary>
+        /// <summary>三之弹回复的生命比例（三之弹只有回血，没有任何移速加成）。</summary>
         private const double GimelHealPct = 0.30;
 
         /// <summary>二之弹：目标移速倍率与持续时间。</summary>
@@ -518,8 +520,12 @@ namespace ChronoBlade
         }
 
         /// <summary>
-        /// 三之弹：回复 30% 生命 + 移速 ×2.0。
-        /// 传奇：回复 60% 生命 + 移速 ×4.0（affect +3.0）。持续时间不变。
+        /// 三之弹：**只回血**，回复 30% 生命。
+        /// 传奇：回复 60% 生命。
+        ///
+        /// ⚠️ 这里以前还附带"移速 ×2.0（affect 116）维持 10 秒"，**已经按要求删掉**
+        ///    —— 三之弹不再有任何移速加成（连带传奇那份也没有）。
+        ///    常量 `GimelSpeedAdd` 也一起删了，别再往这儿加回来。
         /// </summary>
         private static void ApplyGimel(Hero hero, bool legendaryDouble)
         {
@@ -537,19 +543,6 @@ namespace ChronoBlade
             catch (Exception ex)
             {
                 Log($"Gimel 回血失败: {ex.Message}");
-            }
-
-            try
-            {
-                double v = SpeedAffectFromMultiplier(1.0 + GimelSpeedAdd, legendaryDouble);
-                var r = new Ref<double>(ref v);
-                hero.setAffectS(116, HeroSpeedDurS, r, null);
-                Log($"Gimel 自身移速 ×{1.0 + v:0.0} 已施加（{HeroSpeedDurS:0} 秒）" +
-                    (legendaryDouble ? "【传奇·效果翻倍】" : ""));
-            }
-            catch (Exception ex)
-            {
-                Log($"Gimel 加速失败: {ex.Message}");
             }
         }
 
