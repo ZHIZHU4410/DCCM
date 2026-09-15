@@ -37,9 +37,22 @@ ITEM_DESC = ("Combo 1: slash that engraves crossed enemies with Roman numerals. 
 #       玩家看到的名字由 PISTOL_NAME 决定，也就是 Zaphkiel。
 PISTOL_ID = "TimeBullet"
 PISTOL_NAME = "Zaphkiel"
-PISTOL_DESC = ("Twelve bullets of time. Fire the loaded bullet and it pops its own Roman "
-               "numeral; press the reload key to cycle to the next bullet. Each bullet "
-               "applies a different time effect to whatever it hits.")
+# 刻刻帝的描述（写进 item.gameplayDesc）。
+#   ⚠️ 英文原版说明已被替换成这段中文设定文 —— 不走 lang/*.mo，直接写字面量
+#      （动 lang 会把整张文本表替换掉，见 README 第 5 节）。
+#   ⚠️ 只用中文 + 中文标点（，。；：——）：游戏字体对 U+00D7「×」、U+00B7「·」
+#      这类符号没有字形，会显示成方块。
+#   ⚠️ 这段很长（185 字），物品说明框是固定高度的 —— 大概率会被裁掉一部分。
+#      想短一点就直接改这里。
+PISTOL_DESC = (
+    "它不是钟，是悬于万古之上的时间王座；十二道刻度，是十二道不可违逆的敕令。"
+    "时针为刃，分针为狱，秒针每一次落下，都有一瞬被钉死在永恒里。"
+    "过去向它俯首，现在由它加冕，未来被它锁入齿轮。"
+    "它以寿命为祭，以因果为薪，以灵魂为筹码。"
+    "钟声一响，诸界屏息，万古如纸。"
+    "它若拨动指针，生者可逆，死者可返，神明亦要跪听宣判——"
+    "因为时间不是它的力量，而是它的疆土；永恒不是它的归宿，而是它的囚牢。"
+)
 
 # 时间守护者主题配色（取自 data.cdb 里 TimeKeeper 技能配色）
 CLOCK_INNER = 16773535     # 金色内圈
@@ -59,7 +72,7 @@ BLADE_LEGEND_AFFIX = "IgnoreGlobalShield"
 #      CDB 里这一条只负责：出现在传奇物品的说明里、能被 legendAffixes 引用、有名字和图标。
 PISTOL_LEGEND_AFFIX = "ChronoBulletDouble"
 # 说明文字直接写在 CDB 的 desc 字段里（不去碰 lang/*.mo —— 那会把整张文本表替换掉）
-PISTOL_LEGEND_AFFIX_DESC = "每个弹药效果增强"
+PISTOL_LEGEND_AFFIX_DESC = "朕即时间，朕即裁决。"
 # 图标沿用原版卡片图集（不新增美术），取 DoubleSpeed 那一格
 PISTOL_LEGEND_AFFIX_ICON = {"x": 57, "y": 0, "file": "cardIcons.png", "size": 24}
 
