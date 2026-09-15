@@ -69,6 +69,17 @@ namespace ChronoBlade
 
         /// <summary>进入下一关的触发概率。</summary>
         public double VoiceChanceLevel = 0.85;
+
+        // ---------------------------------------------------------------- 刻刻帝的身后时钟背景
+        //
+        // 手持 Zaphkiel 时在英雄身后循环播放 TIMEBEIJING 的那个大时钟
+        // （ChronoFx.UpdateAura / SpawnAura）。
+
+        /// <summary>是否显示这个背景。关掉就完全不创建、不更新。</summary>
+        public bool EnableZaphkielAura = true;
+
+        /// <summary>背景的不透明度：0 = 完全透明（等于看不见），1 = 完全不透明。</summary>
+        public double ZaphkielAuraAlpha = 0.9;
     }
 
     /// <summary>配置读取 + 按键名 → 虚拟键码的解析。</summary>

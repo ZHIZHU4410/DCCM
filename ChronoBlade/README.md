@@ -128,6 +128,15 @@ Dead Cells（v35 / DCCM）武器模组。新增 **两把武器**、**两个全�
 > **"状态"指哪些**（`HeroSample` 里的字段，逐个还原）：
 > 位置、**生命**、**诅咒层数**（`Hero.curseCounter`）、历史最高诅咒（`curCurseMaxReached`）。
 >
+> ⚠️⚠️ **诅咒必须走原版接口，不能直接写 `curseCounter` 字段。**
+> 身上那个诅咒图标是 `Hero.curseLabel`（一个 `LightTip`），它**只在
+> `Hero.curse()` / `Hero.reduceCurse()` / `endCurse()` 里被重建**。
+> 直接赋值只改了数值 —— **屏幕上那个诅咒数不会变**，
+> 表现就是"回溯了但诅咒没回溯"（第一版就是这么写的，已修）。
+> 所以还原时是：
+> 目标更低 → `hero.reduceCurse(差值)`；目标更高 → `hero.curse(差值, null, ...)`
+> （原版所有调用方 reason 都传 `null`）。
+>
 > ⚠️ 为什么是这几个：翻了一遍 `Hero` 的标量字段，真正算"身上持续状态"的只有
 > 生命与诅咒；其余要么是**货币**（`cells` / `goldCombo` —— 回溯货币等于刷钱，不能要），
 > 要么是**几秒就衰减的临时计时**（`curRally` 振作、`spdCombo` 连杀加速、
@@ -159,7 +168,8 @@ Dead Cells（v35 / DCCM）武器模组。新增 **两把武器**、**两个全�
 * **物品描述**：`PISTOL_DESC`（写进 `item.gameplayDesc`）是一段 185 字的中文设定文
   （「它不是钟，是悬于万古之上的时间王座……」）。⚠️ 物品说明框是**固定高度**的，
   这么长大概率会被裁掉一部分；要短就直接改脚本里那个常量。
-* **身后背景**：主手拿着它时，英雄身后循环播放 `TIMEBEIJING` 背景。
+* **身后背景**：主手拿着它时，英雄身后循环播放 `TIMEBEIJING` 背景
+  （可用 `EnableZaphkielAura` 关掉、`ZaphkielAuraAlpha` 调不透明度，两个都在配置里）。
   时钟的**中心对准英雄的头部**：`y = (cy + yr) * 24 - hei`。
   ⚠️ 坐标约定：本模组里 `(cy + yr) * 24` 是实体的**底边（脚）**，
   所以"身体中心"要 `- hei * 0.5`，"头顶"要 `- hei` —— 别把底边当中心用。
@@ -323,6 +333,8 @@ dc.ui.HUD.Class.ME.updateIcon(InventItem i, Tile t);
 | `VoiceChanceKillStreak` | `0.70` | 连杀时刻触发概率 |
 | `VoiceChanceBoss` | `1.0` | 打败 Boss 触发概率 |
 | `VoiceChanceLevel` | `0.85` | 去下一关触发概率 |
+| `EnableZaphkielAura` | `true` | 是否显示手持刻刻帝时**身后的时钟背景** |
+| `ZaphkielAuraAlpha` | `0.9` | 那个背景的不透明度（0 = 看不见，1 = 完全不透明） |
 
 > ⚠️ 早先那套「按 `\` 直接掉一把时之刃 / 按 `P` 直接掉一把 Zaphkiel」的**直召热键已经删除**，
 > 现在拿到武器的唯一途径就是 `P` 面板。（删直召和加面板是同一次改动，不存在"没有获取途径"的中间态。）

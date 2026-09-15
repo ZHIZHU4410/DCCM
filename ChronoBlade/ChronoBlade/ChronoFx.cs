@@ -799,8 +799,31 @@ namespace ChronoBlade
         /// </summary>
         private const double AuraOffsetY = 0.0;
 
-        /// <summary>不透明度（1.0 = 完全不透明）。想让背景更淡一点就调小。</summary>
-        private const double AuraAlpha = 0.9;
+        /// <summary>
+        /// 不透明度的**默认值**（配置读不到时用）。
+        /// 实际值走 `ChronoConfig.ZaphkielAuraAlpha` —— 每帧都会同步到 sprite 上，
+        /// 所以改配置后不用重开关卡。
+        /// </summary>
+        private const double AuraAlphaDefault = 0.9;
+
+        /// <summary>是否显示这个背景（配置 `EnableZaphkielAura`）。</summary>
+        private static bool AuraEnabled
+        {
+            get { try { return ChronoKeys.Config.Value.EnableZaphkielAura; } catch { return true; } }
+        }
+
+        /// <summary>不透明度（配置 `ZaphkielAuraAlpha`，夹到 0…1）。</summary>
+        private static double AuraAlphaValue
+        {
+            get
+            {
+                double v;
+                try { v = ChronoKeys.Config.Value.ZaphkielAuraAlpha; } catch { v = AuraAlphaDefault; }
+                if (v < 0) v = 0;
+                if (v > 1) v = 1;
+                return v;
+            }
+        }
 
         private static HSprite? _aura;
         private static double _auraTime;
@@ -811,12 +834,15 @@ namespace ChronoBlade
         /// <summary>
         /// 每帧调用。holding = 英雄**主手槽**里拿着 Zaphkiel。
         /// 满足条件就在英雄身后的图层循环播放 TIMEBEIJING；不满足立刻移除。
+        ///
+        /// 配置：`EnableZaphkielAura`（开关）、`ZaphkielAuraAlpha`（不透明度）。
+        /// 不透明度每帧同步，改完立刻生效；开关关掉会直接把已有 sprite 移除。
         /// </summary>
         public static void UpdateAura(double dt, Hero? hero, bool holding)
         {
             try
             {
-                if (!holding || hero == null || hero.destroyed || hero._level == null)
+                if (!holding || !AuraEnabled || hero == null || hero.destroyed || hero._level == null)
                 {
                     RemoveAura();
                     return;
@@ -844,6 +870,9 @@ namespace ChronoBlade
                 // 还想微调就改 AuraOffsetY（正数往下）。
                 _aura.x = (hero.cx + hero.xr) * 24.0;
                 _aura.y = (hero.cy + hero.yr) * 24.0 - hero.hei + AuraOffsetY;
+
+                // 不透明度每帧同步（配置改了立刻看得出效果）
+                try { _aura.alpha = AuraAlphaValue; } catch { }
 
                 // 手动推帧：sprite 的 AnimManager 已被暂停，帧号完全由我们控制
                 _auraTime += dt;
@@ -893,7 +922,7 @@ namespace ChronoBlade
 
                 h.scaleX = AuraScale;
                 h.scaleY = AuraScale;
-                h.alpha = AuraAlpha;
+                h.alpha = AuraAlphaValue;
 
                 // ★ 关键在图层：DP_ROOM_MAIN_BACK 比实体用的 DP_ROOM_MAIN **低一层**，
                 //   也就是"英雄/怪物身后、房间背景之前"——原版宠物 Owl 也挂在这一层。
@@ -907,7 +936,7 @@ namespace ChronoBlade
                     int frames = -1;
                     try { frames = h.totalFrames(); } catch { }
                     Log($"身后背景已建立：{AuraAtlasPath} 组={AuraGroup} 帧数={frames} " +
-                        $"缩放={AuraScale} 循环={AuraFps}fps 图层=DP_ROOM_MAIN_BACK 不透明度={AuraAlpha}");
+                        $"缩放={AuraScale} 循环={AuraFps}fps 图层=DP_ROOM_MAIN_BACK 不透明度={AuraAlphaValue:0.##}");
                 }
 
                 return h;

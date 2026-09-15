@@ -980,14 +980,30 @@ namespace ChronoBlade
                 }
 
                 // ---- 诅咒（需求点：不能只把血条拉回去）----
+                //
+                // ⚠️⚠️ **必须走原版的诅咒接口，不能直接写 `curseCounter` 字段**。
+                //    身上那个诅咒图标是 `Hero.curseLabel`（一个 LightTip），
+                //    它**只在 `Hero.curse()` / `Hero.reduceCurse()` / `endCurse()` 里被重建**：
+                //       · curse(count, reason, ...)  —— 加，并重建 label（`Hero.cs:26504`）
+                //       · reduceCurse(n)             —— 减，并重建 / 清掉 label（`Hero.cs:26438`）
+                //    直接 `hero.curseCounter = n` 只改了数值：**屏幕上那个诅咒数不会变**，
+                //    表现就是"回溯了但诅咒没回溯"。（第一版就是这么写的。）
+                //    原版所有调用方传的 reason 都是 null，这里照抄。
                 string curseMsg = "诅咒未变";
                 if (s.Curse >= 0)
                 {
                     try
                     {
                         int before = hero.curseCounter;
-                        hero.curseCounter = s.Curse;
-                        curseMsg = $"诅咒 {before} → {s.Curse}";
+                        if (s.Curse < before)
+                        {
+                            hero.reduceCurse(before - s.Curse);
+                        }
+                        else if (s.Curse > before)
+                        {
+                            hero.curse(s.Curse - before, null, Ref<bool>.Null, Ref<bool>.Null);
+                        }
+                        curseMsg = $"诅咒 {before} → {hero.curseCounter}";
                     }
                     catch (Exception ex) { curseMsg = $"诅咒还原失败({ex.Message})"; }
                 }
