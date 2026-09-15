@@ -63,6 +63,11 @@ PISTOL_LEGEND_AFFIX_DESC = "每个弹药效果增强"
 # 图标沿用原版卡片图集（不新增美术），取 DoubleSpeed 那一格
 PISTOL_LEGEND_AFFIX_ICON = {"x": 57, "y": 0, "file": "cardIcons.png", "size": 24}
 
+# 刻刻帝本体的图标：TIMEZHANJI 的第 0 帧，由 `make_icon_sheet.py` 嫁接进 cardIcons.png。
+#   CDB 的 icon 只会用 (x, y, size) 从 cardIcons.png 里切一格 —— `file` 是死数据，
+#   详见 make_icon_sheet.py 的头部注释和下面 pist_item_row["icon"] 处的说明。
+PISTOL_ICON = {"x": 36, "y": 0, "file": "cardIcons.png", "size": 24}
+
 # 第 1a 居合前冲斩的数值，直接沿用 Katana 项目的调参结果
 DASH_RANGE = 20        # 居合距离（格），原版 6；满蓄力再 ×1.5 ≈ 30 格
 DASH_POWER = 220       # 居合单段伤害（原版 88）
@@ -293,6 +298,20 @@ def main():
     pist_item_row["__separator_group_ID"] = group_index
     # 传奇词条：本模组自己新建的那一条（子弹效果翻倍）
     pist_item_row["legendAffixes"] = [{"affix": PISTOL_LEGEND_AFFIX}]
+
+    # 刻刻帝的图标：用 `make_icon_sheet.py` 把 TIMEZHANJI 的帧嫁接进 cardIcons.png 的空格里。
+    #
+    # ⚠️ CDB 的 `icon.file` 是**死数据** —— `dc._Assets.getItem()` 里根本不读它：
+    #       tile2 = Assets.itemIcons            # 全局唯一那张表（就是 cardIcons.png）
+    #       return tile2.sub(icon.x*size, icon.y*size, size, size)
+    #    所以只用了 x / y / size，含义是"从 cardIcons.png 切第 (x,y) 格"。
+    #    而 `Assets.itemIcons` 由 `loader.loadCache("cardIcons.png")` 得到 ——
+    #    本模组的 pak 里带着同名的 cardIcons.png，会覆盖原版，于是直接改那张图就行。
+    #
+    # 坐标取自 `_icon_cells.txt`（脚本跑完会写出来）：idle_0000 → (36, 0)。
+    # 想换成别的帧/别的观感，改这两个数即可（每一帧的坐标都在那个表里）。
+    pist_item_row["icon"] = PISTOL_ICON
+
     item_lines.insert(insert_at + 1, pist_item_row)
 
     # ---------- 新建 affix 表行：刻刻帝的"子弹效果翻倍"传奇词条 ----------

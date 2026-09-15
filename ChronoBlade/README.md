@@ -154,9 +154,43 @@ Dead Cells（v35 / DCCM）武器模组。新增 **两把武器**、**两个全�
 * 打开期间游戏是**真暂停**：英雄、怪物、弹幕、粒子、动画全部停在那一帧。
 * 选完武器在英雄**当前所在格**（就是 hero 坐标）生成，走过去捡起即可装备。
 * **刻刻帝那一格是动态图标**：面板自己用 `atlas/TIMEZHANJI.atlas` 的帧逐帧播（15fps，46 帧约 3 秒一轮），
-  时之刃仍然用 CDB 的静态图标。物品图标在 CDB 里只是一条 `icon = { x, y, file, size }`
-  的**静态**子矩形（`_Icon.createItemIcon` → `_Assets.getItem()` → 一块 Tile 画成 Bitmap），
-  所以"动态图标"只能在模组自己画的面板里实现；HUD / 背包那一份仍是 CDB 的静态图标。
+  时之刃仍然用原图标。
+* **HUD / 背包上的刻刻帝图标也换成了图集里的时钟**（静态一帧，`idle_0000`）—— 做法见下面的
+  「图标从哪来」一节：把 TIMEZHANJI 的帧嫁接进 `cardIcons.png` 的空格里。
+
+### 图标从哪来（以及 `icon.file` 是个坑）
+
+**结论：物品图标只能改"从 `cardIcons.png` 切哪一格"，`icon.file` 是死数据。**
+
+`dc._Assets.getItem(String i)` 里根本不读 `file`：
+
+```csharp
+Tile tile2 = Assets.Class.itemIcons;          // 全局唯一那张表
+int x = icon.x * icon.size;                    // 只用了 x / y / size
+int y = icon.y * icon.size;
+return tile2.sub(x, y, size, size);            // 切 size×size 一格
+```
+
+而 `Assets.itemIcons` 的来源是 `loader.loadCache("cardIcons.png", Image.Class).toTile()` ——
+**按文件名加载**。本模组的 pak 里带着一份同名的 `Assets/cardIcons.png`（2048×2048，85×85 格），
+会覆盖原版，所以**直接改这张图就行，不需要任何运行时钩子**：
+
+1. `make_icon_sheet.py` 解析 `data.cdb` 收集**已被引用**的格子，
+   再找"没被引用 + 整格全透明"的空白格（正好 46 个）；
+2. 把 TIMEZHANJI 的 46 帧裁掉透明边、等比缩进 24×24，贴进这些格子；
+3. 脚本把"帧 → 格子坐标"写到 `_icon_cells.txt`（`idle_0000` → x=36 y=0）；
+4. `patch_chronoblade_cdb.py` 里 `PISTOL_ICON = {"x": 36, "y": 0, ...}` 指向它。
+
+图片尺寸**不变**（还是 2048×2048），只是把原本空着的格子用起来：不多占显存、
+也不会动到任何别的物品图标。
+
+> ⚠️ **这个脚本不能重复跑**：第二次跑时上一次贴进去的格子已经不透明了，它会去找
+> **另一批**空白格再贴一批 —— 不覆盖，但"哪一帧在哪一格"就对不上了。
+> 所以它写盘前会落一个 `_icon_cells.txt`，见到它就拒绝再跑（要重做先从
+> `res/cardIcons.png` 还原那张图并删掉坐标表）。
+>
+> ⚠️ 想换观感（觉得时钟太淡/想换一帧）：改 `PISTOL_ICON` 的 x/y 即可，
+> 全部 46 帧的坐标都在 `_icon_cells.txt` 里。
 * 弹药面板的说明会根据**当前这把枪是不是传奇**自动切换普通 / 翻倍两套文案。
 
 ### 4. 狂三语音（`kurumi01~08`，四个时刻随机触发）
@@ -306,8 +340,11 @@ ChronoBlade/
     ├── ChronoDiag.cs               诊断日志（定时打印手里拿的是什么）
     ├── ChronoCdbProbe.cs           开局自检 data.cdb 补丁是否生效
     ├── patch_chronoblade_cdb.py    生成 data.cdb（item + weapon + affix 表）
+    ├── make_icon_sheet.py          把 TIMEZHANJI 的帧嫁接进 cardIcons.png 的空格里
+    ├── _icon_cells.txt             上面那个脚本产出的"帧 → 格子坐标"表
     ├── data.cdb                    由脚本生成（构建时 diff 成 data.cdb_ 打进 res.pak）
     └── Assets/
+        ├── cardIcons.png           物品卡图标表（原版同名文件 + 嫁接进去的 46 帧时钟）
         ├── atlas/TIMEKASAN.*       罗马数字 I…XII（刻印 / 蹦字 / 面板图标共用）
         ├── atlas/TIMEZHANJI.*      技能施放 + 十之弹记忆动画
         ├── atlas/TIMEJIBAI.*       怪物死亡特效
@@ -691,5 +728,5 @@ num10 = (cy2 < num6) ? num6 : ...           // 富余量更大 → 直接把内�
 | `LootGen 不可用（不在训练场，属正常）` | 预期行为 —— 传奇词条与**等级**都由面板自己补（`setItemLevel`），不影响结果 |
 | 十二之弹回不去 | 看日志 `Yud-Bet 回到上一关：<id>（来源=...）`；若提示"换过关之后就能用"，先正常换一关 |
 | 按 `P` 召唤出来只有 1 级 | 看日志 `物品等级已写入: LvN（getRawItemLevel=N）`。等级由 `MakeItem()` 末尾的 `setItemLevel()` 写入 —— 普通关卡里 `lootGen` 是 null，那条原版路径根本不会跑，**等级必须自己写**。若这行日志的 Lv 是对的但游戏里显示 1 级，那是 `_itemLevel` 之外还有别的显示来源，把这个日志发我。 |
-| 刻刻帝图标不动 / 是静态的 | 看日志 `刻刻帝动态图标已创建（TIMEZHANJI，N 帧…）`。`N` 应是 46；若这行没出现，说明图集取不到或那一格没被认成刻刻帝（`IsZaphkielEntry`）。注意：**只有面板里这一格是动态的**，HUD / 背包里那份是 CDB 的静态图标（要改得换 CDB 图标资源）。图标偏小就调 `IconArtCell`（越小越大）。 |
+| 刻刻帝图标不动 / 是静态的 | 面板里那一格是**动态**的（日志 `刻刻帝动态图标已创建（TIMEZHANJI，N 帧…）`，`N` 应是 46；没这行就是图集取不到或没被认成刻刻帝）。**HUD / 背包是静态的**（`PISTOL_ICON` 指向图集里的一帧）—— 那里要做出动画得拿到 HUD 那个 `Icon` 对象逐帧换 `tile`，属于没做的一步。图标偏小就调 `IconArtCell`（面板）/ 换 `PISTOL_ICON` 的格子（HUD）。 |
 | 构建报 `MSB3021` | 游戏还开着，DLL 被占用，关掉游戏再构建 |
