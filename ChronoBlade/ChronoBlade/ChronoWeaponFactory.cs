@@ -42,8 +42,8 @@ namespace ChronoBlade
                 try
                 {
                     Weapon created = creator(hero!, item!);
-                    // 诊断：确认 CDB 数据真的映射到了我们的武器类
-                    Log($"Weapon.create 命中 {id} → {created.GetType().Name}");
+                    // 命中成功不打日志（每次造武器一行，正常玩是噪音）；
+                    // 命中失败 / 没命中仍会报（见下面的分支）。
                     return created;
                 }
                 catch (Exception ex)

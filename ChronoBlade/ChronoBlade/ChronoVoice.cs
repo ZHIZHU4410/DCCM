@@ -153,7 +153,6 @@ namespace ChronoBlade
 
         private static double _checkAcc;
         private static bool _loadTried;
-        private static int _playLogCount;
 
         private static Serilog.ILogger? _logger;
 
@@ -287,7 +286,7 @@ namespace ChronoBlade
                 g.mute = false;
                 g.priority = GroupPriority;
                 _chanGroup = g;
-                Log($"独占声道已建立（group priority={GroupPriority:F0}, volume=1.0，不跟随游戏音效音量）");
+                // 不再打"独占声道已建立"（启动噪音）；声道参数见类头注释
             }
             return _chanGroup;
         }
@@ -323,11 +322,7 @@ namespace ChronoBlade
                     ch.mute = false;
                 }
 
-                if (_playLogCount < 12)
-                {
-                    _playLogCount++;
-                    Log($"播放 {what}（音量 {Volume:F2}，独占声道 {GroupPriority:F0}）");
-                }
+                // 播放成功不打日志（以前前 12 次每次都刷一行）；失败仍会报。
             }
             catch (Exception ex)
             {
@@ -354,8 +349,8 @@ namespace ChronoBlade
                 double chance = ChanceFor(moment);
                 if (_rng.NextDouble() > chance)
                 {
-                    // 只在日志里留痕，方便调概率
-                    Log($"{reason}：掷骰未中（概率 {chance:P0}）");
+                    // 掷骰没中：静默返回（以前会打一行"掷骰未中（概率 35%）"，
+                    // 正常玩每隔一阵就刷一条，纯噪音）。要调概率就临时加日志。
                     return;
                 }
 
@@ -507,7 +502,6 @@ namespace ChronoBlade
                 _lastAnyMs = 0;
                 _quietSinceMs = 0;
                 _idleRolled = false;
-                _playLogCount = 0;
                 for (int i = 0; i < _lastMomentMs.Length; i++) _lastMomentMs[i] = 0;
             }
             catch { }

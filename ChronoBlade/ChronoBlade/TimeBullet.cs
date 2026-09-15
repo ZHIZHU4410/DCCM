@@ -50,8 +50,7 @@ namespace ChronoBlade
 
         public TimeBullet(Hero hero, InventItem item) : base(hero, item)
         {
-            Log($"{DisplayName} 就绪：共 {ChronoBullets.All.Length} 发，当前第 {_bulletIndex + 1} 发 " +
-                $"{ChronoBullets.Get(_bulletIndex).Name}");
+            // 武器就绪不再打日志（每次拿到枪一行，正常玩是噪音）
         }
 
         /// <summary>当前弹号（给 ChronoBullets / 主模块读取）。</summary>

@@ -807,7 +807,6 @@ namespace ChronoBlade
         private static double _auraTime;
         private static int _auraFrameCount = -1;
         private static dc.pr.Level? _auraLevel;
-        private static bool _auraLogged;
 
         /// <summary>
         /// 每帧调用。holding = 英雄**主手槽**里拿着 Zaphkiel。
@@ -908,14 +907,8 @@ namespace ChronoBlade
                 level.scroller.addChildAt(h, Const.Class.DP_ROOM_MAIN_BACK);
                 h.posChanged = true;
 
-                if (!_auraLogged)
-                {
-                    _auraLogged = true;
-                    int frames = -1;
-                    try { frames = h.totalFrames(); } catch { }
-                    Log($"身后背景已建立：{AuraAtlasPath} 组={AuraGroup} 帧数={frames} " +
-                        $"缩放={AuraScale} 循环={AuraFps}fps 图层=DP_ROOM_MAIN_BACK 不透明度={AuraAlphaValue:0.##}");
-                }
+                // 建立成功不打日志（以前每个关卡都会刷一行 "身后背景已建立…"）；
+                // 取不到图集 / 创建失败时仍会报（见上面的 LogThrottled）。
 
                 return h;
             }

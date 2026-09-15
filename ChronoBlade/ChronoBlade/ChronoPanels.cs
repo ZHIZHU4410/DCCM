@@ -346,12 +346,7 @@ namespace ChronoBlade
                 try { spr.get_anim().pauseCurrentAnim(); } catch { }
                 try { spr.setFrame(0); } catch { }
 
-                int frames = 1;
-                try { frames = spr.totalFrames(); } catch { }
-
                 _iconAnims.Add(spr);
-                ChronoPanelLog.Write(
-                    $"刻刻帝动态图标已创建（TIMEZHANJI，{frames} 帧，{IconFps:0} fps，缩放 {sc:0.###}）");
 
                 return holder;
             }
@@ -469,13 +464,9 @@ namespace ChronoBlade
                                                   new Ref<bool>(ref colorless), new Ref<bool>(ref legendary));
 
                 // 自检：真的装进网格几项？（过滤逻辑万一改错，看这一行就知道）
+                // 正常打开时**不打日志**（以前每次开面板都刷一行），只在网格为空时报警。
                 int loaded = 0;
                 try { loaded = panel.items?.length ?? 0; } catch { }
-
-                ChronoPanelLog.Write(
-                    $"选择武器面板已打开（真暂停 / Process 栈）：网格载入 {loaded} 项 " +
-                    $"[{string.Join(" / ", OnlyIds)}]；" +
-                    "面板内 ← → 选择、Enter 召唤、Esc 返回，等级与品质用原版控件调");
 
                 if (loaded == 0)
                 {
@@ -588,10 +579,7 @@ namespace ChronoBlade
                     ChronoPanelLog.Write($"掉落位置调整失败（不影响掉落）: {ex.Message}");
                 }
 
-                ChronoPanelLog.Write(
-                    $"已召唤{label}（Lv{level} / 品质{quality}" +
-                    $"{(legendary ? " / 传奇" : "")}{(colorless ? " / 无色" : "")}）：" +
-                    $"在英雄当前位置生成");
+                // 召唤成功不再打日志（每次召唤一行，正常玩是噪音）；失败仍会报。
             }
             catch (Exception ex)
             {
@@ -633,8 +621,9 @@ namespace ChronoBlade
                 }
                 else
                 {
-                    ChronoPanelLog.Write(
-                        "LootGen 不可用（不在训练场，属正常）→ 等级/传奇词条由面板自己补");
+                    // LootGen 在普通关卡里一定是 null（它只在训练场的武器生成器实体里创建），
+                    // 这是**正常**情况：等级/传奇词条由下面自己补。以前这里每次都打一行，
+                    // 现在静默 —— 这里本来就不是异常路径。
                 }
             }
             catch (Exception ex)
@@ -683,7 +672,6 @@ namespace ChronoBlade
             try
             {
                 item.setItemLevel(level);
-                ChronoPanelLog.Write($"物品等级已写入: Lv{level}（getRawItemLevel={item.getRawItemLevel()}）");
             }
             catch (Exception ex)
             {
@@ -814,7 +802,7 @@ namespace ChronoBlade
 
                 dc.ui.HUD.Class.ME?.updateIcon(item, tile);
                 _lastHudIconBullet = idx;
-                ChronoPanelLog.Write($"HUD 图标已同步：第 {idx + 1} 发（第 {cx},{cy} 格）");
+                // 同步成功不打日志（每次换弹一行，正常玩是噪音）；失败仍会报。
             }
             catch (Exception ex)
             {
@@ -1234,9 +1222,7 @@ namespace ChronoBlade
             try
             {
                 _ = new ChronoAmmoPanel(gun);
-                ChronoPanelLog.Write(
-                    $"选择弹药面板已打开（真暂停 / Process 栈）：共 {n} 发，当前第 {_pendingStart + 1} 发 " +
-                    $"{ChronoBullets.Get(_pendingStart).Name}；← → 选择、Enter 确认、Esc 取消");
+                // 打开成功不打日志（每次开面板一行，正常玩是噪音）；失败仍会报。
                 return true;
             }
             catch (Exception ex)

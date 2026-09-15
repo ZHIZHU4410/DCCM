@@ -647,11 +647,8 @@ namespace ChronoBlade
                     bool already = false;
                     try { already = meta.hasUnlockedItem(id.AsHaxeString()); } catch { }
 
-                    if (already)
-                    {
-                        Logger.Information($"[ChronoBlade] {id} 已是解锁状态");
-                        continue;
-                    }
+                    // 已经是解锁状态就静默跳过（以前这里每个 id 打一行，正常运行时纯噪音）
+                    if (already) continue;
 
                     try
                     {
@@ -666,7 +663,6 @@ namespace ChronoBlade
                 }
 
                 _unlockDone = allOk;
-                if (allOk) Logger.Information("[ChronoBlade] 默认解锁完成（时之刃 + Zaphkiel）");
             }
             catch (Exception ex)
             {
@@ -803,13 +799,9 @@ namespace ChronoBlade
             }
             _testKeyWasDown = testDown;
 
-            // 每 10 秒打印一次"手里拿的是什么"，确认时之刃到底有没有装备上
-            _diagTimer += dt;
-            if (_diagTimer >= 10.0)
-            {
-                _diagTimer = 0;
-                ChronoDiag.LogWeapons(this);
-            }
+            // 以前这里每 10 秒打一次"手里拿的是什么"（ChronoDiag.LogWeapons），
+            // 正常玩会把日志刷满 —— **已移除自动调用**。
+            // 需要时手动加一行 `ChronoDiag.LogWeapons(this);` 就能再用。
         }
 
         private static bool IsKeyDown(int vk) => (GetAsyncKeyState(vk) & 0x8000) != 0;
@@ -851,7 +843,6 @@ namespace ChronoBlade
         private bool _hadZaphkiel;
         private bool _selectKeyWasDown;
 
-        private double _diagTimer;
         private bool _atlasReady;
 
         /// <summary>按 ] 时在最近的怪物身上直接画一个罗马数字，单独验证刻印渲染链路。</summary>

@@ -646,10 +646,7 @@ namespace ChronoBlade
                     Log($"关卡变化：{_lastSeenLevelId} → {id}（已记录 {_visitedLevels.Count} 关）");
                     try { LevelChanged?.Invoke(_lastSeenLevelId, id); } catch { }
                 }
-                else
-                {
-                    Log($"关卡记录起点：{id}");
-                }
+                // 第一次看到关卡（"记录起点"）以前会打一行，现在静默 —— 那不是事件，只是初始化。
                 _lastSeenLevelId = id;
             }
             catch { }

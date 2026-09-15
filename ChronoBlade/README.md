@@ -370,7 +370,7 @@ CDB 自检：ChronoBlade（本模组新增）存在，group=4        —— data
 武器就绪：skills=3 段 / strikeChain=3 段              —— 捡起武器后技能建起来了
 选择武器面板已打开（真暂停 / Process 栈）：网格载入 2 项   —— P 面板生效
 选择弹药面板已打开（真暂停 / Process 栈）               —— X 面板生效
-已召唤时之刃（Lv1 / 品质0）：在英雄当前位置生成    —— 面板确认后生效
+已召唤时之刃（Lv1 / 品质0）    —— 面板确认后生效（这行日志已删，仅示意）
 ```
 
 ---
@@ -424,7 +424,7 @@ ChronoBlade/
     ├── ChronoMobFinder.cs          附近怪物搜索（剑雨 / 飞镖选目标）
     ├── ChronoVoice.cs              狂三语音：四个时刻 + 独占最高优先级声道
     ├── ChronoConfig.cs             按键配置（Config<ChronoConfig> + 键名解析）
-    ├── ChronoDiag.cs               诊断日志（定时打印手里拿的是什么）
+    ├── ChronoDiag.cs               诊断工具（打印手里拿的是什么）—— ⚠️ 自动调用已移除，需要时手动调
     ├── ChronoCdbProbe.cs           开局自检 data.cdb 补丁是否生效
     ├── patch_chronoblade_cdb.py    生成 data.cdb（item + weapon + affix 表）
     ├── make_icon_sheet.py          把 TIMEZHANJI 的帧嫁接进 cardIcons.png 的空格里
@@ -814,16 +814,16 @@ num10 = (cy2 < num6) ? num6 : ...           // 富余量更大 → 直接把内�
 | 现象 | 原因 / 处理 |
 |---|---|
 | 弹药面板只看得见一半说明 | 排版公式是 `y = 框高 - 文字高 - DescBottomPad - DescRaiseLines × 行高`，并且**夹在框内顶部**。`textHeight` 量不到（=0）时贴底会偏大一整个文字高度、下半截被框底切掉 —— 所以量不到就按 `行数 × 行高` 估。行数由 `UpdateDescText()` 写进 `_descLineCount`。进面板会打一行 `弹药说明排版：框高=… 行高=… 行数=… 文字高=…`，拿这几个数就能判断还差多少。 |
-| 语音一直不出声 | 先看启动日志有没有 `[ChronoVoice] 语音已加载 8/8 条`。若是 `✗ pak 里没找到语音` → WAV 没打进 pak（检查 `Assets/sfx/`，注意**要重启游戏**，`res.pak` 只在启动时加载）。加载成功却还是不出声，就看有没有 `[ChronoVoice] 独占声道已建立` 和 `播放 …` —— 有"播放"日志但听不见，就是 `VoiceVolume` 太小或者游戏的**主音量**被调低了（语音不受"音效音量"滑块影响，但受主音量影响）。 |
+| 语音一直不出声 | 先看启动日志有没有 `[ChronoVoice] 语音已加载 8/8 条`。若是 `✗ pak 里没找到语音` → WAV 没打进 pak（检查 `Assets/sfx/`，注意**要重启游戏**，`res.pak` 只在启动时加载）。加载成功却还是不出声：**播放/掷骰那几行日志已经删掉了**（正常玩太吵），先确认 `VoiceVolume` 不是 0、以及游戏的**主音量**没被调低（语音不受"音效音量"滑块影响，但受主音量影响）；还不行就在 `ChronoVoice.PlayRaw` 里临时加一行 `Log(...)` 再看。 |
 | 语音太频繁 / 太少 | 调 `VoiceChance*` 四个概率。「休闲」是一条规则：一段安静期只掷一次骰，所以想更容易听到就提高 `VoiceChanceIdle`；嫌吵就把某个概率调 0。 |
-| 语音被别的音效盖住 | 不应该发生 —— 音频走 `priority = 10000` 的独立 `ChannelGroup` 且 `SoundGroup.maxAudible = -1`。如果确实发生，看日志里 `独占声道已建立` 那条的 priority 是不是 10000（见功能 5 的三条压制链路）。 |
+| 语音被别的音效盖住 | 不应该发生 —— 音频走 `priority = 10000` 的独立 `ChannelGroup` 且 `SoundGroup.maxAudible = -1`（见功能 5 的三条压制链路）。那条"独占声道已建立"日志**已删**（启动噪音），要确认参数就直接看 `ChronoVoice.Group()`。 |
 | 第 2a / 3a 一直不出 | 看日志有没有 `连击第 2 段 → 一周飞镖` / `连击第 3 段 → 时钟剑雨`。**有这行**说明连击分派没问题，问题在实体/特效生成（看紧跟着的 `实体 N/12 枚` 与失败堆栈）；**没有这行**说明连击没推进到第 2 下（`_comboStep` 在 `AdvanceCombo` 里推进，需要连续出刀、间隔 < 1.5 秒）。特别注意 `拿到的时之刃是原版 Katana 实例` 那行 —— 出现它表示 `ChronoWeaponFactory` 的 `create` 钩子没命中，根本没有 `ChronoBlade` 对象可调。 |
 | 第 2a / 3a 出了但还带斩击 | 有**两个**原因，都要排除：① `SkipMelee` 没在两个钩子入口都判（`RunAttack` + `OnAnyWeaponExecute`），看日志是 `本段不斩击（Katana 挂点路径…）` 还是 `（Weapon 挂点路径…）` —— 一条都不出现说明两个钩子都没拦住；② 蓄力被注入了 → 原版蓄力分支自己播 `AtkKatanaA` 斩击动画（**动画不受 `orig` 是否被调用影响**）。第 2a/3a 必须**不注入** `nextIsChargeAtk`。 |
 | 落剑看不见 / 半天才落地 | `Stalactite` 出生行被夹在 `SwordFallMaxCells` 内（屏幕外的天花板会被丢弃），下落速度已按 `SwordFallSpeedMul` 提速；两者都在 `ChronoBlade.cs` 顶部常量里。 |
 | 传奇武器不显示传奇词条 / 传奇刻刻帝不翻倍 | 分两步看：① **物品上有没有** —— `已附加词条: Legendary` / `已附加词条: ChronoBulletDouble`；② **代码认不认** —— `传奇词条检查：hasAffix(ChronoBulletDouble) = True`，开火时还会打 `传奇·效果翻倍`。第 ① 有第 ② 没有，就是 `IsLegendaryDouble` 读错了字段（历史上它读的是 `wInfos.item`，那是 id 字符串，`is InventItem` 永远 false；必须用 `Weapon.item`）。 |
-| `LootGen 不可用（不在训练场，属正常）` | 预期行为 —— 传奇词条与**等级**都由面板自己补（`setItemLevel`），不影响结果 |
+| `LootGen 不可用（不在训练场，属正常）` | 这行日志**已删**（正常路径不是异常）。等级与传奇词条都由面板自己补（`setItemLevel` + `addAffix`），不影响结果 |
 | 十二之弹回不去 | 看日志 `Yud-Bet 回到上一关：<id>（来源=...）`；若提示"换过关之后就能用"，先正常换一关 |
-| 按 `P` 召唤出来只有 1 级 | 看日志 `物品等级已写入: LvN（getRawItemLevel=N）`。等级由 `MakeItem()` 末尾的 `setItemLevel()` 写入 —— 普通关卡里 `lootGen` 是 null，那条原版路径根本不会跑，**等级必须自己写**。若这行日志的 Lv 是对的但游戏里显示 1 级，那是 `_itemLevel` 之外还有别的显示来源，把这个日志发我。 |
-| 面板里刻刻帝那格不动 | 看日志 `刻刻帝动态图标已创建（TIMEZHANJI，N 帧…）`，`N` 应是 46；没这行就是图集取不到或那一格没被认成刻刻帝。图标偏小就调 `IconArtCell`（越小越大）。 |
-| HUD 刻刻帝图标不跟着弹药变 | 看日志有没有 `HUD 图标已同步：第 N 发（第 cx,cy 格）`。切一发弹药就该出现一行；完全没有就是 `FindTimeBullet()` 没拿到枪或 `HUD.updateIcon` 没匹配上（它按 `skill.ii == item` 引用比对）。同步只在"那一发真的变了"时才写，所以不会每帧刷屏。 |
+| 按 `P` 召唤出来只有 1 级 | 等级由 `MakeItem()` 末尾的 `setItemLevel()` 写入 —— 普通关卡里 `lootGen` 是 null，那条原版路径根本不会跑，**等级必须自己写**。那两行确认日志（`LootGen 不可用…` / `物品等级已写入…`）**已按需求删掉**（正常玩是噪音）；要复查就在 `MakeItem()` 里临时加一行 `ChronoPanelLog.Write($"Lv={item.getRawItemLevel()}")`。 |
+| 面板里刻刻帝那格不动 | 「刻刻帝动态图标已创建」那行**已删**。要复查：`ChronoFx.GetCastLib()` 返回 null 就是图集取不到（`atlas/TIMEZHANJI.atlas` 没打进 pak 或名字不对）；另外确认 `IsZaphkielEntry()` 认出了那一格。图标偏小就调 `IconArtCell`（越小越大）。 |
+| HUD 刻刻帝图标不跟着弹药变 | 「HUD 图标已同步」那行**已删**。要复查就在 `ChronoAmmoPanel.SyncHudIcon` 里临时加一行日志；常见原因是 `FindTimeBullet()` 没拿到枪，或 `HUD.updateIcon` 没匹配上（它按 `skill.ii == item` **引用**比对）。 |
 | 构建报 `MSB3021` | 游戏还开着，DLL 被占用，关掉游戏再构建 |
