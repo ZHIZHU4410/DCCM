@@ -55,11 +55,11 @@ namespace ChronoBlade
         public static readonly BulletDef[] All =
         {
             new() { Id = "Aleph",    Name = "一之弹 Aleph",       Color = 0x8FE3FF, SelfCast = true,
-                    Desc = "开火即生效：自身移速变成五倍，持续 10 秒",
-                    DescLegendary = "开火即生效：自身移速变成十倍，持续 10 秒" },
+                    Desc = "开火即生效：自身移速变成两倍，持续 10 秒",
+                    DescLegendary = "开火即生效：自身移速变成四倍，持续 10 秒" },
             new() { Id = "Bet",      Name = "二之弹 Bet",         Color = 0x6FA8FF, SelfCast = false,
-                    Desc = "命中后：目标移速变成 0.45 倍（减速），持续 10 秒",
-                    DescLegendary = "命中后：目标移速变成 0.225 倍（减速更强），持续 10 秒" },
+                    Desc = "命中后：目标减速 3.5 秒，并且移速变成 0.45 倍，持续 10 秒后还原",
+                    DescLegendary = "命中后：目标减速 3.5 秒，并且移速变成 0.225 倍，持续 10 秒后还原" },
             new() { Id = "Gimel",    Name = "三之弹 Gimel",       Color = 0x9BE86B, SelfCast = true,
                     Desc = "开火即生效：回复 30% 生命，移速变成两倍，持续 10 秒",
                     DescLegendary = "开火即生效：回复 60% 生命，移速变成四倍，持续 10 秒" },
@@ -69,21 +69,21 @@ namespace ChronoBlade
             new() { Id = "Hei",      Name = "五之弹 Hei",         Color = 0xC9B6FF, SelfCast = true,
                     Desc = "开火即生效：获得全图视野（等同探险家符文）" },
             new() { Id = "Vav",      Name = "六之弹 Vav",         Color = 0xB0FFE0, SelfCast = false,
-                    Desc = "命中后：把目标拽回 15 秒前的位置与生命" },
+                    Desc = "命中后：把目标拽回 25 秒前的位置与生命" },
             new() { Id = "Zayin",    Name = "七之弹 Zayin",       Color = 0xFFB0F0, SelfCast = false,
-                    Desc = "命中后：时停 3 秒，目标移速归零并且无法攻击",
-                    DescLegendary = "命中后：时停 6 秒，目标移速归零并且无法攻击" },
+                    Desc = "命中后：触发时间扭曲，全关卡敌人与弹幕一起变慢 3 秒",
+                    DescLegendary = "命中后：触发时间扭曲，全关卡敌人与弹幕一起变慢 6 秒" },
             new() { Id = "Het",      Name = "八之弹 Het",         Color = 0xFF9E6B, SelfCast = false,
-                    Desc = "命中后：在命中点召唤我方怪物，最多 3 只，存活 10 秒",
-                    DescLegendary = "命中后：在命中点召唤我方怪物，最多 6 只，存活 20 秒" },
+                    Desc = "命中后：在命中点召唤我方近战怪物，跟随英雄打敌人，最多 3 个、10 秒后消失",
+                    DescLegendary = "命中后：在命中点召唤我方近战怪物，跟随英雄打敌人，最多 6 个、20 秒后消失" },
             new() { Id = "Tet",      Name = "九之弹 Tet",         Color = 0xFFF0A0, SelfCast = true,
-                    Desc = "开火即生效：随机传送到本关任意位置（以随机怪物为坐标）" },
+                    Desc = "开火即生效：随机传送到本关任意位置" },
             new() { Id = "Yud",      Name = "十之弹 Yud",         Color = 0xA0E0FF, SelfCast = false,
                     Desc = "命中后：目标头顶播放记忆动画 3 秒，动画结束立即处决",
                     DescLegendary = "命中后：目标头顶播放记忆动画 1.5 秒，动画结束立即处决" },
             new() { Id = "YudAleph", Name = "十一之弹 Yud-Aleph", Color = 0xFF7BD0, SelfCast = true,
-                    Desc = "开火即生效：向前突进 6 格并无敌 2 秒，2 秒后拉回原位",
-                    DescLegendary = "开火即生效：向前突进 12 格并无敌 4 秒，4 秒后拉回原位" },
+                    Desc = "开火即生效：英雄前移 6 格并无敌 2 秒，2 秒后拉回原位",
+                    DescLegendary = "开火即生效：英雄前移 12 格并无敌 4 秒，4 秒后拉回原位" },
             new() { Id = "YudBet",   Name = "十二之弹 Yud-Bet",   Color = 0xFF4D6D, SelfCast = true,
                     Desc = "开火即生效：回到上一关" },
         };
@@ -116,9 +116,12 @@ namespace ChronoBlade
 
         /// <summary>
         /// affect 116 = 原版的"移动速度加成"，值是**加上去**的：
-        /// 英雄基础跑速倍率是 1.0，所以 +4.0 = ×5.0，+1.0 = ×2.0。
+        /// 英雄基础跑速倍率是 1.0，所以 +1.0 = ×2.0，+4.0 = ×5.0。
+        ///
+        /// ⚠️ 一之弹按需求是 **×2.0**（affect 116 值 +1.0）。
+        ///    早先这里是 +4.0（×5.0），需求改成 ×2.0 了 —— 别看到"+4.0"就以为是它。
         /// </summary>
-        private const double AlephSpeedAdd = 4.0;
+        private const double AlephSpeedAdd = 1.0;
         private const double GimelSpeedAdd = 1.0;
 
         /// <summary>三之弹回复的生命比例。</summary>
@@ -128,8 +131,30 @@ namespace ChronoBlade
         private const double BetSlowMul = 0.45;
         private const double BetSlowDurS = 10.0;
 
-        /// <summary>七之弹时停持续时间（移速归零 + 锁 AI 不能攻击）。</summary>
-        private const double ZayinDurS = 3.0;
+        /// <summary>
+        /// 七之弹：时间扭曲（完全等同原版 TimeDistorsion 技能）的持续时间。
+        /// 传奇：时长翻倍（"效果翻倍"对这一个效果就是时长）。
+        /// </summary>
+        private const double ZayinDistortS = 3.0;
+
+        /// <summary>
+        /// 原版 TimeDistorsion 的参数（抄自 GamePseudocode/dc.pow/_TimeDistorsion.cs）：
+        /// 以**施法者（这里就是英雄）**为中心，半径 192，颜色 3591558。
+        /// </summary>
+        private const double DistortRadius = 192.0;
+        private const int DistortColor = 3591558;
+
+        /// <summary>原版"时间扭曲"施加 / 结束时要清掉的 affect id。</summary>
+        private const int DistortAffectId = 24;
+
+        /// <summary>原版 TimeDistorsion 会一起拖慢的实体类别。</summary>
+        private const int ClidMob = 32068;
+        private const int ClidBullet = 1428;
+        private const int ClidGrenade = 27931;
+        private const int ClidInteractive = 47977;
+
+        /// <summary>六之弹：把目标拽回多少秒前（需求 25.0 秒）。</summary>
+        private const double VavRewindS = 25.0;
 
         /// <summary>八之弹召唤物的存活时间与数量上限。</summary>
         private const double AllyLifetimeS = 10.0;
@@ -144,8 +169,13 @@ namespace ChronoBlade
         private static int _curMaxPendingAllies = MaxPendingAllies;
         private static double _curAllyLifetimeS = AllyLifetimeS;
 
-        /// <summary>位置/状态历史的保留时长（十二之弹要 15 秒，所以留 16 秒）与采样间隔。</summary>
-        private const double HistoryKeepS = 16.0;
+        /// <summary>
+        /// 位置/状态历史的保留时长与采样间隔。
+        /// 六之弹 Vav 要**拽回 25 秒前**（需求值），所以必须留够 25 秒以上 —— 给 27。
+        /// ⚠️ 改 Vav 的秒数时**必须同步改这里**，否则"没有历史数据"会静默不生效。
+        /// 代价：10Hz × 27 秒 = 每只怪约 270 个采样点（Trim 会按时长裁掉旧的）。
+        /// </summary>
+        private const double HistoryKeepS = 27.0;
         private const double HistorySampleS = 0.1;
 
         /// <summary>十之弹：记忆动画播完后处决的延时。</summary>
@@ -248,7 +278,7 @@ namespace ChronoBlade
                     case "Bet": ApplyBet(mob, legendaryDouble); break;
                     case "Dalet": ApplyDalet(mob, legendaryDouble); break;
                     case "Vav": ApplyVavRewind(mob); break;              // 六之弹：不变
-                    case "Zayin": ApplyZayin(mob, legendaryDouble); break;
+                    case "Zayin": ApplyZayin(mob, hero, legendaryDouble); break;
                     case "Het": ApplyHet(mob, px, py, legendaryDouble); break;
                     case "Yud": ApplyYud(mob, px, py, legendaryDouble); break;
                 }
@@ -383,8 +413,8 @@ namespace ChronoBlade
         // ================================================================ 自身向（开火即生效）
 
         /// <summary>
-        /// 一之弹：自身移速 ×5.0，维持 10 秒（原版 affect 116）。
-        /// 传奇：倍率翻倍 → ×10.0（affect +9.0）。持续时间不变。
+        /// 一之弹：自身移速 ×2.0，维持 10 秒（原版 affect 116，值 +1.0）。
+        /// 传奇：倍率翻倍 → ×4.0（affect +3.0）。持续时间不变。
         /// </summary>
         private static void ApplyAleph(Hero hero, bool legendaryDouble)
         {
@@ -639,15 +669,61 @@ namespace ChronoBlade
             return "";
         }
 
-        /// <summary>九之弹：随机传送到本关卡的任意位置（用关卡里随机一只怪物的位置）。</summary>
+        /// <summary>
+        /// 九之弹：随机传送到本关**任意位置**。
+        ///
+        /// 做法：随机取一列，用英雄**当前所在的行**为起点往下找第一块实地
+        /// （`map.getGroundY(cx, hero.cy)`），把英雄放到那块地的上面。
+        ///
+        /// ⚠️ 起点为什么要用"英雄当前行"而不是地图顶端：
+        ///    `getGroundY` 是从给定行往下扫第一块 **solid** 格子。从顶端(0)开始扫，
+        ///    扫到的是**房间天花板/顶层岩壁**那一块 —— 英雄会被放到天花板上面（地图外）。
+        ///    从英雄当前行扫，拿到的一定是同层的地面，安全得多。
+        ///
+        /// 拿不到落点时退回"随机一只怪的位置"（早先的实现，仍然可用）。
+        /// </summary>
         private static void ApplyTet(Hero hero)
         {
             try
             {
-                var mobs = hero._level?.entitiesByClass?.get(32068) as ArrayObj;
+                var map = hero._level?.map;
+                if (map != null && map.wid > 4 && map.hei > 4)
+                {
+                    for (int tries = 0; tries < 24; tries++)
+                    {
+                        int cx = 1 + _rng.Next(map.wid - 2);
+                        int ground;
+                        try { ground = map.getGroundY(cx, hero.cy); } catch { continue; }
+
+                        // 越界 = 这一列往下没有地（坑/竖井），换一列
+                        if (ground <= 0 || ground >= map.hei - 1) continue;
+
+                        double px = (cx + 0.5) * 24.0;
+                        double py = ground * 24.0 - hero.hei * 0.5;
+                        hero.setPosPixel(px, py);
+                        Log($"Tet 随机传送已施加（落点 列 {cx}，地面行 {ground}）");
+                        return;
+                    }
+                    Log("Tet：24 列都没找到合法落点，改用怪物坐标兜底");
+                }
+
+                ApplyTetViaMob(hero);
+            }
+            catch (Exception ex)
+            {
+                Log($"Tet 传送失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>九之弹的兜底：跳到随机一只怪物的坐标（早先的实现）。</summary>
+        private static void ApplyTetViaMob(Hero hero)
+        {
+            try
+            {
+                var mobs = hero._level?.entitiesByClass?.get(ClidMob) as ArrayObj;
                 if (mobs == null || mobs.length == 0)
                 {
-                    Log("Tet：本关没有可作目标的怪物，传送取消");
+                    Log("Tet：既没有合法落点也没有怪物，传送取消");
                     return;
                 }
 
@@ -656,14 +732,14 @@ namespace ChronoBlade
                     int i = _rng.Next(mobs.length);
                     if (mobs.getDyn(i) is not Mob m || m.destroyed || m.life <= 0) continue;
                     hero.setPosPixel((m.cx + m.xr) * 24.0, (m.cy + m.yr) * 24.0 - hero.hei * 0.5);
-                    Log($"Tet 随机传送已施加（跳到 ({m.cx},{m.cy})）");
+                    Log($"Tet 随机传送已施加（兜底：跳到 ({m.cx},{m.cy})）");
                     return;
                 }
                 Log("Tet：随机到的目标都无效，传送取消");
             }
             catch (Exception ex)
             {
-                Log($"Tet 传送失败: {ex.Message}");
+                Log($"Tet 兜底传送失败: {ex.Message}");
             }
         }
 
@@ -755,11 +831,14 @@ namespace ChronoBlade
             if (!RestoreMobState(mob, secondsAgo, "Dalet")) Log("Dalet 无历史数据，未生效");
         }
 
-        /// <summary>六之弹 Vav：命中目标后，把它拽回 15 秒前的位置 + 状态（生命）。</summary>
+        /// <summary>
+        /// 六之弹 Vav：命中目标后，把它拽回 <see cref="VavRewindS"/>（25）秒前的位置 + 状态（生命）。
+        /// 这一发**不受传奇词条影响**（50 秒的历史代价太大，需求也只给了单值）。
+        /// </summary>
         private static void ApplyVavRewind(Mob? mob)
         {
             if (mob == null) return;
-            if (!RestoreMobState(mob, 15.0, "Vav")) Log("Vav 无历史数据，未生效");
+            if (!RestoreMobState(mob, VavRewindS, "Vav")) Log("Vav 无历史数据，未生效");
         }
 
         private static bool RestoreMobState(Mob mob, double secondsAgo, string tag)
@@ -789,45 +868,152 @@ namespace ChronoBlade
         }
 
         /// <summary>
-        /// 七之弹：时停 —— 移速归零 3 秒，并且锁住 AI（不能攻击）。
-        /// 传奇：时停 6 秒（这里"效果"就是时长，所以时长翻倍）。
+        /// 七之弹：**完整触发原版 TimeDistorsion（时间扭曲）的效果**。
+        ///
+        /// 原版实现（GamePseudocode/dc.pow/_TimeDistorsion.cs）就三件事，这里逐条照抄：
+        ///   1. `fx.timeDistorsionStart(英雄x, 英雄y, 192, 3591558)` —— 环形光环，**以施法者为中心**；
+        ///      结束时 `timeDistorsionEnd(...)`；期间 `Audio.fadeTimeDistortEffect(1.0)` → 结束回 0.0
+        ///      （那层"时间扭曲"的画面滤镜 + 音频处理就在这个混音参数上）。
+        ///   2. 对**全关卡**的 Mob(32068) / Bullet(1428) / Grenade(27931) / Interactive(47977)
+        ///      施加 `affect 24`，时长 = 本次扭曲的秒数。Bullet 只处理"parent 是 Mob"的（原版就是这样）。
+        ///   3. 结束时对同样的类别 `removeAllAffects(24)`。
+        ///
+        /// 和原版唯一的有意差别：**跳过英雄自己队伍的 Mob**。
+        /// 原版是玩家自己放的技能，没有"自家召唤物"这回事；而本模组八之弹会召我方怪，
+        /// 照抄会把自家召唤物一起拖慢 —— 那是纯负面，不是需求。
+        ///
+        /// 传奇：时长翻倍（这个效果"翻倍"就是翻时长）。
         /// </summary>
-        private static void ApplyZayin(Mob? mob, bool legendaryDouble)
+        private static void ApplyZayin(Mob? mob, Hero? hero, bool legendaryDouble)
         {
-            if (mob == null) return;
+            var level = hero?._level ?? mob?._level;
+            if (level == null) return;
 
-            double dur = ZayinDurS * Boost(legendaryDouble);
+            double dur = ZayinDistortS * Boost(legendaryDouble);
 
+            // 原版是在**施法者（英雄）**位置放光环，不是命中点
+            double hx = 0, hy = 0;
             try
             {
-                double v = 0;
-                var r = new Ref<double>(ref v);
-                mob.setAffectS(23, dur, r, null);
+                if (hero != null)
+                {
+                    hx = (hero.cx + hero.xr) * 24.0;
+                    hy = (hero.cy + hero.yr) * 24.0 - hero.hei * 0.5;
+                }
             }
             catch { }
 
-            try { mob.lockAiS(dur); } catch (Exception ex) { Log($"Zayin 锁 AI 失败: {ex.Message}"); }
+            try { level.fx?.timeDistorsionStart(hx, hy, DistortRadius, DistortColor); }
+            catch (Exception ex) { Log($"Zayin 光环播放失败: {ex.Message}"); }
 
-            try
+            try { dc.Audio.Class.ME.fadeTimeDistortEffect(1.0, Ref<double>.Null); }
+            catch (Exception ex) { Log($"Zayin 时间扭曲混音失败: {ex.Message}"); }
+
+            // 同一次扭曲的"代号"：万一在持续时间里又打了一发七之弹，
+            // 前一发的收尾不能把后一发的时间扭曲一起清掉（否则后一发会提前失效）。
+            int gen = ++_distortGen;
+
+            int n = ApplyDistortAffect(level, dur, hero);
+            Log($"Zayin 时间扭曲已触发（全关卡 {dur:0.#} 秒，拖慢 {n} 个目标）" +
+                (legendaryDouble ? "【传奇·效果翻倍】" : ""));
+
+            Later(dur, () =>
             {
-                double old = mob.baseMoveSpeedMul;
-                mob.baseMoveSpeedMul = 0.0;
-                Later(dur, () =>
+                if (gen != _distortGen)
+                {
+                    Log("Zayin 时间扭曲收尾被跳过（期间又触发了一次新的扭曲）");
+                    return;
+                }
+                try { level.fx?.timeDistorsionEnd(hx, hy, DistortRadius, DistortColor); } catch { }
+                try { dc.Audio.Class.ME.fadeTimeDistortEffect(0.0, Ref<double>.Null); } catch { }
+                ClearDistortAffect(level);
+                Log("Zayin 时间扭曲已结束（affect 24 已清除）");
+            });
+        }
+
+        /// <summary>时间扭曲的代号（见 ApplyZayin 里的说明）。</summary>
+        private static int _distortGen;
+
+        /// <summary>对全关卡的 Mob / Mob 弹幕 / 手雷 / 可交互物施加 affect 24（时间扭曲）。</summary>
+        private static int ApplyDistortAffect(dc.pr.Level level, double dur, Hero? hero)
+        {
+            int n = 0;
+
+            // 怪物：跳过英雄自己队伍（我方召唤物），其余全拖慢
+            n += EachEntity(level, ClidMob, e =>
+            {
+                if (e is Mob m)
                 {
                     try
                     {
-                        if (!mob.destroyed)
-                        {
-                            mob.baseMoveSpeedMul = old;
-                            mob.unlockAi();
-                        }
+                        if (hero != null && m._team != null && m._team == hero._team) return false;
                     }
                     catch { }
-                });
-                Log($"Zayin 时停已施加（移速归零 + 禁止攻击 {dur:0.#} 秒）" +
-                    (legendaryDouble ? "【传奇·效果翻倍】" : ""));
+                }
+                return true;
+            }, dur);
+
+            // 怪物发射的弹幕（原版只处理 parent 是 Mob 的）
+            n += EachEntity(level, ClidBullet, e =>
+            {
+                try { return e is Bullet b && b.parent is Mob; }
+                catch { return false; }
+            }, dur);
+
+            n += EachEntity(level, ClidGrenade, _ => true, dur);
+            n += EachEntity(level, ClidInteractive, _ => true, dur);
+
+            return n;
+        }
+
+        /// <summary>结束时间扭曲：对同样的类别清掉 affect 24（照抄原版的收尾）。</summary>
+        private static void ClearDistortAffect(dc.pr.Level level)
+        {
+            foreach (int clid in new[] { ClidMob, ClidBullet, ClidGrenade, ClidInteractive })
+            {
+                try
+                {
+                    if (level.entitiesByClass?.get(clid) is not ArrayObj list) continue;
+                    for (int i = 0; i < list.length; i++)
+                    {
+                        if (list.getDyn(i) is Entity e)
+                        {
+                            try { e.removeAllAffects(DistortAffectId); } catch { }
+                        }
+                    }
+                }
+                catch { }
+            }
+        }
+
+        /// <summary>
+        /// 遍历某一类实体，对通过 <paramref name="filter"/> 的那些施加 affect 24。
+        /// 返回实际施加成功的数量。
+        /// </summary>
+        private static int EachEntity(dc.pr.Level level, int clid, Func<Entity, bool> filter, double dur)
+        {
+            int n = 0;
+            try
+            {
+                if (level.entitiesByClass?.get(clid) is not ArrayObj list) return 0;
+
+                for (int i = 0; i < list.length; i++)
+                {
+                    if (list.getDyn(i) is not Entity e) continue;
+                    try { if (e.destroyed) continue; } catch { continue; }
+                    try { if (!filter(e)) continue; } catch { continue; }
+
+                    // 第 3 个参数传 null —— 原版就是 `ref *(double*)null`（affect 24 不吃值）
+                    try
+                    {
+                        e.setAffectS(DistortAffectId, dur, Ref<double>.Null, null);
+                        n++;
+                    }
+                    catch { }
+                }
             }
             catch { }
+            return n;
         }
 
         /// <summary>
@@ -1049,6 +1235,7 @@ namespace ChronoBlade
             _heroSampleAcc = 0;
             _visitedLevels.Clear();
             _lastSeenLevelId = "";
+            _distortGen++;      // 让所有还没到点的"时间扭曲收尾"失效
         }
 
         private static void Log(string msg)

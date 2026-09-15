@@ -600,8 +600,26 @@ namespace ChronoBlade
         /// <summary>说明文字距选择框内左边的距离（取不到条目左边距时的兜底值）。</summary>
         private const double DescLeftPad = 12.0;
 
-        /// <summary>说明文字离选择框内底边的距离。</summary>
+        /// <summary>说明文字离选择框内底边的距离（贴底基准）。</summary>
         private const double DescBottomPad = 8.0;
+
+        /// <summary>
+        /// 说明文字在贴底的基础上**再往上抬一个单位**。
+        ///
+        /// 需求原文：「选择子弹时，子弹介绍往上移动一个单位，选择时现在看不到介绍」。
+        /// "一个单位" 取**一行文字的高度**（`text.font.lineHeight`，取不到时用下面的兜底值），
+        /// 因为贴底放的时候最后一行的下缘正好压在框底边框上，看起来像被切掉/看不见。
+        /// </summary>
+        private const double DescRaiseFallback = 12.0;
+
+        /// <summary>
+        /// 说明文字上缘最多贴到框内顶部留这么多。
+        /// 兜底用：万一框太矮、文字又太高，`maskH - h` 会算出负数把整段文字顶到框外
+        /// （那才是真的"完全看不到介绍"），夹一下至少保证内容在可视区里。
+        /// </summary>
+        private const double DescTopPad = 4.0;
+
+        private static bool _descGeomLogged;
 
         /// <summary>
         /// 选择框的上下内边距（原版 5）。调大是为了在**框内底部**腾出放弹药说明的高度。
@@ -729,7 +747,10 @@ namespace ChronoBlade
             LayoutDescText();
         }
 
-        /// <summary>把说明文字贴到"选择框内部"的**左下角**（左对齐 + 贴底）。</summary>
+        /// <summary>
+        /// 把说明文字贴到"选择框内部"的**左下角**（左对齐 + 贴底 + 再往上抬一行）。
+        /// 见 <see cref="DescRaiseFallback"/> 的注释：抬一行是为了让最后一行不被框底切掉。
+        /// </summary>
         private void LayoutDescText()
         {
             var text = _descText;
@@ -748,10 +769,27 @@ namespace ChronoBlade
                 try { left = wrapperItem.x; } catch { }
                 if (left <= 0) left = DescLeftPad;
 
+                // "一个单位" = 一行文字的高度
+                double raise = 0;
+                try { raise = text.font?.lineHeight ?? 0; } catch { }
+                if (raise <= 0 || raise > maskH) raise = DescRaiseFallback;
+
+                double y = maskH - h - DescBottomPad - raise;
+
+                // 兜底：框太矮时别把文字顶出可视区（否则就是"看不到介绍"）
+                if (y < DescTopPad) y = DescTopPad;
+
+                if (!_descGeomLogged)
+                {
+                    _descGeomLogged = true;
+                    ChronoPanelLog.Write($"弹药说明排版：框高={maskH:0.#} 文字高={h:0.#} " +
+                                         $"上抬={raise:0.#} 最终y={y:0.#}（抬一行是为了不被框底切掉）");
+                }
+
                 text.posChanged = true;
                 text.x = left;
                 text.posChanged = true;
-                text.y = maskH - h - DescBottomPad;
+                text.y = y;
             }
             catch { }
         }
