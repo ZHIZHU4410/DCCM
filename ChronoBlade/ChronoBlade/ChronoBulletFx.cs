@@ -190,10 +190,35 @@ namespace ChronoBlade
         private static double _heroSampleAcc;
 
         /// <summary>
-        /// 英雄的位置 + 生命历史：(时间, cx+xr, cy+yr, life)，每 0.1 秒采样一次。
+        /// 英雄的"某一时刻状态"采样。四之弹 / 六之弹就是把自己拽回这里（时间倒流）。
+        ///
+        /// ★ 想再纳入别的状态就**往这个结构里加字段**，然后在两处各加一行：
+        ///   `Update()` 的采样、`ApplyHeroRewind()` 的还原。
+        ///   取不到的字段用哨兵值（见下），还原时**跳过**，免得读失败反而把状态清成 0。
+        /// </summary>
+        private struct HeroSample
+        {
+            /// <summary>采样时刻（`_now` 时间轴）。</summary>
+            public double T;
+
+            /// <summary>格坐标中心（`cx + xr` / `cy + yr`），不是像素。</summary>
+            public double X, Y;
+
+            /// <summary>生命。-1 = 没取到。</summary>
+            public int Life;
+
+            /// <summary>身上的诅咒层数（`Hero.curseCounter`，也就是新版里的"疫病/诅咒"槽）。-1 = 没取到。</summary>
+            public int Curse;
+
+            /// <summary>历史最高诅咒（`Hero.curCurseMaxReached`）。-1 = 没取到。</summary>
+            public int CurseMax;
+        }
+
+        /// <summary>
+        /// 英雄的位置 + 状态历史，每 0.1 秒采样一次。
         /// 四之弹（5 秒）/ 六之弹（25 秒）的"把自己拽回去"就读这里。
         /// </summary>
-        private static readonly List<(double t, double x, double y, double life)> _heroHist = new();
+        private static readonly List<HeroSample> _heroHist = new();
 
         /// <summary>到点要执行的动作（还原移速、拉回位置、处决、召唤物到期…）。</summary>
         private static readonly List<(double due, Action act)> _timed = new();
@@ -328,7 +353,23 @@ namespace ChronoBlade
                 _heroSampleAcc = 0;
                 try
                 {
-                    _heroHist.Add((_now, hero.cx + hero.xr, hero.cy + hero.yr, hero.life));
+                    var s = new HeroSample
+                    {
+                        T = _now,
+                        X = hero.cx + hero.xr,
+                        Y = hero.cy + hero.yr,
+                        Life = -1,
+                        Curse = -1,
+                        CurseMax = -1,
+                    };
+
+                    try { s.Life = (int)hero.life; } catch { }
+                    // 诅咒也一起采样：四/六之弹"回溯"要把身上的诅咒也带回当时的状态，
+                    // 不能只把血条拉回去（需求）。
+                    try { s.Curse = hero.curseCounter; } catch { }
+                    try { s.CurseMax = hero.curCurseMaxReached; } catch { }
+
+                    _heroHist.Add(s);
                     Trim(_heroHist);
                 }
                 catch { }
@@ -441,25 +482,24 @@ namespace ChronoBlade
 
         private static void Later(double sec, Action act) => _timed.Add((_now + sec, act));
 
-        private static void Trim(List<(double t, double x, double y, double life)> list)
+        private static void Trim(List<HeroSample> list)
         {
             double cut = _now - HistoryKeepS;
             int n = 0;
-            while (n < list.Count && list[n].t < cut) n++;
+            while (n < list.Count && list[n].T < cut) n++;
             if (n > 0) list.RemoveRange(0, n);
         }
 
-        /// <summary>取 secondsAgo 秒前的那一份位置 + 生命（找不到就退化成最早的一份）。</summary>
-        private static (double x, double y, double life)? Past(
-            List<(double t, double x, double y, double life)> list, double secondsAgo)
+        /// <summary>取 secondsAgo 秒前的那一份状态（找不到就退化成最早的一份）。</summary>
+        private static HeroSample? Past(List<HeroSample> list, double secondsAgo)
         {
             if (list.Count == 0) return null;
             double target = _now - secondsAgo;
             for (int i = list.Count - 1; i >= 0; i--)
             {
-                if (list[i].t <= target) return (list[i].x, list[i].y, list[i].life);
+                if (list[i].T <= target) return list[i];
             }
-            return (list[0].x, list[0].y, list[0].life);
+            return list[0];
         }
 
         // ================================================================ 自身向（开火即生效）
@@ -891,44 +931,72 @@ namespace ChronoBlade
         private const double DaletRewindS = 5.0;
 
         /// <summary>
-        /// 四之弹 / 六之弹：把**英雄自己**拽回 N 秒前的位置 + 状态（生命）。
+        /// 四之弹 / 六之弹：把**英雄自己**拽回 N 秒前的位置 + **状态**。
         ///
         /// ⚠️ 这两发是**开火即生效、对着自己**的（需求）。
         ///    早先这里是"命中后把**目标**拽回去"，方向完全反了：
         ///    它们的"时间倒流"是对自己用的回溯，不是对敌人的惩罚。
         ///
-        /// 数据来自 `_heroHist`（Update 里每 0.1 秒采样一次"格坐标 + 生命"），
+        /// 数据来自 `_heroHist`（Update 里每 0.1 秒采样一次，见 `HeroSample`），
         /// 保留时长由 `HistoryKeepS` 决定 —— 六之弹要 25 秒，所以那里至少要是 25。
+        ///
+        /// ★ "状态"不只是血条：**身上的诅咒也要一起回到当时**（需求）。
+        ///   所以这里还原的是 `HeroSample` 里的**每一个**字段；
+        ///   以后想再纳入别的状态，就往那个结构里加字段、并在这里补一行。
+        ///   取不到的字段（哨兵 -1）**跳过**，免得读失败反而把状态清成 0。
         /// </summary>
         private static void ApplyHeroRewind(Hero hero, double secondsAgo, string tag)
         {
             try
             {
-                var p = Past(_heroHist, secondsAgo);
-                if (p == null)
+                var past = Past(_heroHist, secondsAgo);
+                if (past == null)
                 {
                     Log($"{tag} 还没有自己的历史数据（刚开始采样），本次不生效");
                     return;
                 }
+                var s = past.Value;
 
+                // ---- 位置 ----
                 // 采样存的是 (cx + xr, cy + yr) 的格坐标，换算成像素中心的公式
                 // 必须和采样处（ChronoFx/Impact 那套）一致：y 要减半个身高。
-                double px = p.Value.x * 24.0;
-                double py = p.Value.y * 24.0 - hero.hei * 0.5;
+                double px = s.X * 24.0;
+                double py = s.Y * 24.0 - hero.hei * 0.5;
                 hero.setPosPixel(px, py);
 
-                try
+                // ---- 生命 ----
+                string lifeMsg = "生命未变";
+                if (s.Life > 0)
                 {
-                    int life = (int)p.Value.life;
-                    if (life > 0)
+                    try
                     {
+                        int before = hero.life;
+                        int life = s.Life;
                         if (life > hero.maxLife) life = hero.maxLife;
                         hero.life = life;
+                        lifeMsg = $"生命 {before} → {life}";
                     }
+                    catch (Exception ex) { lifeMsg = $"生命还原失败({ex.Message})"; }
                 }
-                catch { }
 
-                Log($"{tag} 时间倒流已施加（自己回到 {secondsAgo:0.#} 秒前的位置与生命）");
+                // ---- 诅咒（需求点：不能只把血条拉回去）----
+                string curseMsg = "诅咒未变";
+                if (s.Curse >= 0)
+                {
+                    try
+                    {
+                        int before = hero.curseCounter;
+                        hero.curseCounter = s.Curse;
+                        curseMsg = $"诅咒 {before} → {s.Curse}";
+                    }
+                    catch (Exception ex) { curseMsg = $"诅咒还原失败({ex.Message})"; }
+                }
+                if (s.CurseMax >= 0)
+                {
+                    try { hero.curCurseMaxReached = s.CurseMax; } catch { }
+                }
+
+                Log($"{tag} 时间倒流已施加（自己回到 {secondsAgo:0.#} 秒前：{lifeMsg}，{curseMsg}）");
             }
             catch (Exception ex)
             {
