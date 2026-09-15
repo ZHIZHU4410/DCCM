@@ -537,8 +537,8 @@ namespace ChronoBlade
                 int newLife = hero.life + heal;
                 if (newLife > hero.maxLife) newLife = hero.maxLife;
                 hero.life = newLife;
-                Log($"Gimel 回复生命 +{heal}（{healPct:P0}，当前 {newLife}/{hero.maxLife}）" +
-                    (legendaryDouble ? "【传奇·效果翻倍】" : ""));
+                // 这里以前每开一枪就打一行日志（"Gimel 回复生命 +60（30%，当前 198/198）"），
+                // 按要求删掉 —— 实战里太吵。要排查回血就直接看血条。
             }
             catch (Exception ex)
             {

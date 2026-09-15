@@ -44,9 +44,6 @@ namespace ChronoBlade
             public bool ScaleIn;
             public double ScaleFrom;
             public double ScaleTo;
-            /// <summary>调试：还要打几帧的状态日志（0 = 不打）。</summary>
-            public int DebugFrames;
-            public string DebugTag = "";
         }
 
         private static readonly List<SpriteFx> _fx = new();
@@ -136,24 +133,6 @@ namespace ChronoBlade
                     }
 
                     f.Sprite.posChanged = true;
-
-                    // 调试：前几帧把 sprite 真实状态打出来，判断是"没创建"还是"看不见"
-                    if (f.DebugFrames > 0)
-                    {
-                        f.DebugFrames--;
-                        try
-                        {
-                            var sp = f.Sprite;
-                            int stackLen = -1;
-                            try { stackLen = sp.get_anim().stack.length; } catch { }
-
-                            Log($"[追踪{f.DebugTag}] frame={sp.frame} stack={stackLen} " +
-                                $"alpha={sp.alpha:F2} 缩放={sp.scaleX:F3} 位置=({sp.x:F0},{sp.y:F0}) " +
-                                $"parent={(sp.parent == null ? "null" : "ok")} 销毁={sp.destroyed} " +
-                                $"可见={sp.visible} 总帧={sp.totalFrames()}");
-                        }
-                        catch { }
-                    }
                 }
                 catch
                 {
@@ -749,11 +728,7 @@ namespace ChronoBlade
                     MaxLife = lifeSeconds,
                     Rising = true,
                     RiseSpeed = riseSpeed,
-                    DebugFrames = 3,
-                    DebugTag = numeral,
                 });
-
-                Log($"刻印成功: {numeral}（{NumeralGroup}[{frameIndex}]）位置=({h.x:F0},{h.y:F0}) 停留={lifeSeconds}s");
             }
             catch (Exception ex)
             {
