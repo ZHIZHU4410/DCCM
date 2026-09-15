@@ -199,36 +199,59 @@ namespace ChronoBlade
                 // 新的一刀开始：刀号 +1、本次刻印序号清零
                 ResetSwing();
 
-                // 喂给引擎：满蓄力 + 居合标记。原版随后的蓄力判定直接通过，
-                // 由它调用 onExecute() 走居合分支（瞬移前冲 + 路径群伤）。
-                // 不要自己调 onExecute：实测 isCharging() 为假时它返回 false，
-                // 会走普通斩击分支（日志里的 onExecute=False 就是这么来的）。
-                try
-                {
-                    katanaChargeF = FullChargeF;
-                    nextIsChargeAtk = true;
-                    _consumed = true;
+                // 本次按压已用掉（松手才复位）。两条分支都要置，别只放在蓄力注入里。
+                _consumed = true;
 
-                    if (_pressLogCount < 8)
+                // ---- 先推进连击段，再决定这一刀怎么打 ----
+                //
+                // 顺序必须是这样：得先知道"这是第几下"，才能决定要不要给它注入居合。
+                // 效果照旧和这一刀同一帧生效。
+                AdvanceCombo();
+
+                if (_skipMeleeSwing)
+                {
+                    // 第 2a / 3a：**故意不注入**蓄力 / 居合标记。
+                    //
+                    // ⚠️ 这是"2a/3a 还有斩击"的另一半原因，光拦 onExecute 拦不掉：
+                    //    一旦注入，原版 `Katana.fixedUpdate` 的蓄力分支在蓄满时会
+                    //    **自己调一次 onExecute() 并把 `AtkKatanaA` 斩击动画播出来**
+                    //    （GamePseudocode/dc.tool.weap/Katana.cs:2934-2970）。
+                    //    即使钩子里把 onExecute 拦成"不产生判定"，那套斩击动画照样会播。
+                    //    不注入 + 按住时 controlsLocked → 原版两条分支都不进 → 真的一刀不出。
+                    try
                     {
-                        _pressLogCount++;
-                        Write($"[ChronoBlade] 居合发动 #{_pressLogCount}: cycle={MaybeCycle()} " +
-                              $"range={GetDashRange()} 刀号={_slashId}");
+                        nextIsChargeAtk = false;
+                        katanaChargeF = 0;
+                    }
+                    catch (Exception ex)
+                    {
+                        Write($"[ChronoBlade] 清居合标记失败: {ex.Message}");
                     }
                 }
-                catch (Exception ex)
+                else
                 {
-                    Write($"[ChronoBlade] 喂蓄力失败: {ex}");
-                }
+                    // ---- 第 1a：喂给引擎满蓄力 + 居合标记 ----
+                    // 原版随后的蓄力判定直接通过，由它调用 onExecute() 走居合分支
+                    // （瞬移前冲 + 路径群伤）。
+                    // 不要自己调 onExecute：实测 isCharging() 为假时它返回 false，
+                    // 会走普通斩击分支（日志里的 onExecute=False 就是这么来的）。
+                    try
+                    {
+                        katanaChargeF = FullChargeF;
+                        nextIsChargeAtk = true;
 
-                // ---- 连击段推进 + 第 2a / 3a 触发 ----
-                //
-                // 放在这里，而不是 `tool.Weapon.onExecute` 钩子里，原因：
-                //   `shouldDash` 是本模组**自己**判定的"新一刀开始"，每次按下保证只进一次
-                //   （由 _consumed 把关，松手才复位）—— 前面几轮"以为 onExecute 每刀都会进、
-                //   结果 2a/3a 一直不触发"就是这么踩的。
-                // 顺序放在喂蓄力之后：效果和这一刀同一帧生效。
-                AdvanceCombo();
+                        if (_pressLogCount < 8)
+                        {
+                            _pressLogCount++;
+                            Write($"[ChronoBlade] 居合发动 #{_pressLogCount}: cycle={MaybeCycle()} " +
+                                  $"range={GetDashRange()} 刀号={_slashId}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Write($"[ChronoBlade] 喂蓄力失败: {ex}");
+                    }
+                }
             }
 
             try
@@ -326,6 +349,21 @@ namespace ChronoBlade
         /// <param name="callOriginal">调用原版 Katana.onExecute 的委托。</param>
         public bool RunAttack(Func<bool> callOriginal)
         {
+            // ---- 第 2a / 3a：整刀不斩击 ----
+            //
+            // ⚠️ 这个判断**必须放在这里**，不能只在 ChronoBladeMod.OnAnyWeaponExecute 里做。
+            //    "2a/3a 还是有斩击" 的原因就是漏了这条路径：
+            //    本模组挂了**两个** onExecute 钩子 —— `tool.Weapon.onExecute`（通用）
+            //    和 `Hook_Katana.onExecute`（备用）。后者进来会调 `RunAttack(...)`，
+            //    而 RunAttack 里原本**无条件** `callOriginal()`，
+            //    于是不管 SkipMelee 是什么，原版那一刀照斩。
+            //    把判断放在这个"我方武器唯一的总入口"里，两条钩子路径就都盖住了。
+            if (_skipMeleeSwing)
+            {
+                Write("[ChronoBlade] 本段不斩击（Katana 挂点路径：第 2a/3a 只放飞镖与落剑）");
+                return true;    // "这一下我处理了"
+            }
+
             int cycle = CycleSlash;
             try { cycle = _cycle; } catch { }
 

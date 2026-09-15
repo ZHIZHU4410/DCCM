@@ -23,9 +23,21 @@ Dead Cells（v35 / DCCM）武器模组。新增 **两把武器**、**两个全�
 | 第 2a | **一周飞镖**（不斩击） | 原地以自身为中心，向一整圈（12 枚）甩出飞镖，附带时之守护者的金色法阵 | Boss `TimeKeeper` 的 `levelUpRadius` |
 | 第 3a | **时钟剑雨**（不斩击） | 唤出时之守护者的背景时钟旋转展开，随后数把巨剑从**每个敌人正上方**砸下来 | Boss `TimeKeeper` 的 `swordRain` |
 
-> **第 2a / 3a 不再有近战斩击** —— 只出飞镖与落剑。实现方式是 `ChronoBlade.SkipMelee`
-> 标记（由 `AdvanceCombo()` 每刀重设），`ChronoBladeMod.OnAnyWeaponExecute` 看到它
-> 就**不调用 `orig`**、直接 `return true`（"这一下我处理了"），武器状态机照常收招。
+> **第 2a / 3a 不再有近战斩击** —— 只出飞镖与落剑。要**同时**做对两件事，缺一个就会"还有斩击"：
+>
+> 1. **拦掉 onExecute**：`ChronoBlade.SkipMelee` 标记（由 `AdvanceCombo()` 每刀重设）→
+>    看到就**不调 `orig`**、直接 `return true`（"这一下我处理了"）。
+>    ⚠️ 本模组挂了**两个** onExecute 钩子：`tool.Weapon.onExecute`（通用，在
+>    `ChronoBladeMod.OnAnyWeaponExecute` 里判）和 `Hook_Katana.onExecute`（备用，走
+>    `ChronoBlade.RunAttack`）。**两个入口都要判** —— 只堵通用钩子的话，
+>    Katana 钩子那条会照样 `callOriginal()` 把原版那一刀斩出去。
+>    `RunAttack` 是"我方武器唯一的总入口"，判断放在它开头最稳。
+> 2. **不要注入蓄力**：第 2a/3a **故意不**设 `nextIsChargeAtk` / `katanaChargeF`。
+>    否则原版 `Katana.fixedUpdate` 的蓄力分支在蓄满时会**自己调一次 `onExecute()` 并把
+>    `AtkKatanaA` 斩击动画播出来**（`Katana.cs:2934-2970`）—— **光拦 onExecute 拦不掉这套动画**。
+>    不注入 + 按住时 `controlsLocked`（`isWeaponButtonDown()` 会因此返回 false）→
+>    原版两条分支都不进 → 真的一刀不出。
+>
 > 标记是"当前这一刀"的属性，**不是读一次就清** —— 否则同一刀里 `onExecute` 进两次的话，
 > 第二次会又斩出去。
 >
@@ -655,7 +667,7 @@ num10 = (cy2 < num6) ? num6 : ...           // 富余量更大 → 直接把内�
 | 语音太频繁 / 太少 | 调 `VoiceChance*` 四个概率。「休闲」是一条规则：一段安静期只掷一次骰，所以想更容易听到就提高 `VoiceChanceIdle`；嫌吵就把某个概率调 0。 |
 | 语音被别的音效盖住 | 不应该发生 —— 音频走 `priority = 10000` 的独立 `ChannelGroup` 且 `SoundGroup.maxAudible = -1`。如果确实发生，看日志里 `独占声道已建立` 那条的 priority 是不是 10000（见功能 5 的三条压制链路）。 |
 | 第 2a / 3a 一直不出 | 看日志有没有 `连击第 2 段 → 一周飞镖` / `连击第 3 段 → 时钟剑雨`。**有这行**说明连击分派没问题，问题在实体/特效生成（看紧跟着的 `实体 N/12 枚` 与失败堆栈）；**没有这行**说明连击没推进到第 2 下（`_comboStep` 在 `AdvanceCombo` 里推进，需要连续出刀、间隔 < 1.5 秒）。特别注意 `拿到的时之刃是原版 Katana 实例` 那行 —— 出现它表示 `ChronoWeaponFactory` 的 `create` 钩子没命中，根本没有 `ChronoBlade` 对象可调。 |
-| 第 2a / 3a 出了但还带斩击 | `SkipMelee` 没生效（看有没有 `本段不斩击` 日志）；该标记必须由 `AdvanceCombo()` 在**同一刀内**保持为 true，不能改成"读一次就清"。 |
+| 第 2a / 3a 出了但还带斩击 | 有**两个**原因，都要排除：① `SkipMelee` 没在两个钩子入口都判（`RunAttack` + `OnAnyWeaponExecute`），看日志是 `本段不斩击（Katana 挂点路径…）` 还是 `（Weapon 挂点路径…）` —— 一条都不出现说明两个钩子都没拦住；② 蓄力被注入了 → 原版蓄力分支自己播 `AtkKatanaA` 斩击动画（**动画不受 `orig` 是否被调用影响**）。第 2a/3a 必须**不注入** `nextIsChargeAtk`。 |
 | 落剑看不见 / 半天才落地 | `Stalactite` 出生行被夹在 `SwordFallMaxCells` 内（屏幕外的天花板会被丢弃），下落速度已按 `SwordFallSpeedMul` 提速；两者都在 `ChronoBlade.cs` 顶部常量里。 |
 | 传奇武器不显示传奇词条 | 看日志有没有 `已附加词条: Legendary` / `已附加词条: ChronoBulletDouble` |
 | `LootGen 不可用（不在训练场，属正常）` | 预期行为，等级不套用，其余正常 |

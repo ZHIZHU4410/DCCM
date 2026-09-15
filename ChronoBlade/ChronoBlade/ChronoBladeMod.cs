@@ -287,9 +287,13 @@ namespace ChronoBlade
                     // 这里只做一件事：第 2 / 3 段**不斩击** ——
                     // 看到标记就跳过原版（不产生斩击判定 / 位移），
                     // 直接返回 true 表示"这一下我处理了"，武器状态机照常收招。
+                    //
+                    // ⚠️ 另一条钩子路径（Hook_Katana.onExecute → RunAttack）里的同一个判断
+                    //    在 ChronoBlade.RunAttack 开头 —— **两边都要有**，
+                    //    只堵一边就会出现"2a/3a 还是有斩击"。
                     if (blade != null && blade.SkipMelee)
                     {
-                        Write("[ChronoBlade] 本段不斩击（第 2a/3a 只放飞镖与落剑）");
+                        Write("[ChronoBlade] 本段不斩击（Weapon 挂点路径：第 2a/3a 只放飞镖与落剑）");
                         return true;
                     }
 
