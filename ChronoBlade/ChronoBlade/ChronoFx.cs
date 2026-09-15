@@ -793,7 +793,10 @@ namespace ChronoBlade
         /// <summary>播放帧率：46 帧 / 15fps ≈ 3.07 秒一轮。</summary>
         private const double AuraFps = 15.0;
 
-        /// <summary>相对英雄中心再上下偏移的像素（正数 = 往下）。</summary>
+        /// <summary>
+        /// 相对**英雄头部**再上下偏移的像素（正数 = 往下）。SpawnAura 里 pivot 是居中 (0.5,0.5)，
+        /// 所以 sprite 的 x/y 就是"时钟中心"的位置，这里的偏移直接作用在中心点上。
+        /// </summary>
         private const double AuraOffsetY = 0.0;
 
         /// <summary>不透明度（1.0 = 完全不透明）。想让背景更淡一点就调小。</summary>
@@ -831,8 +834,16 @@ namespace ChronoBlade
                     _auraTime = 0;
                 }
 
+                // 时钟的**中心**对准英雄的**头部**。
+                //
+                // 坐标约定（和本模组其它地方一致）：`(cy + yr) * 24` 是英雄的**底边**（脚），
+                // 实体框往上一个 `hei` 就是**头顶**，所以：
+                //     身体中心 = (cy + yr) * 24 - hei * 0.5   ← 原来用的（时钟套在身体中间）
+                //     头部     = (cy + yr) * 24 - hei         ← 现在用的（往上抬半个身高）
+                // sprite 的 pivot 是居中 (0.5, 0.5)（见 SpawnAura），所以赋给 x/y 的就是时钟中心。
+                // 还想微调就改 AuraOffsetY（正数往下）。
                 _aura.x = (hero.cx + hero.xr) * 24.0;
-                _aura.y = (hero.cy + hero.yr) * 24.0 - hero.hei * 0.5 + AuraOffsetY;
+                _aura.y = (hero.cy + hero.yr) * 24.0 - hero.hei + AuraOffsetY;
 
                 // 手动推帧：sprite 的 AnimManager 已被暂停，帧号完全由我们控制
                 _auraTime += dt;
