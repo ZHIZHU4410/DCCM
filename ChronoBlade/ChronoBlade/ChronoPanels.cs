@@ -604,13 +604,16 @@ namespace ChronoBlade
         private const double DescBottomPad = 8.0;
 
         /// <summary>
-        /// 说明文字在贴底的基础上**再往上抬一个单位**。
+        /// 说明文字在贴底的基础上**再往上抬几个"单位"**。
         ///
-        /// 需求原文：「选择子弹时，子弹介绍往上移动一个单位，选择时现在看不到介绍」。
-        /// "一个单位" 取**一行文字的高度**（`text.font.lineHeight`，取不到时用下面的兜底值），
-        /// 因为贴底放的时候最后一行的下缘正好压在框底边框上，看起来像被切掉/看不见。
+        /// 需求原文：「子弹介绍可以看见了，但是只能看见一半，再往上移动一个单位」——
+        /// 所以从 1 个单位调到 2 个。"一个单位" = **一行文字的高度**（`text.font.lineHeight`）。
+        ///
+        /// 只看见一半的真正原因见 <see cref="LayoutDescText"/>：文字高度量不到（=0）时，
+        /// 贴底公式算出的 y 会偏大一整个文字高度，下半截正好被框底切掉。
+        /// 抬行只能缓解，所以那边同时加了"量不到就按行数估"的兜底 —— 两个一起才治本。
         /// </summary>
-        private const double DescRaiseFallback = 12.0;
+        private const int DescRaiseLines = 2;
 
         /// <summary>
         /// 说明文字上缘最多贴到框内顶部留这么多。
@@ -618,6 +621,12 @@ namespace ChronoBlade
         /// （那才是真的"完全看不到介绍"），夹一下至少保证内容在可视区里。
         /// </summary>
         private const double DescTopPad = 4.0;
+
+        /// <summary>行高量不到时的兜底（单位：UI 单位）。</summary>
+        private const double LineHeightFallback = 12.0;
+
+        /// <summary>最近一次写进说明文字的行数（`textHeight` 量不到时用它估高度）。</summary>
+        private int _descLineCount = 1;
 
         private static bool _descGeomLogged;
 
@@ -748,8 +757,12 @@ namespace ChronoBlade
         }
 
         /// <summary>
-        /// 把说明文字贴到"选择框内部"的**左下角**（左对齐 + 贴底 + 再往上抬一行）。
-        /// 见 <see cref="DescRaiseFallback"/> 的注释：抬一行是为了让最后一行不被框底切掉。
+        /// 把说明文字贴到"选择框内部"的**左下角**（左对齐 + 贴底 + 再往上抬 <see cref="DescRaiseLines"/> 行）。
+        ///
+        /// ⚠️ 这里的 `h` 必须真的等于文字高度，否则会"只看见一半"：
+        ///    贴底公式是 `y = 框高 - h - 贴底间距 - 抬行`，如果 `text.textHeight` 量出来是 0
+        ///    （文字刚 set_text、还没走完布局那一步），y 就会偏大一整个文字高度 ——
+        ///    文字的下半截正好落在框外被裁掉。所以量不到时按 `行数 × 行高` 估一个。
         /// </summary>
         private void LayoutDescText()
         {
@@ -758,22 +771,26 @@ namespace ChronoBlade
 
             try
             {
-                double h = 0;
-                try { h = text.textHeight; } catch { }
+                double lineH = 0;
+                try { lineH = text.font?.lineHeight ?? 0; } catch { }
+                if (lineH <= 0) lineH = LineHeightFallback;
 
                 double maskH = 0;
                 try { maskH = mask.height; } catch { }
+
+                double h = 0;
+                try { h = text.textHeight; } catch { }
+
+                // 量不到（或明显不合理）就按行数估
+                double est = System.Math.Max(1, _descLineCount) * lineH;
+                if (h <= 0 || h > maskH + est) h = est;
 
                 // 左边对齐到条目网格的左边缘（取不到就用固定内边距）
                 double left = 0;
                 try { left = wrapperItem.x; } catch { }
                 if (left <= 0) left = DescLeftPad;
 
-                // "一个单位" = 一行文字的高度
-                double raise = 0;
-                try { raise = text.font?.lineHeight ?? 0; } catch { }
-                if (raise <= 0 || raise > maskH) raise = DescRaiseFallback;
-
+                double raise = lineH * DescRaiseLines;
                 double y = maskH - h - DescBottomPad - raise;
 
                 // 兜底：框太矮时别把文字顶出可视区（否则就是"看不到介绍"）
@@ -782,8 +799,8 @@ namespace ChronoBlade
                 if (!_descGeomLogged)
                 {
                     _descGeomLogged = true;
-                    ChronoPanelLog.Write($"弹药说明排版：框高={maskH:0.#} 文字高={h:0.#} " +
-                                         $"上抬={raise:0.#} 最终y={y:0.#}（抬一行是为了不被框底切掉）");
+                    ChronoPanelLog.Write($"弹药说明排版：框高={maskH:0.#} 行高={lineH:0.#} " +
+                                         $"行数={_descLineCount} 文字高={h:0.#} 上抬={raise:0.#} 最终y={y:0.#}");
                 }
 
                 text.posChanged = true;
@@ -826,6 +843,14 @@ namespace ChronoBlade
 
                 text.set_text(ChronoPanelLog.Hx(sb.ToString()));
                 try { text.set_textColor(def.Color); } catch { }
+
+                // 记下实际行数 —— textHeight 还没算出来时靠它估高度（见 LayoutDescText）
+                int lines = 1;
+                for (int i = 0; i < sb.Length; i++)
+                {
+                    if (sb[i] == '\n') lines++;
+                }
+                _descLineCount = lines;
 
                 // 文案换了高度可能变 → 重新贴一次底部
                 LayoutDescText();

@@ -63,13 +63,13 @@ namespace ChronoBlade
             new() { Id = "Gimel",    Name = "三之弹 Gimel",       Color = 0x9BE86B, SelfCast = true,
                     Desc = "开火即生效：回复 30% 生命，移速变成两倍，持续 10 秒",
                     DescLegendary = "开火即生效：回复 60% 生命，移速变成四倍，持续 10 秒" },
-            new() { Id = "Dalet",    Name = "四之弹 Dalet",       Color = 0xFFD86B, SelfCast = false,
-                    Desc = "命中后：把目标拽回 5 秒前的位置与生命",
-                    DescLegendary = "命中后：把目标拽回 10 秒前的位置与生命" },
+            new() { Id = "Dalet",    Name = "四之弹 Dalet",       Color = 0xFFD86B, SelfCast = true,
+                    Desc = "开火即生效：把自己拽回 5 秒前的位置与生命",
+                    DescLegendary = "开火即生效：把自己拽回 10 秒前的位置与生命" },
             new() { Id = "Hei",      Name = "五之弹 Hei",         Color = 0xC9B6FF, SelfCast = true,
                     Desc = "开火即生效：获得全图视野（等同探险家符文）" },
-            new() { Id = "Vav",      Name = "六之弹 Vav",         Color = 0xB0FFE0, SelfCast = false,
-                    Desc = "命中后：把目标拽回 25 秒前的位置与生命" },
+            new() { Id = "Vav",      Name = "六之弹 Vav",         Color = 0xB0FFE0, SelfCast = true,
+                    Desc = "开火即生效：把自己拽回 25 秒前的位置与生命" },
             new() { Id = "Zayin",    Name = "七之弹 Zayin",       Color = 0xFFB0F0, SelfCast = false,
                     Desc = "命中后：触发时间扭曲，全关卡敌人与弹幕一起变慢 3 秒",
                     DescLegendary = "命中后：触发时间扭曲，全关卡敌人与弹幕一起变慢 6 秒" },
@@ -189,11 +189,11 @@ namespace ChronoBlade
         private static double _now;
         private static double _heroSampleAcc;
 
-        /// <summary>英雄的位置 + 生命历史：(时间, x, y, life)。</summary>
+        /// <summary>
+        /// 英雄的位置 + 生命历史：(时间, cx+xr, cy+yr, life)，每 0.1 秒采样一次。
+        /// 四之弹（5 秒）/ 六之弹（25 秒）的"把自己拽回去"就读这里。
+        /// </summary>
         private static readonly List<(double t, double x, double y, double life)> _heroHist = new();
-
-        /// <summary>每只怪物的位置 + 生命历史。</summary>
-        private static readonly Dictionary<int, List<(double t, double x, double y, double life)>> _mobHist = new();
 
         /// <summary>到点要执行的动作（还原移速、拉回位置、处决、召唤物到期…）。</summary>
         private static readonly List<(double due, Action act)> _timed = new();
@@ -241,7 +241,9 @@ namespace ChronoBlade
                 {
                     case "Aleph": ApplyAleph(hero, legendaryDouble); break;
                     case "Gimel": ApplyGimel(hero, legendaryDouble); break;
+                    case "Dalet": ApplyHeroRewind(hero, DaletRewindS * Boost(legendaryDouble), "Dalet"); break;
                     case "Hei": ApplyHei(hero); break;                  // 五之弹：无"量"可翻倍
+                    case "Vav": ApplyHeroRewind(hero, VavRewindS, "Vav"); break;
                     case "Tet": ApplyTet(hero); break;                  // 九之弹：无"量"可翻倍
                     case "YudAleph": ApplyYudAleph(hero, legendaryDouble); break;
                     case "YudBet": ApplyGoPreviousLevel(hero); break;    // 十二之弹：无"量"可翻倍
@@ -276,8 +278,6 @@ namespace ChronoBlade
                 switch (def.Id)
                 {
                     case "Bet": ApplyBet(mob, legendaryDouble); break;
-                    case "Dalet": ApplyDalet(mob, legendaryDouble); break;
-                    case "Vav": ApplyVavRewind(mob); break;              // 六之弹：不变
                     case "Zayin": ApplyZayin(mob, hero, legendaryDouble); break;
                     case "Het": ApplyHet(mob, px, py, legendaryDouble); break;
                     case "Yud": ApplyYud(mob, px, py, legendaryDouble); break;
@@ -312,6 +312,9 @@ namespace ChronoBlade
         {
             _now += dt;
 
+            // 十一之弹的无敌要每帧补（会被开火/命中清掉），放最前面、别被下面的早退跳过
+            try { MaintainInvulnerability(); } catch { }
+
             if (hero == null || hero.destroyed || hero._level == null)
             {
                 _pendingAllies.Clear();
@@ -329,33 +332,99 @@ namespace ChronoBlade
                     Trim(_heroHist);
                 }
                 catch { }
-
-                try
-                {
-                    var mobs = hero._level.entitiesByClass?.get(32068) as ArrayObj;
-                    if (mobs != null)
-                    {
-                        for (int i = 0; i < mobs.length; i++)
-                        {
-                            if (mobs.getDyn(i) is not Mob m || m.destroyed || m.life <= 0) continue;
-                            int uid = m.__uid;
-                            if (!_mobHist.TryGetValue(uid, out var list))
-                            {
-                                list = new List<(double, double, double, double)>();
-                                _mobHist[uid] = list;
-                            }
-                            list.Add((_now, m.cx + m.xr, m.cy + m.yr, m.life));
-                            Trim(list);
-                        }
-                    }
-                }
-                catch { }
-
-                PruneMobHistory();
             }
 
             // 八之弹的召唤物：一律在攻击循环之外生成
             try { DrainAllySpawns(hero); } catch { }
+        }
+
+        /// <summary>
+        /// **真正的无敌 = affect 5**（不是 48！）。
+        ///
+        /// 依据（都是原版代码）：
+        ///   · `dc.Entity.canBeHit()` —— 只要 `affects[5]` 非空就 `return false`，
+        ///     而 `canBeHitBy()` / `canReceiveAttack()` 全都转发到 `canBeHit()`，
+        ///     攻击管线（`AttackTargetImpl` / `Weapon` / `Mob`）也都查它。**这就是"打不到我"的开关**。
+        ///   · 英雄翻滚的无敌帧：`Hero.cs` 里 `setAffectS(5, 0.08)` / `0.23`。
+        ///   · 权杖（KingScepter）给玩家的无敌：`hero.setAffectS(5, sec)`；烟幕弹同理。
+        ///
+        /// ⚠️ 别再拿 **affect 48** 当无敌 —— 那是**隐身**（Invisibility），
+        ///    而且 `Hero.onInvisibilityBreakingAction()` 会 `removeAllAffects(48)`，
+        ///    而那个方法被 `dc.tool.Weapon`（开火）/ 近战命中 / 翻滚等处调用，
+        ///    所以"开火即生效"的无敌用 48 等于刚加上就被这次开火自己清掉（踩过）。
+        ///    affect 5 不会被这些动作清掉，所以加一次就够。
+        /// </summary>
+        private const int InvincibleAffectId = 5;
+
+        /// <summary>
+        /// 十一之弹的无敌状态：要无敌到 `_now` 的哪一刻。
+        /// 0 = 当前没有在维持无敌。见 `MaintainInvulnerability()`。
+        /// </summary>
+        private static double _invulnUntil;
+        private static Hero? _invulnHero;
+        private static bool _invulnLogged;
+
+        /// <summary>无敌还在不在（读 `affects[5]` 的长度，和 `Entity.canBeHit()` 同一处判据）。</summary>
+        private static bool HeroHasInvincible(Hero hero)
+        {
+            try
+            {
+                var aff = hero.affects;
+                if (aff == null || aff.length <= InvincibleAffectId) return false;
+                var list = aff.getDyn(InvincibleAffectId) as ArrayObj;
+                return list != null && list.length > 0;
+            }
+            catch { return false; }
+        }
+
+        /// <summary>
+        /// 每帧维护十一之弹的无敌。
+        ///
+        /// affect 5 不会被开火 / 命中清掉，所以正常情况下**只需要加一次**；
+        /// 这里每帧只是"看看还在不在，不在了就按剩余时间补一次" ——
+        /// 这样既不会每帧堆一个新的 affect 实例（那会把 `affects[5]` 撑成一长串），
+        /// 也能兜住某些原版流程（如 PolloPower / 过场）中途 `removeAllAffects(5)`。
+        /// </summary>
+        private static void MaintainInvulnerability()
+        {
+            if (_invulnUntil <= 0) return;
+
+            var hero = _invulnHero;
+            if (hero == null || hero.destroyed)
+            {
+                _invulnUntil = 0;
+                _invulnHero = null;
+                return;
+            }
+
+            double remain = _invulnUntil - _now;
+            if (remain <= 0)
+            {
+                _invulnUntil = 0;
+                _invulnHero = null;
+                Log("Yud-Aleph 无敌已结束");
+                return;
+            }
+
+            if (HeroHasInvincible(hero)) return;   // 还在，别重复加
+
+            try
+            {
+                hero.setAffectS(InvincibleAffectId, remain, Ref<double>.Null, null);
+                if (!_invulnLogged)
+                {
+                    _invulnLogged = true;
+                    Log($"Yud-Aleph 无敌已生效（affect 5，剩余 {remain:0.##} 秒）");
+                }
+            }
+            catch (Exception ex)
+            {
+                if (!_invulnLogged)
+                {
+                    _invulnLogged = true;
+                    Log($"Yud-Aleph 无敌施加失败: {ex.Message}");
+                }
+            }
         }
 
         /// <summary>每帧处理到点动作。</summary>
@@ -391,23 +460,6 @@ namespace ChronoBlade
                 if (list[i].t <= target) return (list[i].x, list[i].y, list[i].life);
             }
             return (list[0].x, list[0].y, list[0].life);
-        }
-
-        private static void PruneMobHistory()
-        {
-            if (_mobHist.Count <= 64) return;
-
-            List<int>? dead = null;
-            foreach (var kv in _mobHist)
-            {
-                if (kv.Value.Count == 0)
-                {
-                    dead ??= new List<int>();
-                    dead.Add(kv.Key);
-                }
-            }
-            if (dead == null) return;
-            foreach (int k in dead) _mobHist.Remove(k);
         }
 
         // ================================================================ 自身向（开火即生效）
@@ -746,6 +798,12 @@ namespace ChronoBlade
         /// <summary>
         /// 十一之弹：英雄前移 6 格 + 无敌 2 秒，2 秒后拉回原位置。
         /// 传奇：前移 12 格 + 无敌 4 秒。
+        ///
+        /// ⚠️ **无敌是 affect 5**，不是 48（48 是隐身，而且开火会被
+        ///    `onInvisibilityBreakingAction()` 当场清掉）。详见 `InvincibleAffectId` 的注释。
+        ///
+        /// 这里只登记"要无敌到什么时候"并立刻加一次；续期 / 补加在
+        /// `MaintainInvulnerability()`（每帧检查 `affects[5]` 还在不在）。
         /// </summary>
         private static void ApplyYudAleph(Hero hero, bool legendaryDouble)
         {
@@ -759,10 +817,16 @@ namespace ChronoBlade
             try
             {
                 hero.setPosPixel(ox + dir * tiles * 24.0, oy);
-                double v = 0;
-                var r = new Ref<double>(ref v);
-                try { hero.setAffectS(48, invuln, r, null); } catch { }
-                Log($"Yud-Aleph 前移 {tiles:0} 格 + 无敌 {invuln:0} 秒" +
+
+                // 无敌：先加一次，之后由每帧维护兜底
+                _invulnHero = hero;
+                _invulnUntil = _now + invuln;
+                _invulnLogged = false;
+
+                try { hero.setAffectS(InvincibleAffectId, invuln, Ref<double>.Null, null); }
+                catch (Exception ex) { Log($"Yud-Aleph 无敌施加失败: {ex.Message}"); }
+
+                Log($"Yud-Aleph 前移 {tiles:0} 格 + 无敌 {invuln:0.#} 秒（affect 5）" +
                     (legendaryDouble ? "【传奇·效果翻倍】" : ""));
             }
             catch (Exception ex)
@@ -821,49 +885,54 @@ namespace ChronoBlade
         }
 
         /// <summary>
-        /// 四之弹：把目标拽回 5.0 秒前的位置 + 状态（生命）。
+        /// 四之弹：把自己拽回 5.0 秒前的位置 + 状态（生命）。
         /// 传奇：拽回 10 秒前。
         /// </summary>
-        private static void ApplyDalet(Mob? mob, bool legendaryDouble)
-        {
-            if (mob == null) return;
-            double secondsAgo = 5.0 * Boost(legendaryDouble);
-            if (!RestoreMobState(mob, secondsAgo, "Dalet")) Log("Dalet 无历史数据，未生效");
-        }
+        private const double DaletRewindS = 5.0;
 
         /// <summary>
-        /// 六之弹 Vav：命中目标后，把它拽回 <see cref="VavRewindS"/>（25）秒前的位置 + 状态（生命）。
-        /// 这一发**不受传奇词条影响**（50 秒的历史代价太大，需求也只给了单值）。
+        /// 四之弹 / 六之弹：把**英雄自己**拽回 N 秒前的位置 + 状态（生命）。
+        ///
+        /// ⚠️ 这两发是**开火即生效、对着自己**的（需求）。
+        ///    早先这里是"命中后把**目标**拽回去"，方向完全反了：
+        ///    它们的"时间倒流"是对自己用的回溯，不是对敌人的惩罚。
+        ///
+        /// 数据来自 `_heroHist`（Update 里每 0.1 秒采样一次"格坐标 + 生命"），
+        /// 保留时长由 `HistoryKeepS` 决定 —— 六之弹要 25 秒，所以那里至少要是 25。
         /// </summary>
-        private static void ApplyVavRewind(Mob? mob)
-        {
-            if (mob == null) return;
-            if (!RestoreMobState(mob, VavRewindS, "Vav")) Log("Vav 无历史数据，未生效");
-        }
-
-        private static bool RestoreMobState(Mob mob, double secondsAgo, string tag)
+        private static void ApplyHeroRewind(Hero hero, double secondsAgo, string tag)
         {
             try
             {
-                if (!_mobHist.TryGetValue(mob.__uid, out var list)) return false;
-                var p = Past(list, secondsAgo);
-                if (p == null) return false;
+                var p = Past(_heroHist, secondsAgo);
+                if (p == null)
+                {
+                    Log($"{tag} 还没有自己的历史数据（刚开始采样），本次不生效");
+                    return;
+                }
 
-                mob.setPosPixel(p.Value.x * 24.0, p.Value.y * 24.0 - mob.hei * 0.5);
+                // 采样存的是 (cx + xr, cy + yr) 的格坐标，换算成像素中心的公式
+                // 必须和采样处（ChronoFx/Impact 那套）一致：y 要减半个身高。
+                double px = p.Value.x * 24.0;
+                double py = p.Value.y * 24.0 - hero.hei * 0.5;
+                hero.setPosPixel(px, py);
+
                 try
                 {
                     int life = (int)p.Value.life;
-                    if (life > 0) mob.life = life;
+                    if (life > 0)
+                    {
+                        if (life > hero.maxLife) life = hero.maxLife;
+                        hero.life = life;
+                    }
                 }
                 catch { }
 
-                Log($"{tag} 时间倒流已施加（回到 {secondsAgo:0.#} 秒前的位置与状态）");
-                return true;
+                Log($"{tag} 时间倒流已施加（自己回到 {secondsAgo:0.#} 秒前的位置与生命）");
             }
             catch (Exception ex)
             {
                 Log($"{tag} 失败: {ex.Message}");
-                return false;
             }
         }
 
@@ -1228,8 +1297,9 @@ namespace ChronoBlade
         public static void Clear()
         {
             _heroHist.Clear();
-            _mobHist.Clear();
             _timed.Clear();
+            _invulnUntil = 0;
+            _invulnHero = null;
             _allies.Clear();
             _pendingAllies.Clear();
             _heroSampleAcc = 0;
