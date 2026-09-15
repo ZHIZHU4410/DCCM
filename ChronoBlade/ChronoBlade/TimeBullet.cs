@@ -66,6 +66,14 @@ namespace ChronoBlade
         /// 词条本身由 CDB 决定：item.legendAffixes 里列了它，物品生成时就会 Roll 上去；
         /// 这里只是查物品身上有没有 —— 走 InventItem.hasAffix()，不要去比对 _itemData，
         /// 因为 _itemData.legendAffixes 是"可 Roll 的池子"，不是"已经 Roll 到的词条"。
+        ///
+        /// ⚠️⚠️ 必须用 **`Weapon.item`**（`InventItem` 属性）。
+        ///   这里原来写的是 `wInfos?.item`，而 **`wInfos.item` 是物品 id 字符串**
+        ///   （`dc.String`，例如 "TimeBullet"）—— 所以 `raw is InventItem`
+        ///   **永远为 false**，这个方法就恒返回 false：
+        ///   表现正是"**传奇刻刻帝的传奇词条从不触发**"（面板说明也不会切成翻倍文案）。
+        ///   `ChronoBlade.cs` 的 `CurrentItem()` 早就踩过同一个坑并改对了，这处漏了。
+        ///   （其它地方写 `wInfos.item` 都是 `.ToString()` 取 id，那些是对的，别一起改。）
         /// </summary>
         public bool IsLegendaryDouble
         {
@@ -73,15 +81,33 @@ namespace ChronoBlade
             {
                 try
                 {
-                    object? raw = wInfos?.item;
-                    if (raw is InventItem item) return item.hasAffix(ToHaxe(ChronoBullets.LegendAffixId));
-                    return false;
+                    var it = item;                       // ← Weapon.item（InventItem）
+                    if (it == null)
+                    {
+                        LogOnce("传奇词条检查：拿不到 InventItem（Weapon.item 为 null）");
+                        return false;
+                    }
+
+                    bool has = it.hasAffix(ToHaxe(ChronoBullets.LegendAffixId));
+                    LogOnce($"传奇词条检查：hasAffix({ChronoBullets.LegendAffixId}) = {has}");
+                    return has;
                 }
-                catch
+                catch (Exception ex)
                 {
+                    LogOnce($"传奇词条检查异常: {ex.Message}");
                     return false;
                 }
             }
+        }
+
+        /// <summary>上面那个属性会被频繁读取，日志只打前几次。</summary>
+        private int _legendLogCount;
+
+        private void LogOnce(string msg)
+        {
+            if (_legendLogCount >= 4) return;
+            _legendLogCount++;
+            Log(msg);
         }
 
         /// <summary>手动换弹（选择 UI 的 ← → 用）。</summary>

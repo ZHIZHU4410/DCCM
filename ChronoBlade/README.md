@@ -670,11 +670,18 @@ num10 = (cy2 < num6) ? num6 : ...           // 富余量更大 → 直接把内�
 
 > ⚠️ 判定要用 `InventItem.hasAffix()`，**不能**去读 `_itemData.legendAffixes` —— 后者是"可 Roll 的池子"，不是"已经 Roll 到的词条"，永远为真。
 
-### 翻倍的两条易错规则
+### 翻倍的三条易错规则
 
 * **"移速翻倍"要先翻倍倍率再减 1**。affect 116 是**加上去**的值（基础跑速倍率 1.0），所以 ×2.0 传的是 +1.0。想把倍率翻成 ×4.0 必须传 +3.0 —— 直接把 +1.0 翻倍成 +2.0 只有 ×3.0。见 `SpeedAffectFromMultiplier()`。
 * **负面效果（减速）要缩小倍率**：×0.45 → ×0.225。把 0.45 × 2 变成 ×0.90 是"减速减弱"，方向反了。
 * 传奇的 `Yud` 处决延时和记忆动画时长**必须是同一个值**（都 1.5s），否则会出现"动画播完了人还活着"或者反过来，所以 `PlayMemoryAt()` 现在接收时长参数。
+* **查"物品身上有没有词条"必须用 `Weapon.item`（`InventItem`），不是 `wInfos.item`**。
+  `wInfos.item` 是**物品 id 字符串**（`dc.String`，例如 `"TimeBullet"`）。
+  `TimeBullet.IsLegendaryDouble` 原来写的是 `wInfos?.item is InventItem item` ——
+  这个 `is` **永远为 false**，于是那个属性恒返回 false，
+  表现就是"**传奇刻刻帝的传奇词条从不触发**"（面板文案也不会切成翻倍版）。
+  `ChronoBlade.cs` 的 `CurrentItem()` 早就踩过同一个坑并改对了，这处漏了。
+  别的地方写 `wInfos.item` 都是 `.ToString()` 取 id（`IsOurWeapon` / 诊断日志），那些是对的。
 
 ### 兜底：为什么"面板选传奇出来的是普通货"
 
@@ -762,7 +769,7 @@ num10 = (cy2 < num6) ? num6 : ...           // 富余量更大 → 直接把内�
 | 第 2a / 3a 一直不出 | 看日志有没有 `连击第 2 段 → 一周飞镖` / `连击第 3 段 → 时钟剑雨`。**有这行**说明连击分派没问题，问题在实体/特效生成（看紧跟着的 `实体 N/12 枚` 与失败堆栈）；**没有这行**说明连击没推进到第 2 下（`_comboStep` 在 `AdvanceCombo` 里推进，需要连续出刀、间隔 < 1.5 秒）。特别注意 `拿到的时之刃是原版 Katana 实例` 那行 —— 出现它表示 `ChronoWeaponFactory` 的 `create` 钩子没命中，根本没有 `ChronoBlade` 对象可调。 |
 | 第 2a / 3a 出了但还带斩击 | 有**两个**原因，都要排除：① `SkipMelee` 没在两个钩子入口都判（`RunAttack` + `OnAnyWeaponExecute`），看日志是 `本段不斩击（Katana 挂点路径…）` 还是 `（Weapon 挂点路径…）` —— 一条都不出现说明两个钩子都没拦住；② 蓄力被注入了 → 原版蓄力分支自己播 `AtkKatanaA` 斩击动画（**动画不受 `orig` 是否被调用影响**）。第 2a/3a 必须**不注入** `nextIsChargeAtk`。 |
 | 落剑看不见 / 半天才落地 | `Stalactite` 出生行被夹在 `SwordFallMaxCells` 内（屏幕外的天花板会被丢弃），下落速度已按 `SwordFallSpeedMul` 提速；两者都在 `ChronoBlade.cs` 顶部常量里。 |
-| 传奇武器不显示传奇词条 | 看日志有没有 `已附加词条: Legendary` / `已附加词条: ChronoBulletDouble` |
+| 传奇武器不显示传奇词条 / 传奇刻刻帝不翻倍 | 分两步看：① **物品上有没有** —— `已附加词条: Legendary` / `已附加词条: ChronoBulletDouble`；② **代码认不认** —— `传奇词条检查：hasAffix(ChronoBulletDouble) = True`，开火时还会打 `传奇·效果翻倍`。第 ① 有第 ② 没有，就是 `IsLegendaryDouble` 读错了字段（历史上它读的是 `wInfos.item`，那是 id 字符串，`is InventItem` 永远 false；必须用 `Weapon.item`）。 |
 | `LootGen 不可用（不在训练场，属正常）` | 预期行为 —— 传奇词条与**等级**都由面板自己补（`setItemLevel`），不影响结果 |
 | 十二之弹回不去 | 看日志 `Yud-Bet 回到上一关：<id>（来源=...）`；若提示"换过关之后就能用"，先正常换一关 |
 | 按 `P` 召唤出来只有 1 级 | 看日志 `物品等级已写入: LvN（getRawItemLevel=N）`。等级由 `MakeItem()` 末尾的 `setItemLevel()` 写入 —— 普通关卡里 `lootGen` 是 null，那条原版路径根本不会跑，**等级必须自己写**。若这行日志的 Lv 是对的但游戏里显示 1 级，那是 `_itemLevel` 之外还有别的显示来源，把这个日志发我。 |
