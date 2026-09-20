@@ -254,6 +254,8 @@ namespace ChronoBlade
             var def = Get(bulletIndex);
             if (!def.SelfCast) return;
             if (hero == null || hero.destroyed) return;
+            // 功能开关：十二之弹效果关掉 → 枪照常开火，但没有任何时间系效果
+            if (!ChronoFeatures.IsOn(ChronoFeature.Bullets)) return;
 
             try
             {
@@ -293,6 +295,9 @@ namespace ChronoBlade
 
             // 自身向的子弹在开火时已经生效，命中时不要再触发一次
             if (def.SelfCast) return;
+
+            // 功能开关：同上，效果关掉时命中也不做事
+            if (!ChronoFeatures.IsOn(ChronoFeature.Bullets)) return;
 
             try
             {

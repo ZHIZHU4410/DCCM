@@ -170,7 +170,8 @@ namespace ChronoBlade
 
         private static bool Enabled
         {
-            get { try { return ChronoKeys.Config.Value.EnableVoice; } catch { return true; } }
+            // 走 ChronoFeatures：这样**总开关也管得住语音**（配置项本体是 EnableVoice）
+            get { try { return ChronoFeatures.IsOn(ChronoFeature.Voice); } catch { return true; } }
         }
 
         private static double Volume

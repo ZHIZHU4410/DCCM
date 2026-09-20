@@ -307,7 +307,9 @@ namespace ChronoBlade
                 _comboLastMs = now;
                 _comboStep = _comboStep % 3 + 1;
 
-                if (_comboLogCount < 24 && _comboStep >= ComboShuriken)
+                bool hasEffect = StepHasEffect(_comboStep);
+
+                if (_comboLogCount < 24 && hasEffect)
                 {
                     _comboLogCount++;
                     Write($"[ChronoBlade] 连击第 {_comboStep} 段 → " +
@@ -316,7 +318,11 @@ namespace ChronoBlade
                 }
 
                 // 第 2 / 3 段不斩击：只放飞镖 / 落剑。标记交给 OnAnyWeaponExecute 消费。
-                _skipMeleeSwing = _comboStep >= ComboShuriken;
+                //
+                // ⚠️ 但如果"连击效果"或"这一段的效果"**被开关关掉了**，就不置这个标记 ——
+                //    否则那两下会变成"既不斩击、也没有效果"的空刀，手感很怪。
+                //    关掉时就退回普通斩击（第 2、3 段照常砍）。
+                _skipMeleeSwing = hasEffect;
 
                 AddCycleEffect(_comboStep);
             }
@@ -329,6 +335,18 @@ namespace ChronoBlade
         private int MaybeCycle()
         {
             try { return get_cycle(); } catch { return -1; }
+        }
+
+        /// <summary>
+        /// 这一段连击**有没有模组附加效果**（= 该不该"整刀不斩击"）。
+        /// 由功能开关决定：连击效果总开关 + 这一段自己的开关（见 ChronoFeatures）。
+        /// </summary>
+        private static bool StepHasEffect(int step)
+        {
+            if (!ChronoFeatures.IsOn(ChronoFeature.BladeCombo)) return false;
+            if (step == ComboShuriken) return ChronoFeatures.IsOn(ChronoFeature.Shuriken);
+            if (step == ComboSwordRain) return ChronoFeatures.IsOn(ChronoFeature.SwordRain);
+            return false;
         }
 
         private static void Write(string msg)
@@ -427,6 +445,10 @@ namespace ChronoBlade
             {
                 case ComboShuriken:
                     ResetSwing();
+                    // 功能开关：连击效果 / 这一段的飞镖（关掉就什么都不做，
+                    // 那种情况下 _skipMeleeSwing 也不会被置上，所以会走普通斩击）
+                    if (!ChronoFeatures.IsOn(ChronoFeature.BladeCombo)) break;
+                    if (!ChronoFeatures.IsOn(ChronoFeature.Shuriken)) break;
                     FaceTarget(hero, ShurikenRadius + 6.0);
                     // 在英雄中心播放 TIMEZHANJI 图集（和技能释放同一个表现）
                     ChronoFx.PlayCastEffect(hero);
@@ -434,11 +456,14 @@ namespace ChronoBlade
                     ChronoFx.CastShurikenCircle(hero, ShurikenCount, ShurikenRadius);
                     // 实体层：12 枚真正会飞、会打伤害的旋转刃
                     int shurikens = SpawnShurikenEntities(hero, ShurikenCount, ShurikenPower);
-                    Write($"[ChronoBlade] 第 2a 一周飞镖已触发：实体 {shurikens}/{ShurikenCount} 枚");
+                    if (shurikens < ShurikenCount)
+                        Write($"[ChronoBlade] 第 2a 一周飞镖：实体只生成了 {shurikens}/{ShurikenCount} 枚");
                     break;
 
                 case ComboSwordRain:
                     ResetSwing();
+                    if (!ChronoFeatures.IsOn(ChronoFeature.BladeCombo)) break;
+                    if (!ChronoFeatures.IsOn(ChronoFeature.SwordRain)) break;
                     // 在英雄中心播放 TIMEZHANJI 图集（和技能释放同一个表现）
                     ChronoFx.PlayCastEffect(hero);
                     CastSwordRain(hero);
@@ -675,6 +700,8 @@ namespace ChronoBlade
         public void EngraveAt(Mob? mob, double pixelX, double pixelY)
         {
             if (!_ready) return;
+            // 功能开关：刻印关掉就整个不画（连去重表也不动，省得下次开回来时状态错乱）
+            if (!ChronoFeatures.IsOn(ChronoFeature.Engrave)) return;
             try
             {
                 // 去重键：优先用怪物的 uid；怪物已经销毁时退回用坐标，保证仍能刻

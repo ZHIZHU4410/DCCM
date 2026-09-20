@@ -337,6 +337,43 @@ dc.ui.HUD.Class.ME.updateIcon(InventItem i, Tile t);
 | `EnableZaphkielAura` | `true` | 是否显示手持刻刻帝时**身后的时钟背景** |
 | `ZaphkielAuraAlpha` | `0.9` | 那个背景的不透明度，0～1 |
 
+### 功能开关（含总开关）
+
+每一个功能模块都有「开关本体 + 热键」两个配置。开关本体在游戏里是
+**「选项 → 模组 → ChronoBlade」里的复选框**（共 12 个）；热键**默认全部留空（不绑键）**，
+想用自己往 `KeyToggleXxx` 里填 —— 避免和游戏本体 / 其它模组撞键。
+
+| 功能 | 开关 | 热键 |
+|---|---|---|
+| **总开关** | `EnableMod` | `KeyToggleMod` |
+| 时之刃连击效果（2/3 段） | `EnableBladeCombo` | `KeyToggleBladeCombo` |
+| 第 2 段 一周飞镖 | `EnableShuriken` | `KeyToggleShuriken` |
+| 第 3 段 时钟剑雨 | `EnableSwordRain` | `KeyToggleSwordRain` |
+| 罗马数字刻印 | `EnableEngrave` | `KeyToggleEngrave` |
+| 十二之弹效果 | `EnableBullets` | `KeyToggleBullets` |
+| HUD 弹药图标 | `EnableHudIcon` | `KeyToggleHudIcon` |
+| 选择面板（P / X） | `EnablePanels` | `KeyTogglePanels` |
+| 刻刻帝身后时钟 | `EnableZaphkielAura` | `KeyToggleAura` |
+| 狂三语音 | `EnableVoice` | `KeyToggleVoice` |
+| 怪物死亡特效 | `EnableDeathEffect` | `KeyToggleDeathFx` |
+| 拾取音效 | `EnablePickupSfx` | `KeyTogglePickupSfx` |
+
+> **总开关语义**：`EnableMod = false` → **除总开关自己以外全部停用**，
+> 连 P / X 面板都打不开；但总开关本身始终可切换（热键 + 菜单复选框都照常），
+> 否则关掉之后就再也开不回来了。
+>
+> ⚠️ **所有调用点必须走 `ChronoFeatures.IsOn(ChronoFeature.Xxx)`**，不要直接读
+> `ChronoConfig.EnableXxx` —— 直读会**绕过总开关**。映射表在 `ChronoFeatures.cs`
+> （一张 `All` 数组 + `RawGet` / `Set` / `KeyName` 三个 switch）。
+>
+> ⚠️ 热键是**边沿触发**（`PollHotkeys`，按住不会连发），并且只在
+> `IOnHeroUpdate` 里轮询 —— 也就是说**面板打开（游戏真暂停）时切不了开关**，
+> 总开关也一样。这是有意的：暂停中不该改配置。
+>
+> ⚠️ 关掉「时之刃连击效果」或某一段的效果时，那两段会**退回普通斩击**
+> （`_skipMeleeSwing` 只在"这一段确实有效果"时才置位）——
+> 否则会挥出两下什么都不发生的空刀。见 `ChronoBlade.StepHasEffect()`。
+
 > **这两个也会出现在游戏的「选项 → 模组 → ChronoBlade」里**（复选框 + 滑条）。
 > 那一页是 `ChronoBladeMain.BuildMenu()` 自己建的：实现 **`ModCore.Menu.IModMenu`**
 > （`GetName()` + `BuildMenu(dc.ui.Options)`），在里面
@@ -424,6 +461,7 @@ ChronoBlade/
     ├── ChronoMobFinder.cs          附近怪物搜索（剑雨 / 飞镖选目标）
     ├── ChronoVoice.cs              狂三语音：四个时刻 + 独占最高优先级声道
     ├── ChronoConfig.cs             按键配置（Config<ChronoConfig> + 键名解析）
+    ├── ChronoFeatures.cs           功能开关总控（12 个开关 + 热键轮询 + 菜单标签）
     ├── ChronoDiag.cs               诊断工具（打印手里拿的是什么）—— ⚠️ 自动调用已移除，需要时手动调
     ├── ChronoCdbProbe.cs           开局自检 data.cdb 补丁是否生效
     ├── patch_chronoblade_cdb.py    生成 data.cdb（item + weapon + affix 表）

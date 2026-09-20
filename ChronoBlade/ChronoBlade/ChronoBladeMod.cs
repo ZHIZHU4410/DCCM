@@ -464,9 +464,8 @@ namespace ChronoBlade
         /// </summary>
         private void OnEntityDie(Hook_Entity.orig_onDie orig, Entity self)
         {
-            // 配置里可以关掉死亡特效
-            bool fxEnabled = true;
-            try { fxEnabled = ChronoKeys.Config.Value.EnableDeathEffect; } catch { }
+            // 死亡特效开关（走 ChronoFeatures，所以总开关也管得住它）
+            bool fxEnabled = ChronoFeatures.IsOn(ChronoFeature.DeathFx);
 
             bool isMob = self is dc.en.Mob;
 
@@ -765,8 +764,15 @@ namespace ChronoBlade
                 return;
             }
 
+            // ---- 功能开关热键 ----
+            // 默认**一个都没绑**（配置里的 KeyToggleXxx 全是空串），想用自己填。
+            // 放在面板判断**之前**：这样即使"选择面板"被关掉、总开关被关掉，
+            // 键盘上的开关热键依然能工作（否则关掉总开关之后就再也开不回来了）。
+            try { ChronoFeatures.PollHotkeys(Write); } catch { }
+
             // 选择武器面板（P）—— 面板里只列本模组新增的两把武器；打开即真暂停
-            bool panelDown = IsKeyDown(ChronoKeys.Resolve(cfg.KeyWeaponPanel, 0x50));
+            bool panelsOn = ChronoFeatures.IsOn(ChronoFeature.Panels);
+            bool panelDown = panelsOn && IsKeyDown(ChronoKeys.Resolve(cfg.KeyWeaponPanel, 0x50));
             if (panelDown && !_weaponPanelKeyWasDown)
             {
                 ChronoWeaponPanel.Open();
@@ -774,7 +780,7 @@ namespace ChronoBlade
             _weaponPanelKeyWasDown = panelDown;
 
             // 选择弹药面板（X）—— **换弹机制已取消**，这是唯一的换弹入口；打开即真暂停
-            bool selectDown = IsKeyDown(ChronoKeys.Resolve(cfg.KeySelectBullet, 0x58));
+            bool selectDown = panelsOn && IsKeyDown(ChronoKeys.Resolve(cfg.KeySelectBullet, 0x58));
             if (selectDown && !_selectKeyWasDown)
             {
                 var gun = FindTimeBullet();
@@ -789,7 +795,10 @@ namespace ChronoBlade
             _hadZaphkiel = holds;
 
             // HUD 图标跟着装填的弹药走（切弹药后第一帧就会更新；见 ChronoAmmoPanel.SyncHudIcon）
-            try { ChronoAmmoPanel.SyncHudIcon(FindTimeBullet()); } catch { }
+            if (ChronoFeatures.IsOn(ChronoFeature.HudIcon))
+            {
+                try { ChronoAmmoPanel.SyncHudIcon(FindTimeBullet()); } catch { }
+            }
 
             // 刻印渲染自测 —— 键位读配置
             bool testDown = IsKeyDown(ChronoKeys.Resolve(cfg.KeyTestNumeral, 0xDD));
@@ -828,6 +837,8 @@ namespace ChronoBlade
         /// <summary>播放 Zaphkiel 的拾取音效（sfx/CHUXIAN.WAV）。</summary>
         private void PlayPickupSound()
         {
+            if (!ChronoFeatures.IsOn(ChronoFeature.PickupSfx)) return;
+
             if (_pickupSfx == null)
             {
                 Write("[ChronoBlade] 拾取 Zaphkiel（音效未加载）");
@@ -900,19 +911,30 @@ namespace ChronoBlade
                 ((dc.ui.Text)b.title).set_text(StringUtils.AsHaxeString("CHRONOBLADE 设置"));
                 b.createScroller(0.0);
 
-                // ---- 1) 刻刻帝的身后时钟背景：开 / 关 ----
-                bool auraOn = ChronoKeys.Config.Value.EnableZaphkielAura;
-                b.addToggleWidget(
-                    StringUtils.AsHaxeString("刻刻帝背景"),
-                    StringUtils.AsHaxeString("手持刻刻帝时，英雄身后的时钟"),
-                    (HlFunc<bool>)delegate
-                    {
-                        ChronoKeys.Config.Value.EnableZaphkielAura = !ChronoKeys.Config.Value.EnableZaphkielAura;
-                        ChronoKeys.Config.Save();
-                        return ChronoKeys.Config.Value.EnableZaphkielAura;
-                    },
-                    new Ref<bool>(ref auraOn),
-                    b.scrollerFlow);
+                // ---- 1) 每个功能一个复选框（总开关排最前）----
+                //
+                // 用 ChronoFeatures.All 循环生成，而不是手写 12 段 addToggleWidget ——
+                // 以后加功能只要往那个枚举/表里加一项，菜单自动多一行。
+                foreach (var f in ChronoFeatures.All)
+                {
+                    var feature = f;                       // 闭包捕获：别直接用循环变量
+                    bool on = ChronoFeatures.RawGet(feature);
+                    string key = ChronoFeatures.KeyName(feature);
+                    string hint = ChronoFeatures.Hint(feature);
+                    if (!string.IsNullOrWhiteSpace(key)) hint += $"（热键 {key}）";
+
+                    b.addToggleWidget(
+                        StringUtils.AsHaxeString(ChronoFeatures.Label(feature)),
+                        StringUtils.AsHaxeString(hint),
+                        (HlFunc<bool>)delegate
+                        {
+                            bool now = !ChronoFeatures.RawGet(feature);
+                            ChronoFeatures.Set(feature, now);
+                            return now;
+                        },
+                        new Ref<bool>(ref on),
+                        b.scrollerFlow);
+                }
 
                 // ---- 2) 那个背景的透明度（0 = 看不见，1 = 完全不透明）----
                 b.addSliderWidget(
@@ -933,7 +955,7 @@ namespace ChronoBlade
                     Ref<int>.In(0));
 
                 b.updateScroller();
-                Write("[ChronoBlade] 选项菜单已建立：刻刻帝背景开关 + 背景透明度");
+                Write($"[ChronoBlade] 选项菜单已建立：{ChronoFeatures.All.Length} 个功能开关 + 背景透明度");
             }
             catch (Exception ex)
             {
@@ -949,6 +971,7 @@ namespace ChronoBlade
                 Hook_Katana.hitFromWeapon -= OnKatanaHitFromWeapon;
                 try { ChronoBullets.LevelChanged -= ChronoVoice.OnLevelChanged; } catch { }
                 ChronoVoice.Shutdown();
+                ChronoFeatures.ResetHotkeyState();
                 WeaponCreateMap.Clear();
                 ChronoFx.Clear();
             }

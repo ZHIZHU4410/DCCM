@@ -781,11 +781,11 @@ namespace ChronoBlade
         /// </summary>
         private const double AuraAlphaDefault = 0.9;
 
-        /// <summary>是否显示这个背景（配置 `EnableZaphkielAura`）。</summary>
-        private static bool AuraEnabled
-        {
-            get { try { return ChronoKeys.Config.Value.EnableZaphkielAura; } catch { return true; } }
-        }
+        /// <summary>
+        /// 是否显示这个背景。走 <see cref="ChronoFeatures"/> 而不是直接读配置 ——
+        /// 这样**总开关也管得住它**（配置项本体是 `EnableZaphkielAura`）。
+        /// </summary>
+        private static bool AuraEnabled => ChronoFeatures.IsOn(ChronoFeature.Aura);
 
         /// <summary>
         /// 不透明度（配置 `ZaphkielAuraAlpha`，0…1，夹住）。

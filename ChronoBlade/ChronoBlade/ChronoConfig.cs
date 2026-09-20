@@ -87,6 +87,64 @@ namespace ChronoBlade
         /// 所以 slider 收 `double` 完全没问题。
         /// </summary>
         public double ZaphkielAuraAlpha = 0.9;
+
+        // ---------------------------------------------------------------- 功能开关（含总开关）
+        //
+        // 每一个功能模块都有一对配置：
+        //   EnableXxx     —— 开关本体（游戏「选项 → 模组 → ChronoBlade」里是复选框）
+        //   KeyToggleXxx  —— 运行时切换它的热键，**默认留空 = 不绑键**
+        //                    （按需求默认不绑，避免和游戏本体 / 其它模组撞键；想用自己填）
+        //
+        // 总开关 `EnableMod` 一关，**所有功能全部停用（连 P / X 面板也不开）**，
+        // 但它自己仍然可用（热键 + 菜单里的复选框），否则就没法从游戏里开回来了。
+        //
+        // 具体的映射在 ChronoFeatures.cs 里（一张表 + 三个 switch），
+        // 调用点统一用 `ChronoFeatures.IsOn(ChronoFeature.Xxx)` 判断，别直接读这里的字段。
+
+        /// <summary>总开关：关掉 = 整个模组静默（只有总开关自己还能切换）。</summary>
+        public bool EnableMod = true;
+        public string KeyToggleMod = "";
+
+        /// <summary>时之刃的三段连击效果（第 2a 飞镖 / 第 3a 剑雨）。</summary>
+        public bool EnableBladeCombo = true;
+        public string KeyToggleBladeCombo = "";
+
+        /// <summary>第 2a 一周飞镖。</summary>
+        public bool EnableShuriken = true;
+        public string KeyToggleShuriken = "";
+
+        /// <summary>第 3a 时钟剑雨。</summary>
+        public bool EnableSwordRain = true;
+        public string KeyToggleSwordRain = "";
+
+        /// <summary>罗马数字刻印（命中时刻数字）。</summary>
+        public bool EnableEngrave = true;
+        public string KeyToggleEngrave = "";
+
+        /// <summary>刻刻帝十二之弹的时间系效果（关掉枪照常开火，只是没有效果）。</summary>
+        public bool EnableBullets = true;
+        public string KeyToggleBullets = "";
+
+        /// <summary>HUD 图标跟着装填的弹药变化。</summary>
+        public bool EnableHudIcon = true;
+        public string KeyToggleHudIcon = "";
+
+        /// <summary>P / X 两个选择面板。</summary>
+        public bool EnablePanels = true;
+        public string KeyTogglePanels = "";
+
+        /// <summary>刻刻帝身后时钟背景的热键（开关本体是上面的 EnableZaphkielAura）。</summary>
+        public string KeyToggleAura = "";
+
+        /// <summary>语音总开关的热键（开关本体是上面的 EnableVoice）。</summary>
+        public string KeyToggleVoice = "";
+
+        /// <summary>死亡特效的热键（开关本体是上面的 EnableDeathEffect）。</summary>
+        public string KeyToggleDeathFx = "";
+
+        /// <summary>Zaphkiel 拾取音效。</summary>
+        public bool EnablePickupSfx = true;
+        public string KeyTogglePickupSfx = "";
     }
 
     /// <summary>配置读取 + 按键名 → 虚拟键码的解析。</summary>
