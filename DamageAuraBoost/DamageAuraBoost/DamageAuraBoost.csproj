@@ -40,11 +40,20 @@
     <RemoveDir Directories="$(AssetDiffDir)" />
     <Exec Command="dotnet &quot;$(_DCCM_Root)core/mdk/tools/DCCMTool.dll&quot; cdb diff -i &quot;$(ModCdbFile)&quot; -t &quot;$(TemplateCdbFile)&quot; -o &quot;$(DiffPakPath)&quot;" />
     <Exec Command="dotnet &quot;$(_DCCM_Root)core/mdk/tools/DCCMTool.dll&quot; pak unpack -i &quot;$(DiffPakPath)&quot; -o &quot;$(MSBuildProjectDirectory)/Assets&quot;" />
-    <!-- 动态追加 PackAssets（Assets 在项目评估期还是空的，静态 ItemGroup 收集不到） -->
+    <!-- 重新收集 PackAssets（去掉评估期收集到的旧项，避免重复），
+         这样"刚生成的文件"也能进本次打包 -->
     <ItemGroup>
+      <PackAssets Remove="@(PackAssets)" />
       <PackAssets Include="Assets/**/*" RootInPak="" />
     </ItemGroup>
   </Target>
+
+  <!-- Assets 里的文件（含已提交的数据补丁 JSON）打包进 res.pak。
+       没有 data.cdb 时（例如 clone 下来直接构建）BuildResPak 会跳过，
+       此时就用仓库里已存在的 Assets 打包，保证仍然能构建出可用的 res.pak -->
+  <ItemGroup>
+    <PackAssets Include="Assets/**/*" RootInPak="" Condition="Exists('Assets')" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="DeadCellsCoreModding.MDK" Version="1.0.1" />
