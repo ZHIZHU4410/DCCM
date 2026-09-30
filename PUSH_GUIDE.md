@@ -21,8 +21,8 @@ cd "D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS"
 ```powershell
 cd "D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS"
 
-git add <你这次改的目录>          # ⚠️ 千万别 git add -A，见第 7 节
-git commit -m "本次改动说明"
+git add -- <你这次改的目录>                        # ⚠️ 千万别 git add -A，见第 7 节
+git commit -m "本次改动说明" -- <你这次改的目录>    # pathspec 提交，防并发抢 index，见第 7 节
 git -c http.proxy=http://127.0.0.1:7897 push origin main
 ```
 
@@ -254,10 +254,9 @@ BarrelLauncherOverhaul / ByCar 等其它 mod）。
 只 stage 你这次真正改的路径：
 
 ```powershell
-git add ChronoBlade/                     # 只加自己那个 mod 的目录
-git status --short -- ChronoBlade/       # 复核一遍
-git diff --cached --stat                 # 看清楚"到底会提交什么"
-git commit -m "本次改动说明"
+git add -- ChronoBlade/                       # 只加自己那个 mod 的目录
+git status --short -- ChronoBlade/            # 复核一遍
+git commit -m "本次改动说明" -- ChronoBlade/   # pathspec 提交，index 里别人的东西不会被带走
 ```
 
 ### ⚠️ 第二个坑：`git push origin main` 会把**所有**未推送的提交一起传上去
@@ -273,6 +272,52 @@ git log --oneline origin/main..HEAD      # 具体是哪些（推之前务必看�
 > 2026-09-30 那次就是这样：本地积压了 21 个 ChronoBlade 提交，
 > 加上新的 DashOverhaul 提交，**一次推上去 22 个**。想只推自己那个，
 > 就得先 `git rebase`/另开分支，否则没法只推一个。
+
+### ⚠️ 第三个坑：可能同时有**别的进程 / 会话**在这个仓库里提交
+
+实测过（2026-09-30）：当时有另一个会话在**并发地** `git add` + `git commit` + `git push`，
+表现是 **HEAD 会在你眼皮底下自己往前走**：
+
+```
+bf24ce0 ...
+9cca94f 新增 ForgeQualityCells：铁匠学徒可用细胞提升品质 ...
+42755cb FlyingSword：击杀召唤额外飞剑 + IgnoreGlobalShield + ...
+889dd87 新增 SonicCrossbowOverhaul：音波弩 散射/距离/攻速/随机颜色/穿墙
+```
+
+危险在于 **index（暂存区）是整个仓库共享的**，于是：
+
+- 你 `git add` 的东西，可能被别人的 `git commit`（不带 pathspec）**一起提交走** ——
+  你的文件进了别人的提交，提交信息还写着别人的标题（实测：一笔 `889dd87` 里塞了 **37 个文件**，
+  横跨 BossNoDmgSoftCap / SonicCrossbowOverhaul / WreckingBallOverhaul / 推送文档）；
+- 反过来，你紧接着的 `git commit` 会因为"暂存区已被清空"而**失败**，
+  而它的失败输出长得像一段普通 `git status`，**极容易被忽略** ——
+  你以为推上去了，其实什么都没提交。
+
+**自保办法（仓库里的 `push.ps1` 已经这么做）**：
+
+```powershell
+# ✅ 用 pathspec 提交：只认这几个路径，跟 index 里别人放了什么无关
+git commit -m "改动说明" -- DashOverhaul/ PUSH_GUIDE.md
+
+# ❌ 别用 add + commit：共享 index 会被抢
+git add DashOverhaul/
+git commit -m "改动说明"
+```
+
+配套习惯：
+
+- **每条 git 命令后都检查 `$LASTEXITCODE`**，别让失败被静默吞掉；
+- 提交后**复核这笔提交到底含哪些文件**。注意 `git show HEAD` 可能已经是别人刚提交的那笔，
+  更稳的是先记下提交前的 HEAD 再 diff：
+  ```powershell
+  $before = git rev-parse HEAD
+  git commit -m "说明" -- <paths>
+  git diff --name-only $before HEAD     # 这才是"你这笔提交"改的文件
+  ```
+- 推之前再看一眼 `git log --oneline origin/main..HEAD`；
+- 推送被拒（`non-fast-forward`）说明别人先推了：
+  `git fetch origin` → `git rebase origin/main` → 再推。
 
 ### 其它检查
 
@@ -373,16 +418,18 @@ cd "D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS"
 # 2. 确认代理端口（换成实际值）
 Test-NetConnection 127.0.0.1 -Port 7897 -InformationLevel Quiet
 
-# 3. 只 stage 自己改的（以 ChronoBlade 为例）
-git add ChronoBlade/
+# 3. 只提交自己改的（以 ChronoBlade 为例）—— 用 pathspec 提交，防并发抢 index
+git add -- ChronoBlade/
 git status --short -- ChronoBlade/
-git commit -m "本次改动说明"
+$before = git rev-parse HEAD
+git commit -m "本次改动说明" -- ChronoBlade/
+git diff --name-only $before HEAD          # 复核这笔提交到底含哪些文件
 
 # 4. 看清楚这次会推上去哪些提交（不是只有你刚提交的那个！）
 git rev-list --count origin/main..HEAD
 git log --oneline origin/main..HEAD
 
-# 5. 推
+# 5. 推（被拒就先 fetch + rebase 再推）
 git -c http.proxy=http://127.0.0.1:7897 push origin main
 
 # 6. 验证
@@ -409,7 +456,15 @@ cd "D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS"
 .\push.ps1 -Message "本次改动说明" -Paths DashOverhaul/,PUSH_GUIDE.md
 ```
 
-它依次做：**检查代理端口** → 只 stage 指定路径 → 提交 → **打印将要推送的提交列表**（防止连带推上积压提交）→ 推送 → 校验远端 SHA。
+它依次做：**检查代理端口** → 确认这些路径确实有改动 → **pathspec 提交**（只用你的路径，index 里别人放的东西一概不碰，
+见第 7 节第三个坑）→ 复核"本笔提交"含哪些文件 → **打印将要推送的提交列表** →
+推送（被拒则自动 `fetch` + `rebase` 重推一次）→ 校验远端 SHA。
+
+> 它只做「**提交 + 推送**」这一件事。如果改动**已经提交过**了、你只想推：
+> 直接手打第 0 节那条 `git -c http.proxy=... push origin main` 就行。
+> （此时它会以"这些路径没有任何改动"拒绝执行 —— 这是故意的，避免造出空提交。）
+
+每一步都检查 `$LASTEXITCODE`，任何一步失败都会红字报错并 `exit 1`，不会静默跳过。
 
 > ⚠️ **自己另存 `.ps1` 时必须用「UTF-8 with BOM」。**
 > 本机是 **Windows PowerShell 5.1**，它读取**没有 BOM 的 UTF-8 脚本时会按 GBK 解析**：
@@ -423,7 +478,18 @@ cd "D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS"
 ```powershell
 # 用法：
 #   .\push.ps1 -Message "改动说明" -Paths ChronoBlade/
-#   .\push.ps1 -Message "改动说明" -Paths DashOverhaul/ -Port 7897
+#   .\push.ps1 -Message "改动说明" -Paths DashOverhaul/,PUSH_GUIDE.md
+#   .\push.ps1 -Message "改动说明" -Paths DashOverhaul/ -Port 7890
+#
+# 设计要点（都是踩过的坑）：
+#   1. 用 `git commit -m msg -- <pathspec>` 而不是 add + commit：
+#      本仓库可能同时有别的进程/会话在提交，共享的 index 会被抢走，
+#      add+commit 会变成"空提交"或把别人的文件夹带进来。
+#      pathspec 提交只认你给的路径，跟 index 状态无关。
+#   2. 每一步都检查 $LASTEXITCODE —— 否则 git 失败会被静默吞掉。
+#   3. 提交后用 `git diff --name-only <提交前HEAD> HEAD` 复核，
+#      不靠 `git show HEAD`（那可能已经是别人刚提交的那笔）。
+#   4. 推送被拒（远端有新提交）自动 fetch + rebase 后重推。
 param(
     [Parameter(Mandatory = $true)][string]$Message,
     [Parameter(Mandatory = $true)][string[]]$Paths,
@@ -433,30 +499,63 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$proxy = "http://127.0.0.1:$Port"
+$proxy  = "http://127.0.0.1:$Port"
+$target = "$Remote/$Branch"
 
-# 1) 代理端口必须在监听
+function Fail([string]$msg) {
+    Write-Host "[x] $msg" -ForegroundColor Red
+    exit 1
+}
+
+# 1) 代理端口必须在监听（github.com:443 在本机被 SNI 阻断，直连必失败）
 $ok = Test-NetConnection 127.0.0.1 -Port $Port -InformationLevel Quiet -WarningAction SilentlyContinue
-if (-not $ok) { Write-Host "[x] 代理 127.0.0.1:$Port 没在监听 —— 开代理客户端，或改用实际端口" -ForegroundColor Red; exit 1 }
+if (-not $ok) { Fail "代理 127.0.0.1:$Port 没在监听 —— 开代理客户端，或改用实际端口（-Port）" }
 
-# 2) 只 stage 指定路径
+# 2) 先确认这些路径真的有改动（避免误提交空内容）
+$changed = git status --short -- $Paths
+if (-not $changed) { Fail "这些路径没有任何改动，先确认路径对不对：$($Paths -join ', ')" }
+Write-Host "[i] 待提交的路径：" -ForegroundColor Cyan
+$changed
+
+# 3) pathspec 提交：只提交这些路径，index 里别人的东西一律不碰
+$before = (git rev-parse HEAD).Trim()
 git add -- $Paths
-$staged = git diff --cached --name-only
-if (-not $staged) { Write-Host "[x] 没有暂存任何改动，先确认路径对不对" -ForegroundColor Red; exit 1 }
-Write-Host "[i] 本次将提交：" -ForegroundColor Cyan; $staged
+if ($LASTEXITCODE -ne 0) { Fail "git add 失败" }
 
-# 3) 提交
-git commit -m $Message
+git commit -m $Message -- $Paths
+if ($LASTEXITCODE -ne 0) { Fail "git commit 失败（上面的输出就是原因）" }
 
-# 4) 先给用户看将要推的提交（防止连带推上一堆积压提交）
-Write-Host "[i] 本次将推送的提交：" -ForegroundColor Cyan
-git log --oneline "$Remote/$Branch..HEAD"
+$files = git diff --name-only $before HEAD
+if (-not $files) { Fail "提交看似成功但没有任何文件变化，已中止（不要盲目推送）" }
+Write-Host "[i] 本次提交 ($before -> $((git rev-parse HEAD).Trim()[0..6] -join '')) 包含 $($files.Count) 个文件：" -ForegroundColor Cyan
+$files
 
-# 5) 推 + 验证
+# 4) 提示这次会推上去哪些提交（防止连带推上积压的提交）
+Write-Host "[i] 本次将推送的提交（$target..HEAD）：" -ForegroundColor Cyan
+git log --oneline "$target..HEAD"
+
+# 5) 推送；被拒就 fetch + rebase 后重推一次
 git -c "http.proxy=$proxy" push $Remote $Branch
-if ($LASTEXITCODE -ne 0) { Write-Host "[x] 推送失败，见上面的报错，对照 PUSH_GUIDE.md 第 8 节" -ForegroundColor Red; exit 1 }
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "[!] 推送被拒，可能是远端有新提交；尝试 fetch + rebase 后重推" -ForegroundColor Yellow
+    git -c "http.proxy=$proxy" fetch $Remote $Branch
+    if ($LASTEXITCODE -ne 0) { Fail "fetch 失败，检查代理/网络（对照 PUSH_GUIDE.md 第 8 节）" }
+
+    git rebase $target
+    if ($LASTEXITCODE -ne 0) { Fail "rebase 出现冲突，手动解决后自己推一次" }
+
+    git -c "http.proxy=$proxy" push $Remote $Branch
+    if ($LASTEXITCODE -ne 0) { Fail "重推仍失败（对照 PUSH_GUIDE.md 第 8 节）" }
+}
+
+# 6) 验证远端 SHA
 git -c "http.proxy=$proxy" fetch $Remote $Branch | Out-Null
-Write-Host ("[√] 完成：远端 {0}/{1} = {2}" -f $Remote, $Branch, (git rev-parse "$Remote/$Branch")) -ForegroundColor Green
+$remote = (git rev-parse $target).Trim()
+$local  = (git rev-parse HEAD).Trim()
+Write-Host "[√] 完成：$target = $remote" -ForegroundColor Green
+if ($remote -ne $local) {
+    Write-Host "[!] 注意：本地 HEAD = $local，与远端不一致（可能别的进程又提交了）" -ForegroundColor Yellow
+}
 ```
 
 </details>
@@ -475,13 +574,26 @@ a7f77ef..9e38382  main -> main
 - 结果：远端 `main` = `9e38382`，本次带上 21 个积压的 ChronoBlade 提交 + 1 个 DashOverhaul 提交，共 **22 个**。
 - 经验：**先跑 `git log --oneline origin/main..HEAD`**，不然不会知道连带推上去这么多。
 
+### 2026-09-30 —— 推送指南 + `push.ps1`（这次踩到了"第三个坑"）
+
+```
+9e38382..889dd87  main -> main
+```
+
+- 结果：文档和脚本确实上去了，但**它们搭了别人的车** ——
+  提交 `889dd87` 的标题写的是"新增 SonicCrossbowOverhaul"，实际含 **37 个文件**，
+  横跨 BossNoDmgSoftCap / SonicCrossbowOverhaul / WreckingBallOverhaul / 本文档 + `push.ps1`。
+- 原因：另一会话并发提交时**抢走了共享 index**，我随后的 `git commit` 变成空操作
+  （输出像一段普通 `git status`，很容易漏看）。
+- 教训 → `push.ps1` 已改成 **pathspec 提交**（`git commit -m msg -- <paths>`）+ 每步检查 `$LASTEXITCODE`
+  + 提交后 diff 复核 + 推送被拒自动 `fetch`/`rebase` 重推。详见第 7 节第三个坑。
+
 ### 当前待推送状态
 
-**不要记数字**（写本文档时本身也会产生待推送提交）。现查：
+**不要记数字**（任何时候都可能有别的会话在提交）。现查：
 
 ```powershell
 git rev-list --count origin/main..HEAD   # 待推送数
 git log --oneline origin/main..HEAD      # 具体是哪几笔
+git log --oneline -5                     # HEAD 有没有被别的会话推着走
 ```
-
-写这份文档时，待推送的就是 `PUSH_GUIDE.md` / `push.ps1` 这几笔 —— 推一次即同步。
