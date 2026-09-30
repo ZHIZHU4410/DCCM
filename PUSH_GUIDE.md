@@ -4,6 +4,14 @@
 > 远端仓库：<https://github.com/ZHIZHU4410/DCCM>
 > 本文档中标 ✅ 的都是**实测过**的结果（最后验证：2026-09-30）。
 
+### 实测记录
+
+✅ **2026-09-30 已经成功推送过一次**：远端 `main` 与本地 `origin/main` 都停在
+`9e38382`（"新增 DashOverhaul…"），即此前积压的 21 个 ChronoBlade 提交
++ 1 个 DashOverhaul 提交全部已上 GitHub。
+
+所以下面第 0 节的命令是**验证过能用的**，不是理论写法。
+
 ---
 
 ## 0. 现在就能推的一条命令
@@ -16,8 +24,8 @@ cd "D:\steama\steamapps\common\Dead Cells\coremod\DCCMDEAD CELLS"
 git -c http.proxy=http://127.0.0.1:7897 -c https.proxy=http://127.0.0.1:7897 push origin main
 ```
 
-✅ 2026-09-30 实测：`fetch` 与 `ls-remote` 走这条通道都成功，且
-「领先 origin/main 22 个提交、落后 0 个」→ 是一次干净的 fast-forward，不会被拒。
+> 推送前先看有多少要推：`git rev-list --count origin/main..HEAD`
+> （这个数字会变，**别记死**，以命令输出为准。）
 
 > ⚠️ **必须是 `push origin main`，不能只写 `git push`。**
 > 这个分支跟踪的是 **`upstream`（SSH 那个远端）**，裸 `git push` 会走 SSH，
@@ -253,7 +261,7 @@ git diff --cached --stat
 ### 其它检查
 
 ```powershell
-git rev-list --count origin/main..HEAD    # 待推送数（当前 22）
+git rev-list --count origin/main..HEAD    # 待推送数
 git rev-list --count HEAD..origin/main    # 必须 0
 git status --short -- ChronoBlade/        # 自己那部分是否干净
 ```
