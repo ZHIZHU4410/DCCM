@@ -1,0 +1,20 @@
+# ---------------------------------------------------------------- 构建产物
+**/bin/
+**/obj/
+__pycache__/
+
+# ---------------------------------------------------------------- DCCMTool 中间产物
+#
+# `_diffCDB.pak` 是 `dotnet build` 里 `cdb diff` 的临时产物（csproj 的 BuildResPak 目标），
+# 每次构建都会重新生成，不进版本库。
+#
+# 这两个**留**在版本库里（和 ChronoBlade / DamageAuraBoost 的做法一致，方便直接看数据）：
+#   · data.cdb                            ← patch_forge_quality_cdb.py 的产物，整个补丁的源头
+#   · Assets/data.cdb_/truelle/*.json     ← cdb diff 解包出来的那一行补丁（内容确定，不会每构建一次就变）
+**/_diffCDB.pak
+
+# ---------------------------------------------------------------- 编辑器 / 系统
+.vs/
+.vscode/
+Thumbs.db
+Desktop.ini

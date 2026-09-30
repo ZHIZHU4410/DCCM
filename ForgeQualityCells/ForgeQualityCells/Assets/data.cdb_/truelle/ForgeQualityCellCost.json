@@ -1,0 +1,21 @@
+{
+  "id": "ForgeQualityCellCost",
+  "tile": {
+    "x": 55,
+    "y": 21,
+    "file": "cardIcons.png",
+    "size": 24
+  },
+  "comment": "Cells a investir par niveau de qualite, index = palier actuel, [3] = passage en Legendaire (mod ForgeQualityCells)",
+  "value0": [
+    50.0,
+    100.0,
+    200.0,
+    400.0,
+    800.0
+  ],
+  "value1": 1,
+  "__separator_group_Name": "TempRuntimeTweak",
+  "__separator_group_ID": 8,
+  "__original_Index": 5
+}

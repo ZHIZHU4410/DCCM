@@ -1,0 +1,63 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ModType>mod</ModType>
+    <ModName>ForgeQualityCells</ModName>
+    <ModMain>ForgeQualityCells.ForgeQualityCellsMain</ModMain>
+    <AutoInstallMod Condition="'$(Configuration)' == 'Debug'">true</AutoInstallMod>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <GenerateDiffCDB>false</GenerateDiffCDB>
+    <GameVersion>35</GameVersion>
+    <GenerateSinglePakFile>true</GenerateSinglePakFile>
+  </PropertyGroup>
+
+  <!-- ==================== 数据补丁：Assets 打包 ====================
+       patch_forge_quality_cdb.py（本目录，纯 Python，秒级）
+         -> data.cdb（以 MDK v35 模板为底 + truelle 表新增 ForgeQualityCellCost 行）
+         -> DCCMTool cdb diff（对比游戏模板）-> diff.pak -> pak unpack
+         -> Assets/data.cdb_/truelle/ForgeQualityCellCost.json
+       然后由 MDK 的 PackAssets（GenerateSinglePakFile=true）
+       把 Assets/**/* 打成 res.pak 并自动安装到 coremod/mods/ForgeQualityCells/。
+
+       ⚠️ PackAssets 是在 BuildResPak 里**动态**追加的（评估期 Assets 还是空的），
+          所以这个 Target 必须真的跑起来，否则 pak pack 会因为文件列表为空而报错。 -->
+  <PropertyGroup>
+    <ModCdbFile>$(MSBuildProjectDirectory)/data.cdb</ModCdbFile>
+    <TemplateCdbFile>$(_DCCM_Root)core/mdk/databases/v$(GameVersion)/data.cdb</TemplateCdbFile>
+    <DiffPakPath>$(IntermediateOutputPath)_diffCDB.pak</DiffPakPath>
+    <AssetDiffDir>$(MSBuildProjectDirectory)/Assets/data.cdb_</AssetDiffDir>
+  </PropertyGroup>
+
+  <!-- 脚本比 data.cdb 新（或 data.cdb 不存在）就重新生成 -->
+  <Target Name="RegenCdb" BeforeTargets="BuildResPak"
+          Inputs="$(MSBuildProjectDirectory)/patch_forge_quality_cdb.py"
+          Outputs="$(ModCdbFile)">
+    <Message Importance="high" Text="[ForgeQualityCells] 重新生成 data.cdb ..." />
+    <Exec Command="python &quot;$(MSBuildProjectDirectory)/patch_forge_quality_cdb.py&quot;" />
+  </Target>
+
+  <Target Name="BuildResPak"
+          BeforeTargets="PackAssetsIntoPak"
+          DependsOnTargets="RegenCdb"
+          Condition="Exists('$(ModCdbFile)')">
+    <Message Importance="high" Text="[ForgeQualityCells] 生成数据补丁 -> Assets/data.cdb_ ..." />
+    <RemoveDir Directories="$(AssetDiffDir)" />
+    <Exec Command="dotnet &quot;$(_DCCM_Root)core/mdk/tools/DCCMTool.dll&quot; cdb diff -i &quot;$(ModCdbFile)&quot; -t &quot;$(TemplateCdbFile)&quot; -o &quot;$(DiffPakPath)&quot;" />
+    <Exec Command="dotnet &quot;$(_DCCM_Root)core/mdk/tools/DCCMTool.dll&quot; pak unpack -i &quot;$(DiffPakPath)&quot; -o &quot;$(MSBuildProjectDirectory)/Assets&quot;" />
+    <!-- 动态追加 PackAssets（Assets 在项目评估期还是空的，静态 ItemGroup 收集不到） -->
+    <ItemGroup>
+      <PackAssets Include="Assets/**/*" RootInPak="" />
+    </ItemGroup>
+  </Target>
+
+  <ItemGroup>
+    <PackageReference Include="DeadCellsCoreModding.MDK" Version="1.0.1" />
+  </ItemGroup>
+
+</Project>
