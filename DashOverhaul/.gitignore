@@ -1,0 +1,9 @@
+# .NET 编译产物
+**/bin/
+**/obj/
+
+# patch_dash_cdb.py 生成的中间产物（build_dash_overhaul.py 会重新生成）
+data.cdb
+_diffCDB.pak
+**/data.cdb
+**/_diffCDB.pak
