@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ModType>mod</ModType>
+    <ModName>SeismicStompSlam</ModName>
+    <ModMain>SeismicStompSlam.SeismicStompSlamMain</ModMain>
+    <AutoInstallMod Condition="'$(Configuration)' == 'Debug'">true</AutoInstallMod>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <GenerateDiffCDB>false</GenerateDiffCDB>
+    <GameVersion>35</GameVersion>
+    <GenerateSinglePakFile>true</GenerateSinglePakFile>
+  </PropertyGroup>
+
+  <!-- ============ 数据补丁：Assets 打包（仿照 DamageAuraBoost） ============
+       data.cdb（patch_seismicstomp_cdb.py 生成：item/SeismicStomp 的 effectCD 1.5 -> 0.05，
+                以及 hero/Beheaded、hero/Richter 的 heroLife 100 -> 2000）
+         -> DCCMTool cdb diff（对比游戏模板） -> _diffCDB.pak
+         -> DCCMTool pak unpack -> Assets/data.cdb_/item/SeismicStomp.json
+                                  Assets/data.cdb_/hero/Beheaded.json
+                                  Assets/data.cdb_/hero/Richter.json
+       然后由 MDK 的 PackAssetsIntoPak（GenerateSinglePakFile=true）
+       把 Assets/**/* 打成 res.pak 并自动安装到 coremod/mods/SeismicStompSlam/ -->
+  <PropertyGroup>
+    <ModCdbFile>$(MSBuildProjectDirectory)/data.cdb</ModCdbFile>
+    <TemplateCdbFile>$(_DCCM_Root)core/mdk/databases/v$(GameVersion)/data.cdb</TemplateCdbFile>
+    <DiffPakPath>$(IntermediateOutputPath)_diffCDB.pak</DiffPakPath>
+    <AssetDiffDir>$(MSBuildProjectDirectory)/Assets/data.cdb_</AssetDiffDir>
+    <!-- 增量判定的输出：三个补丁文件缺一不可（少列一个就可能跳过重建） -->
+    <AssetDiffJson>$(AssetDiffDir)/item/SeismicStomp.json;$(AssetDiffDir)/hero/Beheaded.json;$(AssetDiffDir)/hero/Richter.json</AssetDiffJson>
+  </PropertyGroup>
+
+  <Target Name="BuildResPak"
+          BeforeTargets="PackAssetsIntoPak"
+          Inputs="$(ModCdbFile);$(TemplateCdbFile)"
+          Outputs="$(AssetDiffJson)"
+          Condition="Exists('$(ModCdbFile)')">
+    <Message Importance="high" Text="[SeismicStompSlam] 生成数据补丁 -> Assets/data.cdb_ ..." />
+    <RemoveDir Directories="$(AssetDiffDir)" />
+    <Exec Command="dotnet &quot;$(_DCCM_Root)core/mdk/tools/DCCMTool.dll&quot; cdb diff -i &quot;$(ModCdbFile)&quot; -t &quot;$(TemplateCdbFile)&quot; -o &quot;$(DiffPakPath)&quot;" />
+    <Exec Command="dotnet &quot;$(_DCCM_Root)core/mdk/tools/DCCMTool.dll&quot; pak unpack -i &quot;$(DiffPakPath)&quot; -o &quot;$(MSBuildProjectDirectory)/Assets&quot;" />
+    <!-- Assets 在项目评估期还不存在，必须动态追加 PackAssets，供 PackAssetsIntoPak 收集 -->
+    <ItemGroup>
+      <PackAssets Include="Assets/**/*" RootInPak="" />
+    </ItemGroup>
+  </Target>
+
+  <ItemGroup>
+    <PackageReference Include="DeadCellsCoreModding.MDK" Version="1.0.1" />
+  </ItemGroup>
+
+</Project>

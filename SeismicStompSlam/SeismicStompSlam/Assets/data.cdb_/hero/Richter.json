@@ -1,0 +1,86 @@
+{
+  "props": {
+    "speedComboRun": 0,
+    "speedComboRoll": 0,
+    "coyoteTime": 0.12,
+    "speedComboMaxMobs": 9999,
+    "rallyPerHitCap": 0.2,
+    "globalShieldRallyMalus": 0.65,
+    "rallyLossTick": 0.3,
+    "gravityFactor": 0.8,
+    "onHitGlobalShield": 0.5,
+    "speedComboDecayTime": 0,
+    "speedComboClimb": 0,
+    "heroLife": 2000,
+    "rallyPerHit": 0.12,
+    "unrallyableDamage": 0.2,
+    "speedComboDecayKills": 9999,
+    "runSpd": 0.23,
+    "rallyLossPct": 0.08
+  },
+  "skills": [
+    {
+      "props": {
+        "speed": 0.8,
+        "duration2": 0.25,
+        "duration3": 0.4,
+        "pct": 0.1,
+        "alpha": 0.5
+      },
+      "requiredItem": "RichterDashKey",
+      "cooldown": 0.2,
+      "duration": 0.35,
+      "skill": "RichterDodge"
+    },
+    {
+      "cooldown": 0,
+      "duration": 0,
+      "skill": "JumpDown"
+    },
+    {
+      "props": {
+        "power": 0.78,
+        "pct": 0.3
+      },
+      "cooldown": 0,
+      "duration": 0,
+      "skill": "JumpCastlevania"
+    },
+    {
+      "props": {
+        "power": 0.83,
+        "pct": 0.12
+      },
+      "requiredItem": "RichterUppercutKey",
+      "cooldown": 0,
+      "duration": 0,
+      "skill": "AirJumpUppercut"
+    },
+    {
+      "props": {
+        "power": 0.4,
+        "pct": 0.33
+      },
+      "cooldown": 0,
+      "duration": 0,
+      "skill": "AirJumpBackflip"
+    },
+    {
+      "cooldown": 0,
+      "duration": 0,
+      "skill": "JumpDown"
+    }
+  ],
+  "id": "Richter",
+  "name": "Richter Belmont",
+  "sounds": {
+    "death": "sfx/hero/hero_die.wav",
+    "dmg": "sfx/hero/hero_dmg1.wav",
+    "duck": "sfx/hero/duck.wav",
+    "fall": "sfx/hero/hero_fall.wav",
+    "stun": "sfx/hero/hero_stun.wav"
+  },
+  "__separator_group_Name": "",
+  "__separator_group_ID": -1,
+  "__original_Index": 1
+}

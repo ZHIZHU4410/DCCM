@@ -1,0 +1,130 @@
+{
+  "props": {
+    "speedComboRun": 0.4,
+    "speedComboRoll": 0.12,
+    "coyoteTime": 0.12,
+    "speedComboMaxMobs": 9,
+    "rallyPerHitCap": 0.2,
+    "globalShieldRallyMalus": 0.65,
+    "rallyLossTick": 0.3,
+    "gravityFactor": 1,
+    "onHitGlobalShield": 0.5,
+    "speedComboDecayTime": 10,
+    "speedComboClimb": 0.5,
+    "heroLife": 2000,
+    "rallyPerHit": 0.12,
+    "unrallyableDamage": 0.2,
+    "speedComboDecayKills": 9999,
+    "runSpd": 0.23,
+    "rallyLossPct": 0.08
+  },
+  "skills": [
+    {
+      "props": {
+        "speed": 0.33,
+        "duration2": 0.25
+      },
+      "cooldown": 0.37,
+      "duration": 0.4,
+      "skill": "DodgeRoll"
+    },
+    {
+      "cooldown": 0,
+      "duration": 0,
+      "skill": "JumpDown"
+    },
+    {
+      "props": {
+        "color2": 4157906,
+        "color3": 16731904,
+        "power": 35,
+        "affect": 1,
+        "radius": 1,
+        "buff2": 20,
+        "pct": 1.5,
+        "power2": 90,
+        "buff": 25,
+        "radius2": 2,
+        "color": 13084271,
+        "threshold": 2.5
+      },
+      "cooldown": 0,
+      "duration": 2,
+      "skill": "DiveAttack"
+    },
+    {
+      "props": {
+        "power": 0.36,
+        "buff": 0.1,
+        "count": 3
+      },
+      "cooldown": 0,
+      "duration": 0,
+      "skill": "JumpBeheaded"
+    },
+    {
+      "props": {
+        "power": 0.65
+      },
+      "cooldown": 0,
+      "duration": 0,
+      "skill": "AirJumpBeheaded"
+    },
+    {
+      "props": {
+        "power": 0.6,
+        "color": 13006047,
+        "count": 150
+      },
+      "cooldown": 0.5,
+      "forbiddenItem": "SpecialFlask",
+      "duration": 0.67,
+      "skill": "HealFlask"
+    },
+    {
+      "props": {
+        "duration2": 6
+      },
+      "requiredItem": "HomKey",
+      "cooldown": 0,
+      "duration": 0.1,
+      "skill": "Homunculus"
+    },
+    {
+      "props": {
+        "color2": 1305343,
+        "power": 0.6,
+        "color": 13006047,
+        "count": 150
+      },
+      "requiredItem": "SpecialFlask",
+      "cooldown": 0.5,
+      "duration": 0.67,
+      "skill": "CollectorFlask"
+    },
+    {
+      "props": {
+        "power": 0.6,
+        "color": 13006047,
+        "count": 150
+      },
+      "cooldown": 0.5,
+      "flags": 1,
+      "forbiddenItem": "SpecialFlask",
+      "duration": 0,
+      "skill": "HealCaptainChicken"
+    }
+  ],
+  "id": "Beheaded",
+  "name": "The Beheaded",
+  "sounds": {
+    "death": "sfx/hero/hero_die.wav",
+    "dmg": "sfx/hero/hero_dmg1.wav",
+    "duck": "sfx/hero/duck.wav",
+    "fall": "sfx/hero/hero_fall.wav",
+    "stun": "sfx/hero/hero_stun.wav"
+  },
+  "__separator_group_Name": "",
+  "__separator_group_ID": -1,
+  "__original_Index": 0
+}
