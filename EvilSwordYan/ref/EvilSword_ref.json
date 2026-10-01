@@ -1,0 +1,206 @@
+{
+ "_source": "01:04 首次构建（参考数据原样）",
+ "item": {
+  "commonProps": {},
+  "synergy": [],
+  "props": {},
+  "gameplayDesc": "炎之呼吸",
+  "moneyCost": 2500,
+  "group": 4,
+  "castCD": 0,
+  "ambiantDesc": "Alors comme ça, vous voulez la jouer difficile ?",
+  "id": "EvilSword",
+  "icon": {
+   "x": 8,
+   "y": 21,
+   "file": "cardIcons.png",
+   "size": 24
+  },
+  "legendAffixes": [
+   {
+    "affix": "TrueEvil"
+   },
+   {
+    "affix": "IgnoreGlobalShield"
+   }
+  ],
+  "name": "YAN",
+  "droppable": true,
+  "tags": [
+   {
+    "tag": "AlwaysCritical"
+   }
+  ],
+  "tier1": "Brutality",
+  "cellCost": 150
+ },
+ "weapon": {
+  "allowCrouch": true,
+  "isACancel": false,
+  "item": "EvilSword",
+  "strikeChain": [
+   {
+    "coolDown": 0,
+    "power": [
+     75
+    ],
+    "fxProps": {
+     "fxScale": [
+      0.5,
+      0.5
+     ],
+     "fxOffset": [
+      25,
+      -25
+     ]
+    },
+    "lockCtrlAfter": 0.16,
+    "props": {
+     "color2": 16741120,
+     "bump": 0,
+     "color": 16765184,
+     "limit": 5
+    },
+    "breachBonus": -0.3,
+    "dynamicCharge": 0,
+    "charge": 0.2,
+    "sfxProps": {},
+    "canCrit": true,
+    "area": {
+     "width": 8,
+     "offsetCaseX": -0.5,
+     "offsetCaseY": 0,
+     "height": 6,
+     "shape": 1
+    },
+    "sfxRelease": "sfx/weapon/weapon_eblade_release1.wav",
+    "fxId": "HUOA",
+    "animId": "AtkTonfaB",
+    "sfxHit": "sfx/weapon/weapon_eblade_hit.wav",
+    "hitFrame": 6,
+    "critMul": 1.1,
+    "glowColor": 16723200,
+    "animSpd": 1
+   },
+   {
+    "coolDown": 0,
+    "power": [
+     60
+    ],
+    "fxProps": {
+     "fxScale": [
+      0.5,
+      0.5
+     ],
+     "fxOffset": [
+      25,
+      -25
+     ]
+    },
+    "lockCtrlAfter": 0.26,
+    "props": {
+     "color2": 16741120,
+     "bump": 0,
+     "color": 16765184,
+     "limit": 5
+    },
+    "breachBonus": -0.3,
+    "dynamicCharge": 0,
+    "charge": 0.2,
+    "sfxProps": {},
+    "canCrit": true,
+    "area": {
+     "width": 8,
+     "offsetCaseX": -0.5,
+     "offsetCaseY": 0,
+     "height": 6,
+     "shape": 1
+    },
+    "sfxRelease": "sfx/weapon/weapon_eblade_release1.wav",
+    "fxId": "HUOB",
+    "animId": "AtkTonfaD",
+    "sfxHit": "sfx/weapon/weapon_eblade_hit.wav",
+    "hitFrame": 6,
+    "critMul": 1.1,
+    "glowColor": 16723200,
+    "animSpd": 1
+   },
+   {
+    "coolDown": 0,
+    "power": [
+     75
+    ],
+    "fxProps": {
+     "fxScale": [
+      0.5,
+      0.5
+     ],
+     "fxOffset": [
+      25,
+      -25
+     ]
+    },
+    "lockCtrlAfter": 0.15,
+    "props": {},
+    "breachBonus": 0,
+    "dynamicCharge": 0,
+    "charge": 0.15,
+    "sfxProps": {},
+    "canCrit": true,
+    "area": {
+     "width": 8,
+     "offsetCaseX": 0,
+     "offsetCaseY": 0,
+     "height": 4,
+     "shape": 1
+    },
+    "sfxRelease": "sfx/weapon/weapon_saber_release1.wav",
+    "fxId": "HUOC",
+    "animId": "atkSaberA",
+    "sfxHit": "sfx/weapon/hit_blade.wav",
+    "hitFrame": 4,
+    "critMul": 0.5,
+    "glowColor": 16731904,
+    "animSpd": 2
+   },
+   {
+    "charge": 0.37,
+    "coolDown": 0,
+    "lockCtrlAfter": 0.25,
+    "hitFrame": 8,
+    "fxProps": {
+     "fxScale": [
+      0.4,
+      0.4
+     ],
+     "fxOffset": [
+      25,
+      -25
+     ]
+    },
+    "area": {
+     "width": 13.5,
+     "offsetCaseX": 0,
+     "offsetCaseY": 0,
+     "height": 12.5,
+     "shape": 1
+    },
+    "breachBonus": 1.5,
+    "dynamicCharge": 0,
+    "canCrit": true,
+    "props": {},
+    "sfxProps": {},
+    "animId": "atkC",
+    "fxId": "HUOD",
+    "glowColor": 16737536,
+    "power": [
+     60
+    ],
+    "sfxCharge": "sfx/weapon/weapon_dualdg_charge3.wav",
+    "sfxRelease": "sfx/weapon/weapon_dualdg_release3.wav"
+   }
+  ],
+  "airControlAlways": false,
+  "cannotBeCanceledByWeapon": false
+ }
+}

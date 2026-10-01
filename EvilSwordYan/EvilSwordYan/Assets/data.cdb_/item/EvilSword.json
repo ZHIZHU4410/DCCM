@@ -1,0 +1,37 @@
+{
+  "commonProps": {},
+  "synergy": [],
+  "props": {},
+  "gameplayDesc": "炎之呼吸",
+  "moneyCost": 2500,
+  "group": 4,
+  "castCD": 0,
+  "ambiantDesc": "Alors comme ça, vous voulez la jouer difficile ?",
+  "id": "EvilSword",
+  "icon": {
+    "x": 2,
+    "y": 3,
+    "file": "cardIcons.png",
+    "size": 24
+  },
+  "legendAffixes": [
+    {
+      "affix": "TrueEvil"
+    },
+    {
+      "affix": "IgnoreGlobalShield"
+    }
+  ],
+  "name": "YAN",
+  "droppable": true,
+  "tags": [
+    {
+      "tag": "AlwaysCritical"
+    }
+  ],
+  "tier1": "Brutality",
+  "cellCost": 150,
+  "__separator_group_Name": "Melee",
+  "__separator_group_ID": 4,
+  "__original_Index": 9
+}
