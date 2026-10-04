@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ModType>mod</ModType>
+    <ModName>GojoLimitless</ModName>
+    <ModMain>GojoLimitless.GojoLimitlessMain</ModMain>
+    <AutoInstallMod Condition="'$(Configuration)' == 'Debug'">true</AutoInstallMod>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <!--
+    不再生成 / 打包任何资源。
+
+    历史：v1~v3 用 make_gojo_assets.py 往 item 表插了一行 Power 道具「Limitless」，
+    再 cdb diff 成 res.pak 当数据补丁。现在按需求**彻底去掉道具** —— 招式纯靠按键触发，
+    所以没有 cdb 补丁、没有图标覆盖、也没有 res.pak。
+    运行时不再挂 pak，也就没有"pak 加载失败"这一类降级路径了。
+  -->
+  <PropertyGroup>
+    <GenerateDiffCDB>false</GenerateDiffCDB>
+    <GenerateSinglePakFile>false</GenerateSinglePakFile>
+    <GameVersion>35</GameVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DeadCellsCoreModding.MDK" Version="1.0.1" />
+  </ItemGroup>
+
+</Project>
