@@ -1,0 +1,129 @@
+{
+  "allowCrouch": false,
+  "isACancel": false,
+  "item": "QueenRapier",
+  "strikeChain": [
+    {
+      "coolDown": 0,
+      "power": [
+        35
+      ],
+      "fxProps": {
+        "fxInnerColor": 16719380,
+        "fxOuterColor": 2752512
+      },
+      "lockCtrlAfter": 0.08,
+      "props": {
+        "offsetX": 2,
+        "offsetY": 0.5,
+        "power2": [
+          58.0
+        ],
+        "angle": 0.5
+      },
+      "breachBonus": 0,
+      "dynamicCharge": 0,
+      "charge": 0.1,
+      "sfxProps": {},
+      "canCrit": true,
+      "area": {
+        "width": 6.0,
+        "offsetCaseX": 0.5,
+        "offsetCaseY": 0,
+        "height": 2.0,
+        "shape": 1
+      },
+      "sfxRelease": "sfx/weapon/weapon_multikick_release.wav",
+      "animId": "atkPunchA",
+      "sfxHit": "sfx/weapon/weapon_kick_hit.wav",
+      "hitFrame": 2,
+      "critMul": 1.6,
+      "glowColor": 14685204,
+      "fxId": "fxAtkPunchA",
+      "animSpd": 2.0
+    },
+    {
+      "coolDown": 0,
+      "power": [
+        25
+      ],
+      "fxProps": {
+        "fxInnerColor": 16719380,
+        "fxOuterColor": 2752512
+      },
+      "lockCtrlAfter": 0.08,
+      "props": {
+        "offsetX": 2,
+        "offsetY": -0.5,
+        "power2": [
+          58.0
+        ],
+        "angle": -0.4
+      },
+      "breachBonus": 0,
+      "dynamicCharge": 0,
+      "charge": 0.1,
+      "sfxProps": {},
+      "canCrit": true,
+      "area": {
+        "width": 6.0,
+        "offsetCaseX": 0.5,
+        "offsetCaseY": 0,
+        "height": 2.0,
+        "shape": 1
+      },
+      "sfxRelease": "sfx/weapon/weapon_multikick_release.wav",
+      "animId": "atkPunchB",
+      "sfxHit": "sfx/weapon/weapon_kick_hit.wav",
+      "hitFrame": 2,
+      "critMul": 1.1,
+      "glowColor": 14685204,
+      "fxId": "fxAtkPunchB",
+      "animSpd": 2.0
+    },
+    {
+      "coolDown": 0,
+      "power": [
+        25
+      ],
+      "fxProps": {
+        "fxInnerColor": 16719380,
+        "fxOuterColor": 2752512
+      },
+      "lockCtrlAfter": 0.08,
+      "props": {
+        "offsetX": 2,
+        "offsetY": 0,
+        "power2": [
+          58.0
+        ],
+        "angle": 0
+      },
+      "breachBonus": 0,
+      "dynamicCharge": 0,
+      "charge": 0.1,
+      "sfxProps": {},
+      "canCrit": true,
+      "area": {
+        "width": 6.0,
+        "offsetCaseX": 0.5,
+        "offsetCaseY": 0,
+        "height": 2.0,
+        "shape": 1
+      },
+      "sfxRelease": "sfx/weapon/weapon_multikick_release.wav",
+      "animId": "atkPunchC",
+      "sfxHit": "sfx/weapon/weapon_kick_hit.wav",
+      "hitFrame": 3,
+      "critMul": 1.1,
+      "glowColor": 14685204,
+      "fxId": "fxAtkPunchC",
+      "animSpd": 2.0
+    }
+  ],
+  "airControlAlways": false,
+  "cannotBeCanceledByWeapon": false,
+  "__separator_group_Name": "",
+  "__separator_group_ID": -1,
+  "__original_Index": 111
+}

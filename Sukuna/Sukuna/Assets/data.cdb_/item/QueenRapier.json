@@ -1,0 +1,39 @@
+{
+  "commonProps": {},
+  "synergy": [],
+  "props": {
+    "width": 1.8,
+    "distance": 420,
+    "duration": 0.1
+  },
+  "gameplayDesc": "命中后追加「解」的多段斩击；精英与强敌额外吃一记「捌」的贯穿斩线；可展开领域「伏魔御厨子」。",
+  "moneyCost": 2000,
+  "group": 4,
+  "castCD": 0,
+  "ambiantDesc": "不义的游戏，开始了。",
+  "id": "QueenRapier",
+  "dlc": "TheQueenAndTheSea",
+  "icon": {
+    "x": 33,
+    "y": 8,
+    "file": "cardIcons.png",
+    "size": 24
+  },
+  "legendAffixes": [
+    {
+      "affix": "SuperSlice"
+    }
+  ],
+  "name": "宿傩",
+  "droppable": true,
+  "tags": [
+    {
+      "tag": "InstantBlueprint"
+    }
+  ],
+  "tier1": "Brutality",
+  "cellCost": 150,
+  "__separator_group_Name": "Melee",
+  "__separator_group_ID": 4,
+  "__original_Index": 58
+}
