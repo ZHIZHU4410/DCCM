@@ -1,0 +1,24 @@
+{
+ "art_scale": 2.0,
+ "hero_scale": 0.5,
+ "anim_fps": 60.0,
+ "ss": 2,
+ "mirror": true,
+ "dedupe": true,
+ "pages": 2,
+ "records": 10641,
+ "unique_crops": 1380,
+ "canvas": "K x (max(150, vanilla, art)) + glow pad",
+ "glow": {
+  "hz": 0.45,
+  "min": 0.22,
+  "max": 2.05,
+  "halo": 1.2,
+  "radius": [
+   1.8,
+   3.2,
+   6.0
+  ],
+  "key": 6740479
+ }
+}

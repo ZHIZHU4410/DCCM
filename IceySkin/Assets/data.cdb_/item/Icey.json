@@ -1,0 +1,27 @@
+{
+  "commonProps": {
+    "revealedAtStart": true
+  },
+  "synergy": [],
+  "props": {},
+  "gameplayDesc": "ICEY From ICEY",
+  "moneyCost": 0,
+  "group": 13,
+  "castCD": 0,
+  "id": "Icey",
+  "icon": {
+    "x": 13,
+    "y": 14,
+    "file": "cardIcons.png",
+    "size": 24
+  },
+  "legendAffixes": [],
+  "name": "ICEY",
+  "droppable": false,
+  "tags": [],
+  "cellCost": 0,
+  "ambiantDesc": "",
+  "__separator_group_Name": "Skin",
+  "__separator_group_ID": 13,
+  "__original_Index": 153
+}

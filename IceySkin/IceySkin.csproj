@@ -1,0 +1,56 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ModType>mod</ModType>
+    <ModName>IceySkin</ModName>
+    <ModMain>IceySkin.IceySkinMain</ModMain>
+    <!-- 只在游戏 coremod/mods/IceySkin/ 装一份，方便手动卸载 -->
+    <AutoInstallMod Condition="'$(Configuration)' == 'Debug'">true</AutoInstallMod>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+  </PropertyGroup>
+
+  <!--
+    与 MobBuffCombo 相同的打包策略：
+      · 不用 MDK 自带的 GenerateDiffCDB（它要求项目根有一份完整 data.cdb）；
+      · 改为在 BuildResPak 里用 DCCMTool 把「vanilla data.cdb + 我们的新行」与我们
+        生成的 data.cdb 做 diff，产出 _diffCDB.pak，再 merge 进 res.pak。
+      · Assets/ 下的 atlas/** 按原样打进 res.pak，路径与游戏 res/atlas/ 一致。
+  -->
+  <PropertyGroup>
+    <GenerateDiffCDB>false</GenerateDiffCDB>
+    <GameVersion>35</GameVersion>
+    <GenerateSinglePakFile>true</GenerateSinglePakFile>
+
+    <ModCdbFile>$(MSBuildProjectDirectory)/data.cdb</ModCdbFile>
+    <TemplateCdbFile>$(_DCCM_Root)core/mdk/databases/v$(GameVersion)/data.cdb</TemplateCdbFile>
+    <DiffPakPath>$(MSBuildProjectDirectory)/obj/_diffCDB.pak</DiffPakPath>
+    <AssetDiffDir>$(MSBuildProjectDirectory)/Assets/data.cdb_</AssetDiffDir>
+  </PropertyGroup>
+
+  <!-- Assets/data.cdb_ 是 BuildResPak 生成的产物，打包时不直接收集它（内容已在 _diffCDB.pak 里） -->
+  <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)/Assets')">
+    <PackAssets Include="Assets/**/*" Exclude="Assets/data.cdb_/**/*" RootInPak="" />
+  </ItemGroup>
+
+  <Target Name="BuildResPak"
+          BeforeTargets="PackAssetsIntoPak"
+          Condition="Exists('$(ModCdbFile)')">
+    <Message Importance="high" Text="[IceySkin] 生成数据补丁 -> Assets/data.cdb_ ..." />
+    <RemoveDir Directories="$(AssetDiffDir)" />
+    <Exec Command="dotnet &quot;$(_DCCM_Root)core/mdk/tools/DCCMTool.dll&quot; cdb diff -i &quot;$(ModCdbFile)&quot; -t &quot;$(TemplateCdbFile)&quot; -o &quot;$(DiffPakPath)&quot;" />
+    <Exec Command="dotnet &quot;$(_DCCM_Root)core/mdk/tools/DCCMTool.dll&quot; pak unpack -i &quot;$(DiffPakPath)&quot; -o &quot;$(MSBuildProjectDirectory)/Assets&quot;" />
+    <ItemGroup>
+      <PakFile Include="$(DiffPakPath)" />
+      <PackAssets Include="Assets/**/*" Exclude="Assets/data.cdb_/**/*" RootInPak="" />
+    </ItemGroup>
+  </Target>
+
+  <ItemGroup>
+    <PackageReference Include="DeadCellsCoreModding.MDK" Version="1.0.1" />
+  </ItemGroup>
+
+</Project>
