@@ -1,0 +1,4 @@
+Verification/
+dist/
+**/bin/
+**/obj/

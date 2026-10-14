@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ModType>mod</ModType>
+    <ModName>MobDeathSplit</ModName>
+    <ModMain>MobDeathSplit.MobDeathSplitMain</ModMain>
+    <Version>1.2.1</Version>
+    <!-- 按用户指定，构建完成后由 MDK 安装到游戏 coremod/mods/MobDeathSplit。 -->
+    <AutoInstallMod>true</AutoInstallMod>
+    <GenerateDiffCDB>false</GenerateDiffCDB>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="DeadCellsCoreModding.MDK" Version="1.0.1" />
+    <OutputFiles Include="../README.md" />
+  </ItemGroup>
+</Project>
