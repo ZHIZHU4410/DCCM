@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ModType>mod</ModType>
+    <ModName>ThrowingKnifeOverhaul</ModName>
+    <ModMain>ThrowingKnifeOverhaul.ThrowingKnifeOverhaulMain</ModMain>
+    <AutoInstallMod Condition="'$(Configuration)' == 'Debug'">true</AutoInstallMod>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <!-- 本模组全部走运行时改写（子弹字段 / 武器技能 / 弹药），
+       不需要 res.pak 数据补丁，所以 GenerateSinglePakFile=false。 -->
+  <PropertyGroup>
+    <GenerateDiffCDB>false</GenerateDiffCDB>
+    <GameVersion>35</GameVersion>
+    <GenerateSinglePakFile>false</GenerateSinglePakFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DeadCellsCoreModding.MDK" Version="1.0.1" />
+  </ItemGroup>
+
+</Project>
